@@ -64,8 +64,9 @@ export default function Inbox() {
 
   const handleMarkRead = (conv) => setReadIds(prev => new Set([...prev, conv.contact_id]));
 
-  const handleArchive = (conv) => {
-    setArchived(prev => prev.includes(conv.contact_id) ? prev : [...prev, conv.contact_id]);
+  const handleArchive = async (conv) => {
+    await base44.entities.Contact.update(conv.contact_id, { archiviata: true });
+    queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
     if (activeConv?.contact_id === conv.contact_id) setActiveConv(null);
   };
 
@@ -73,8 +74,8 @@ export default function Inbox() {
     const msgs = allMessages.filter(m => m.contact_id === conv.contact_id);
     await Promise.all(msgs.map(m => base44.entities.Message.delete(m.id)));
     await base44.entities.Contact.delete(conv.contact_id);
-    queryClient.invalidateQueries({ queryKey: ['contacts'] });
-    queryClient.invalidateQueries({ queryKey: ['all-messages'] });
+    queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
+    queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
     if (activeConv?.contact_id === conv.contact_id) setActiveConv(null);
   };
 
