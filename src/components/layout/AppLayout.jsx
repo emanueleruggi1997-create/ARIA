@@ -11,7 +11,7 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Desktop sidebar */}
+      {/* Desktop */}
       <div className="hidden md:block">
         <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
         <div className="fixed top-3 right-4 z-30">
@@ -19,31 +19,21 @@ export default function AppLayout() {
         </div>
       </div>
 
-      {/* Mobile header */}
+      {/* Mobile header (fixed top) */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40">
         <MobileHeader />
       </div>
 
-      {/* Main content */}
+      {/* Main */}
       <main className={cn(
         "min-h-screen transition-all duration-300",
-        /* desktop */ "md:ml-[240px]",
-      )}
-        style={{ marginLeft: undefined }}
-      >
-        {/* Desktop uses sidebar margin; mobile uses top/bottom padding */}
-        <div className="md:hidden h-14" />
-        <div
-          className={cn(
-            "md:transition-all md:duration-300",
-            collapsed ? "md:ml-[68px]" : "md:ml-[240px]",
-          )}
-          style={{}}
-        >
-          <Outlet />
-        </div>
-        {/* Mobile bottom bar spacer */}
-        <div className="md:hidden h-16" />
+        collapsed ? "md:ml-[68px]" : "md:ml-[240px]"
+      )}>
+        {/* Spacer for mobile fixed header */}
+        <div className="h-14 md:hidden" />
+        <Outlet />
+        {/* Spacer for mobile bottom nav */}
+        <div className="h-16 md:hidden" />
       </main>
 
       {/* Mobile bottom nav */}
