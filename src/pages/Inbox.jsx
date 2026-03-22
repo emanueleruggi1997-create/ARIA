@@ -42,10 +42,10 @@ export default function Inbox() {
         lastMessageTime: lastMsg?.created_date,
         unreadCount: unread.length,
         lastResponder: lastMsg?.ruolo,
-        archiviata: archived.includes(contact.id),
+        archiviata: contact.archiviata || false,
       };
     }).sort((a, b) => new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0));
-  }, [contacts, allMessages, readIds, archived]);
+  }, [contacts, allMessages, readIds]);
 
   const activeMessages = useMemo(() => {
     if (!activeConv) return [];
