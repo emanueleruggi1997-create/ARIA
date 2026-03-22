@@ -92,9 +92,10 @@ export default function ConversationList({ conversations, activeId, onSelect, on
           </div>
         </div>
       )) : (
-        <div className="text-center py-12 text-muted-foreground">
-          <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">Nessuna conversazione</p>
+        <div className="text-center py-16 text-muted-foreground px-4">
+          <div className="text-4xl mb-3">💬</div>
+          <p className="text-sm font-medium text-foreground">Nessuna conversazione ancora</p>
+          <p className="text-xs mt-1">I messaggi WhatsApp e Instagram appariranno qui</p>
         </div>
       )}
     </div>
