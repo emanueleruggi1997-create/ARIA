@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus, Save, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { UserPlus, Save, Loader2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
+import { format } from 'date-fns';
 
 const STATI = [
   { value: 'lead', label: 'Lead' },

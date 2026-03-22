@@ -2,8 +2,14 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import LeadCard from '@/components/crm/LeadCard';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
+import ContactsTab from '@/components/crm/ContactsTab';
+import TemplateLibrary from '@/components/email/TemplateLibrary';
+import CampaignsTab from '@/components/email/CampaignsTab';
+import AutomationsTab from '@/components/email/AutomationsTab';
+import EmailStatsTab from '@/components/email/EmailStatsTab';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -19,21 +25,26 @@ const columns = [
   { id: 'chiuso_perso', label: 'Perso', color: 'bg-red-500' },
 ];
 
-export default function CRM() {
-  const { business } = useBusiness();
+function LeadsKanban({ businessId }) {
   const queryClient = useQueryClient();
   const [selectedLead, setSelectedLead] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showAddToMailingList, setShowAddToMailingList] = useState(null);
   const [newLead, setNewLead] = useState({ contact_nome: '', tipo_progetto: '', canale: 'whatsapp' });
 
   const { data: leads = [] } = useQuery({
-    queryKey: ['leads', business?.id],
-    queryFn: () => base44.entities.Lead.filter({ business_id: business?.id }),
-    enabled: !!business?.id,
+    queryKey: ['leads', businessId],
+    queryFn: () => base44.entities.Lead.filter({ business_id: businessId }),
+    enabled: !!businessId,
   });
 
   const handleUpdateLead = async (id, data) => {
     await base44.entities.Lead.update(id, data);
+    // If won, suggest adding to mailing list
+    if (data.stato === 'chiuso_vinto') {
+      const lead = leads.find(l => l.id === id);
+      if (lead) setShowAddToMailingList(lead);
+    }
     queryClient.invalidateQueries({ queryKey: ['leads'] });
     setSelectedLead(null);
   };
@@ -45,14 +56,28 @@ export default function CRM() {
 
   const handleMoveLead = async (lead, newStato) => {
     await base44.entities.Lead.update(lead.id, { stato: newStato });
+    if (newStato === 'chiuso_vinto') setShowAddToMailingList(lead);
     queryClient.invalidateQueries({ queryKey: ['leads'] });
   };
 
   const handleCreateLead = async () => {
-    await base44.entities.Lead.create({ ...newLead, business_id: business.id, stato: 'nuovo' });
+    await base44.entities.Lead.create({ ...newLead, business_id: businessId, stato: 'nuovo' });
     queryClient.invalidateQueries({ queryKey: ['leads'] });
     setShowCreate(false);
     setNewLead({ contact_nome: '', tipo_progetto: '', canale: 'whatsapp' });
+  };
+
+  const handleAddToMailingList = async (lead) => {
+    await base44.entities.ContactEmail.create({
+      business_id: businessId,
+      nome: lead.contact_nome,
+      email: '',
+      tags: ['cliente'],
+      fonte: lead.canale,
+      stato: 'attivo',
+    });
+    queryClient.invalidateQueries({ queryKey: ['contacts-email'] });
+    setShowAddToMailingList(null);
   };
 
   const totalValue = leads.reduce((s, l) => s + (l.budget_max || 0), 0);
@@ -60,17 +85,14 @@ export default function CRM() {
   const convRate = leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0;
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">CRM / Lead</h1>
-          <div className="flex items-center gap-4 mt-1">
-            <span className="text-xs text-muted-foreground">{leads.length} lead totali</span>
-            <span className="text-xs text-muted-foreground">Valore: €{totalValue.toLocaleString()}</span>
-            <span className="text-xs text-muted-foreground">Conversione: {convRate}%</span>
-          </div>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-muted-foreground">{leads.length} lead totali</span>
+          <span className="text-xs text-muted-foreground">Valore: €{totalValue.toLocaleString()}</span>
+          <span className="text-xs text-muted-foreground">Conversione: {convRate}%</span>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="hidden md:flex">
+        <Button onClick={() => setShowCreate(true)} size="sm" className="hidden md:flex">
           <Plus className="w-4 h-4 mr-2" /> Nuovo Lead
         </Button>
         <button onClick={() => setShowCreate(true)}
@@ -79,7 +101,6 @@ export default function CRM() {
         </button>
       </div>
 
-      {/* Empty state */}
       {leads.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
           <div className="text-5xl mb-4">👥</div>
@@ -91,7 +112,6 @@ export default function CRM() {
         </div>
       )}
 
-      {/* Kanban */}
       {leads.length > 0 && (
         <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
           {columns.map(col => {
@@ -105,13 +125,7 @@ export default function CRM() {
                 </div>
                 <div className="space-y-2 bg-secondary/30 rounded-xl p-2 min-h-[200px]">
                   {colLeads.map(lead => (
-                    <LeadCard
-                      key={lead.id}
-                      lead={lead}
-                      onClick={setSelectedLead}
-                      onDelete={handleDeleteLead}
-                      onMove={handleMoveLead}
-                    />
+                    <LeadCard key={lead.id} lead={lead} onClick={setSelectedLead} onDelete={handleDeleteLead} onMove={handleMoveLead} />
                   ))}
                 </div>
               </div>
@@ -120,25 +134,14 @@ export default function CRM() {
         </div>
       )}
 
-      <LeadDetailModal
-        lead={selectedLead}
-        open={!!selectedLead}
-        onClose={() => setSelectedLead(null)}
-        onUpdate={handleUpdateLead}
-      />
+      <LeadDetailModal lead={selectedLead} open={!!selectedLead} onClose={() => setSelectedLead(null)} onUpdate={handleUpdateLead} />
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="bg-card border-border">
           <DialogHeader><DialogTitle>Nuovo Lead</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div>
-              <Label>Nome contatto</Label>
-              <Input value={newLead.contact_nome} onChange={e => setNewLead(p => ({ ...p, contact_nome: e.target.value }))} className="mt-1 bg-secondary border-border" />
-            </div>
-            <div>
-              <Label>Tipo progetto</Label>
-              <Input value={newLead.tipo_progetto} onChange={e => setNewLead(p => ({ ...p, tipo_progetto: e.target.value }))} className="mt-1 bg-secondary border-border" />
-            </div>
+            <div><Label>Nome contatto</Label><Input value={newLead.contact_nome} onChange={e => setNewLead(p => ({ ...p, contact_nome: e.target.value }))} className="mt-1 bg-secondary border-border" /></div>
+            <div><Label>Tipo progetto</Label><Input value={newLead.tipo_progetto} onChange={e => setNewLead(p => ({ ...p, tipo_progetto: e.target.value }))} className="mt-1 bg-secondary border-border" /></div>
             <div>
               <Label>Canale</Label>
               <Select value={newLead.canale} onValueChange={v => setNewLead(p => ({ ...p, canale: v }))}>
@@ -153,6 +156,76 @@ export default function CRM() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add to mailing list popup */}
+      <Dialog open={!!showAddToMailingList} onOpenChange={() => setShowAddToMailingList(null)}>
+        <DialogContent className="bg-card border-border">
+          <DialogHeader><DialogTitle>🎉 Lead vinto!</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Vuoi aggiungere <strong className="text-foreground">{showAddToMailingList?.contact_nome}</strong> alla mailing list email?
+            </p>
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={() => handleAddToMailingList(showAddToMailingList)}>
+                📧 Sì, aggiungi alla mailing list
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => setShowAddToMailingList(null)}>
+                No, grazie
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+export default function CRM() {
+  const { business } = useBusiness();
+
+  return (
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">CRM & Email Marketing</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Gestisci lead, contatti e campagne email</p>
+      </div>
+
+      <Tabs defaultValue="lead">
+        <TabsList className="bg-secondary w-full overflow-x-auto flex-nowrap scrollbar-none">
+          <TabsTrigger value="lead" className="text-xs shrink-0">👥 Lead</TabsTrigger>
+          <TabsTrigger value="contatti" className="text-xs shrink-0">📋 Contatti</TabsTrigger>
+          <TabsTrigger value="template" className="text-xs shrink-0">🎨 Email Marketing</TabsTrigger>
+          <TabsTrigger value="campagne" className="text-xs shrink-0">🚀 Campagne</TabsTrigger>
+          <TabsTrigger value="statistiche" className="text-xs shrink-0">📊 Statistiche</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="lead" className="mt-4">
+          <LeadsKanban businessId={business?.id} />
+        </TabsContent>
+
+        <TabsContent value="contatti" className="mt-4">
+          <ContactsTab businessId={business?.id} />
+        </TabsContent>
+
+        <TabsContent value="template" className="mt-4 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Libreria Template</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Scegli un template, personalizzalo e usalo nelle tue campagne</p>
+          </div>
+          <TemplateLibrary businessId={business?.id} />
+        </TabsContent>
+
+        <TabsContent value="campagne" className="mt-4 space-y-6">
+          <CampaignsTab businessId={business?.id} />
+          <div className="border-t border-border pt-6">
+            <AutomationsTab businessId={business?.id} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="statistiche" className="mt-4">
+          <EmailStatsTab businessId={business?.id} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
