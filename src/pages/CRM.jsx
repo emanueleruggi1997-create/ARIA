@@ -223,7 +223,7 @@ export default function CRM() {
         <p className="text-sm text-muted-foreground mt-0.5">Gestisci lead, contatti e campagne email</p>
       </div>
 
-      <Tabs defaultValue="lead">
+      <Tabs value={crmTab} onValueChange={setCrmTab}>
         <MobileTabSelect
           value={crmTab}
           onValueChange={setCrmTab}
