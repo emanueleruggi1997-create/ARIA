@@ -54,12 +54,23 @@ export default function SocialManager() {
   const schedulati = posts.filter(p => p.stato === 'schedulato');
   const pubblicati = posts.filter(p => p.stato === 'pubblicato');
 
-  const renderGrid = (list, emptyMsg) => (
+  const renderGrid = (list, isMainEmpty) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
       {list.map(p => (
         <PostCard key={p.id} post={p} onDelete={handleDelete} onDuplicate={handleDuplicate} onChangeStato={handleChangeStato} />
       ))}
-      {list.length === 0 && <p className="text-sm text-muted-foreground col-span-full text-center py-12">{emptyMsg}</p>}
+      {list.length === 0 && (
+        <div className="col-span-full flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <div className="text-5xl mb-4">📱</div>
+          <p className="text-base font-medium text-foreground">Nessun post ancora</p>
+          <p className="text-sm mt-1 mb-4">Crea il tuo primo contenuto social</p>
+          {isMainEmpty && (
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Crea primo post
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 
