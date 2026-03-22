@@ -137,7 +137,7 @@ ${form.escalation_rules.length > 0 ? form.escalation_rules.join('\n') : 'Mai'}`;
   const status = STATUS_MAP[form.stato_agente] || STATUS_MAP.off;
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-4xl">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 max-w-4xl">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -169,7 +169,7 @@ ${form.escalation_rules.length > 0 ? form.escalation_rules.join('\n') : 'Mai'}`;
       </div>
 
       <Tabs defaultValue="identita">
-        <TabsList className="bg-secondary w-full justify-start overflow-x-auto">
+        <TabsList className="bg-secondary w-full justify-start overflow-x-auto scrollbar-none flex-nowrap">
           <TabsTrigger value="identita" className="text-xs">👤 Identità</TabsTrigger>
           <TabsTrigger value="business" className="text-xs">🏢 Business</TabsTrigger>
           <TabsTrigger value="comportamento" className="text-xs">⚙️ Comportamento</TabsTrigger>
@@ -196,7 +196,7 @@ ${form.escalation_rules.length > 0 ? form.escalation_rules.join('\n') : 'Mai'}`;
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
                 <Label>Nome agente</Label>
                 <Input value={form.nome_agente} onChange={e => updateField('nome_agente', e.target.value)} placeholder='Es. "Sofia"' className="mt-1 bg-secondary border-border" />
