@@ -76,9 +76,13 @@ export default function AgentConfig() {
   const autoSave = useCallback(
     debounce(async (data) => {
       if (!business) return;
-      await base44.entities.Business.update(business.id, data);
-      setAutoSaved(true);
-      setTimeout(() => setAutoSaved(false), 2000);
+      try {
+        await base44.entities.Business.update(business.id, data);
+        setAutoSaved(true);
+        setTimeout(() => setAutoSaved(false), 2000);
+      } catch {
+        // silent fail — user can use manual save
+      }
     }, 1500),
     [business]
   );
