@@ -60,7 +60,7 @@ export default function CRM() {
   const convRate = leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0;
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">CRM / Lead</h1>
@@ -70,17 +70,23 @@ export default function CRM() {
             <span className="text-xs text-muted-foreground">Conversione: {convRate}%</span>
           </div>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
+        {/* Desktop button */}
+        <Button onClick={() => setShowCreate(true)} className="hidden md:flex">
           <Plus className="w-4 h-4 mr-2" /> Nuovo Lead
         </Button>
+        {/* Mobile FAB */}
+        <button onClick={() => setShowCreate(true)}
+          className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center">
+          <Plus className="w-6 h-6 text-white" />
+        </button>
       </div>
 
       {/* Kanban */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
         {columns.map(col => {
           const colLeads = leads.filter(l => l.stato === col.id);
           return (
-            <div key={col.id} className="min-w-[240px] flex-1">
+            <div key={col.id} className="min-w-[85vw] md:min-w-[240px] md:flex-1 snap-start shrink-0">
               <div className="flex items-center gap-2 mb-3 px-1">
                 <div className={`w-2 h-2 rounded-full ${col.color}`} />
                 <h3 className="text-sm font-semibold text-foreground">{col.label}</h3>
