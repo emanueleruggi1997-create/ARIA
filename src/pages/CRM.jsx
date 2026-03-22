@@ -222,12 +222,12 @@ export default function CRM() {
       </div>
 
       <Tabs defaultValue="lead">
-        <TabsList className="bg-secondary w-full overflow-x-auto flex-nowrap scrollbar-none">
-          <TabsTrigger value="lead" className="text-xs shrink-0">👥 Lead</TabsTrigger>
-          <TabsTrigger value="contatti" className="text-xs shrink-0">📋 Contatti</TabsTrigger>
-          <TabsTrigger value="template" className="text-xs shrink-0">🎨 Email Marketing</TabsTrigger>
-          <TabsTrigger value="campagne" className="text-xs shrink-0">🚀 Campagne</TabsTrigger>
-          <TabsTrigger value="statistiche" className="text-xs shrink-0">📊 Statistiche</TabsTrigger>
+        <TabsList className="bg-secondary w-full overflow-x-auto flex-nowrap scrollbar-none snap-x">
+          <TabsTrigger value="lead" className="shrink-0 snap-start text-xs px-3 min-w-[72px]">👥 Lead</TabsTrigger>
+          <TabsTrigger value="contatti" className="shrink-0 snap-start text-xs px-3 min-w-[86px]">📋 Contatti</TabsTrigger>
+          <TabsTrigger value="template" className="shrink-0 snap-start text-xs px-3 min-w-[130px]">🎨 Email Marketing</TabsTrigger>
+          <TabsTrigger value="campagne" className="shrink-0 snap-start text-xs px-3 min-w-[90px]">🚀 Campagne</TabsTrigger>
+          <TabsTrigger value="statistiche" className="shrink-0 snap-start text-xs px-3 min-w-[100px]">📊 Statistiche</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lead" className="mt-4">
