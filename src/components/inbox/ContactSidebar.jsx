@@ -19,6 +19,7 @@ export default function ContactSidebar({ contact, businessId, onRefresh }) {
   const [stato, setStato] = useState(contact?.stato || 'lead');
   const [note, setNote] = useState(contact?.note || '');
   const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // 'ok' | 'err'
   const [converting, setConverting] = useState(false);
 
   useEffect(() => {
@@ -31,9 +32,15 @@ export default function ContactSidebar({ contact, businessId, onRefresh }) {
   const handleSave = async () => {
     if (!contact) return;
     setSaving(true);
-    await base44.entities.Contact.update(contact.id, { stato, note });
-    onRefresh?.();
-    toast({ title: 'Contatto aggiornato' });
+    setSaveStatus(null);
+    try {
+      await base44.entities.Contact.update(contact.id, { stato, note });
+      onRefresh?.();
+      setSaveStatus('ok');
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch {
+      setSaveStatus('err');
+    }
     setSaving(false);
   };
 
@@ -99,7 +106,7 @@ export default function ContactSidebar({ contact, businessId, onRefresh }) {
 
         <Button size="sm" variant="outline" className="w-full" onClick={handleSave} disabled={saving}>
           {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
-          Salva
+          {saveStatus === 'ok' ? '💾 Salvato' : saveStatus === 'err' ? '⚠️ Errore' : 'Salva'}
         </Button>
 
         <Button size="sm" className="w-full" onClick={handleConvertToLead} disabled={converting}>
