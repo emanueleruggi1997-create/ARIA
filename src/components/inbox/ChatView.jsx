@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { base44 } from '@/api/base44Client';
@@ -86,9 +86,20 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Modalità manuale</span>
-          <Switch checked={manualMode} onCheckedChange={setManualMode} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              if (window.__addToMailingList) window.__addToMailingList(conversation);
+            }}
+            className="hidden sm:flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-secondary border border-border hover:border-primary/30 text-muted-foreground transition-colors"
+            title="Aggiungi alla mailing list"
+          >
+            <Mail className="w-3 h-3" /> Mailing list
+          </button>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="hidden sm:inline">Manuale</span>
+            <Switch checked={manualMode} onCheckedChange={setManualMode} />
+          </div>
         </div>
       </div>
 
