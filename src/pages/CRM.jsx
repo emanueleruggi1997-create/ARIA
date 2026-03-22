@@ -113,26 +113,56 @@ function LeadsKanban({ businessId }) {
         </div>
       )}
 
+      {/* Mobile: lista verticale con filtro */}
       {leads.length > 0 && (
-        <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
-          {columns.map(col => {
-            const colLeads = leads.filter(l => l.stato === col.id);
-            return (
-              <div key={col.id} className="min-w-[85vw] md:min-w-[240px] md:flex-1 snap-start shrink-0">
-                <div className="flex items-center gap-2 mb-3 px-1">
-                  <div className={`w-2 h-2 rounded-full ${col.color}`} />
-                  <h3 className="text-sm font-semibold text-foreground">{col.label}</h3>
-                  <span className="text-xs text-muted-foreground ml-auto">{colLeads.length}</span>
+        <>
+          {/* Mobile view */}
+          <div className="md:hidden space-y-3">
+            <Select value={mobileFilter} onValueChange={setMobileFilter}>
+              <SelectTrigger className="w-full bg-secondary border-border"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tutti">Tutti ({leads.length})</SelectItem>
+                {columns.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.label} ({leads.filter(l => l.stato === c.id).length})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="space-y-2">
+              {leads.filter(l => mobileFilter === 'tutti' || l.stato === mobileFilter).map(lead => {
+                const col = columns.find(c => c.id === lead.stato);
+                return (
+                  <div key={lead.id} className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${col?.color || 'bg-muted'}`} />
+                    <div className="flex-1">
+                      <LeadCard lead={lead} onClick={setSelectedLead} onDelete={handleDeleteLead} onMove={handleMoveLead} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Desktop Kanban */}
+          <div className="hidden md:flex gap-4 overflow-x-auto pb-4">
+            {columns.map(col => {
+              const colLeads = leads.filter(l => l.stato === col.id);
+              return (
+                <div key={col.id} className="min-w-[240px] flex-1">
+                  <div className="flex items-center gap-2 mb-3 px-1">
+                    <div className={`w-2 h-2 rounded-full ${col.color}`} />
+                    <h3 className="text-sm font-semibold text-foreground">{col.label}</h3>
+                    <span className="text-xs text-muted-foreground ml-auto">{colLeads.length}</span>
+                  </div>
+                  <div className="space-y-2 bg-secondary/30 rounded-xl p-2 min-h-[200px]">
+                    {colLeads.map(lead => (
+                      <LeadCard key={lead.id} lead={lead} onClick={setSelectedLead} onDelete={handleDeleteLead} onMove={handleMoveLead} />
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2 bg-secondary/30 rounded-xl p-2 min-h-[200px]">
-                  {colLeads.map(lead => (
-                    <LeadCard key={lead.id} lead={lead} onClick={setSelectedLead} onDelete={handleDeleteLead} onMove={handleMoveLead} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       <LeadDetailModal lead={selectedLead} open={!!selectedLead} onClose={() => setSelectedLead(null)} onUpdate={handleUpdateLead} />
