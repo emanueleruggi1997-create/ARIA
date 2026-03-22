@@ -153,8 +153,8 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
         </div>
       )}
 
-      {/* Input area */}
-      <div className="p-3 border-t border-border shrink-0 space-y-2">
+      {/* Input area — sticky on mobile */}
+      <div className="p-3 border-t border-border shrink-0 space-y-2 bg-background" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         {manualMode && (
           <div className="flex items-center gap-1 text-xs text-yellow-400 bg-yellow-500/10 rounded-lg px-2 py-1">
             👤 Modalità manuale attiva — l'AI non risponde automaticamente
