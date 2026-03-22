@@ -102,9 +102,9 @@ export default function SocialManager() {
         <TabsContent value="calendario" className="mt-4">
           <CalendarGrid posts={posts} onDayClick={handleDayClick} />
         </TabsContent>
-        <TabsContent value="bozze" className="mt-4">{renderGrid(bozze, 'Nessuna bozza')}</TabsContent>
-        <TabsContent value="schedulati" className="mt-4">{renderGrid(schedulati, 'Nessun post schedulato')}</TabsContent>
-        <TabsContent value="pubblicati" className="mt-4">{renderGrid(pubblicati, 'Nessun post pubblicato')}</TabsContent>
+        <TabsContent value="bozze" className="mt-4">{renderGrid(bozze, false)}</TabsContent>
+        <TabsContent value="schedulati" className="mt-4">{renderGrid(schedulati, false)}</TabsContent>
+        <TabsContent value="pubblicati" className="mt-4">{renderGrid(pubblicati, false)}</TabsContent>
       </Tabs>
 
       <CreatePostModal
