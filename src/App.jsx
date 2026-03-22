@@ -9,7 +9,7 @@ import { BusinessProvider, useBusiness } from '@/lib/useBusinessContext.jsx';
 
 import Dashboard from '@/pages/Dashboard';
 import Inbox from '@/pages/Inbox';
-import CRM from '@/pages/CRM.jsx';
+import CRM from '@/pages/CRM';
 import SocialManager from '@/pages/SocialManager';
 import AgentConfig from '@/pages/AgentConfig';
 import Analytics from '@/pages/Analytics';
