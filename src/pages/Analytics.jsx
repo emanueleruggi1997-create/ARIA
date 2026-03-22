@@ -82,7 +82,7 @@ export default function Analytics() {
   };
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
         <Button variant="outline" onClick={handleExportCSV}>
@@ -90,14 +90,14 @@ export default function Analytics() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <KpiCard title="AI Response Rate" value={`${aiRate}%`} icon={Zap} />
         <KpiCard title="Tempo medio risposta" value="< 30s" icon={Clock} />
         <KpiCard title="Lead convertiti" value={`${wonRate}%`} icon={TrendingUp} />
         <KpiCard title="Post pubblicati" value={publishedThisMonth} icon={Calendar} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Messages by channel */}
         <div className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-sm font-semibold text-foreground mb-4">Messaggi per canale (30 giorni)</h3>
