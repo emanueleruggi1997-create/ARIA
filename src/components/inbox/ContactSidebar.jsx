@@ -143,6 +143,18 @@ export default function ContactSidebar({ contact, businessId, onRefresh }) {
           {converting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <UserPlus className="w-3 h-3 mr-1" />}
           Converti in Lead
         </Button>
+
+        {/* Email marketing section */}
+        <div className="pt-2 border-t border-border">
+          <p className="text-xs font-medium text-muted-foreground uppercase mb-2">📧 Email Marketing</p>
+          <div className="flex items-center justify-between bg-secondary/50 rounded-lg p-2.5">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-foreground">{isSubscribed ? 'Iscritto alla lista' : emailContact ? 'Non iscritto' : 'Non in lista'}</p>
+              {isSubscribed && <p className="text-[10px] text-green-400">✓ Riceve le campagne</p>}
+            </div>
+            <Switch checked={isSubscribed} onCheckedChange={handleToggleMailingList} />
+          </div>
+        </div>
       </div>
     </div>
   );
