@@ -38,23 +38,23 @@ export default function CRM() {
     setSelectedLead(null);
   };
 
+  const handleDeleteLead = async (id) => {
+    await base44.entities.Lead.delete(id);
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+  };
+
+  const handleMoveLead = async (lead, newStato) => {
+    await base44.entities.Lead.update(lead.id, { stato: newStato });
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+  };
+
   const handleCreateLead = async () => {
-    await base44.entities.Lead.create({
-      ...newLead,
-      business_id: business.id,
-      stato: 'nuovo',
-    });
+    await base44.entities.Lead.create({ ...newLead, business_id: business.id, stato: 'nuovo' });
     queryClient.invalidateQueries({ queryKey: ['leads'] });
     setShowCreate(false);
     setNewLead({ contact_nome: '', tipo_progetto: '', canale: 'whatsapp' });
   };
 
-  const handleChangeStatus = async (lead, newStatus) => {
-    await base44.entities.Lead.update(lead.id, { stato: newStatus });
-    queryClient.invalidateQueries({ queryKey: ['leads'] });
-  };
-
-  // Pipeline stats
   const totalValue = leads.reduce((s, l) => s + (l.budget_max || 0), 0);
   const wonLeads = leads.filter(l => l.stato === 'chiuso_vinto').length;
   const convRate = leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0;
@@ -88,7 +88,13 @@ export default function CRM() {
               </div>
               <div className="space-y-2 bg-secondary/30 rounded-xl p-2 min-h-[200px]">
                 {colLeads.map(lead => (
-                  <LeadCard key={lead.id} lead={lead} onClick={setSelectedLead} />
+                  <LeadCard
+                    key={lead.id}
+                    lead={lead}
+                    onClick={setSelectedLead}
+                    onDelete={handleDeleteLead}
+                    onMove={handleMoveLead}
+                  />
                 ))}
               </div>
             </div>
@@ -96,20 +102,16 @@ export default function CRM() {
         })}
       </div>
 
-      {/* Detail modal */}
-      <LeadDetailModal 
-        lead={selectedLead} 
-        open={!!selectedLead} 
-        onClose={() => setSelectedLead(null)} 
-        onUpdate={handleUpdateLead} 
+      <LeadDetailModal
+        lead={selectedLead}
+        open={!!selectedLead}
+        onClose={() => setSelectedLead(null)}
+        onUpdate={handleUpdateLead}
       />
 
-      {/* Create modal */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle>Nuovo Lead</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Nuovo Lead</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>Nome contatto</Label>

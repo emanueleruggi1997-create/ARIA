@@ -14,6 +14,7 @@ export default function SocialManager() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [tab, setTab] = useState('calendario');
+  const [preselectedDate, setPreselectedDate] = useState(null);
 
   const { data: posts = [] } = useQuery({
     queryKey: ['posts', business?.id],
@@ -21,9 +22,46 @@ export default function SocialManager() {
     enabled: !!business?.id,
   });
 
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['posts'] });
+
+  const handleDelete = async (id) => {
+    await base44.entities.Post.delete(id);
+    refresh();
+  };
+
+  const handleDuplicate = async (post) => {
+    await base44.entities.Post.create({
+      business_id: post.business_id,
+      canale: post.canale,
+      caption: post.caption + ' (copia)',
+      hashtags: post.hashtags,
+      stato: 'bozza',
+    });
+    refresh();
+  };
+
+  const handleChangeStato = async (post, newStato) => {
+    await base44.entities.Post.update(post.id, { stato: newStato });
+    refresh();
+  };
+
+  const handleDayClick = (day) => {
+    setPreselectedDate(day);
+    setShowCreate(true);
+  };
+
   const bozze = posts.filter(p => p.stato === 'bozza');
   const schedulati = posts.filter(p => p.stato === 'schedulato');
   const pubblicati = posts.filter(p => p.stato === 'pubblicato');
+
+  const renderGrid = (list, emptyMsg) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {list.map(p => (
+        <PostCard key={p.id} post={p} onDelete={handleDelete} onDuplicate={handleDuplicate} onChangeStato={handleChangeStato} />
+      ))}
+      {list.length === 0 && <p className="text-sm text-muted-foreground col-span-full text-center py-12">{emptyMsg}</p>}
+    </div>
+  );
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -46,40 +84,21 @@ export default function SocialManager() {
           <TabsTrigger value="schedulati">Schedulati ({schedulati.length})</TabsTrigger>
           <TabsTrigger value="pubblicati">Pubblicati ({pubblicati.length})</TabsTrigger>
         </TabsList>
-
         <TabsContent value="calendario" className="mt-4">
-          <CalendarGrid posts={posts} />
+          <CalendarGrid posts={posts} onDayClick={handleDayClick} />
         </TabsContent>
-
-        <TabsContent value="bozze" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {bozze.map(p => <PostCard key={p.id} post={p} />)}
-            {bozze.length === 0 && <p className="text-sm text-muted-foreground col-span-full text-center py-12">Nessuna bozza</p>}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="schedulati" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {schedulati.map(p => <PostCard key={p.id} post={p} />)}
-            {schedulati.length === 0 && <p className="text-sm text-muted-foreground col-span-full text-center py-12">Nessun post schedulato</p>}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="pubblicati" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pubblicati.map(p => <PostCard key={p.id} post={p} />)}
-            {pubblicati.length === 0 && <p className="text-sm text-muted-foreground col-span-full text-center py-12">Nessun post pubblicato</p>}
-          </div>
-        </TabsContent>
+        <TabsContent value="bozze" className="mt-4">{renderGrid(bozze, 'Nessuna bozza')}</TabsContent>
+        <TabsContent value="schedulati" className="mt-4">{renderGrid(schedulati, 'Nessun post schedulato')}</TabsContent>
+        <TabsContent value="pubblicati" className="mt-4">{renderGrid(pubblicati, 'Nessun post pubblicato')}</TabsContent>
       </Tabs>
 
-      <CreatePostModal 
-        open={showCreate} 
-        onClose={() => setShowCreate(false)} 
-        businessId={business?.id} 
+      <CreatePostModal
+        open={showCreate}
+        onClose={() => { setShowCreate(false); setPreselectedDate(null); }}
+        businessId={business?.id}
         businessNome={business?.nome}
         tono={business?.tono}
-        onCreated={() => queryClient.invalidateQueries({ queryKey: ['posts'] })} 
+        onCreated={refresh}
       />
     </div>
   );

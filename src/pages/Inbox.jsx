@@ -13,6 +13,7 @@ export default function Inbox() {
   const queryClient = useQueryClient();
   const [activeConv, setActiveConv] = useState(null);
   const [filter, setFilter] = useState('tutti');
+  const [archived, setArchived] = useState([]); // contact_ids archived locally
 
   const { data: contacts = [] } = useQuery({
     queryKey: ['contacts', business?.id],
@@ -26,11 +27,14 @@ export default function Inbox() {
     enabled: !!business?.id,
   });
 
+  // Local unread override — when a convo is opened, mark its messages as read locally
+  const [readIds, setReadIds] = useState(new Set());
+
   const conversations = useMemo(() => {
     return contacts.map(contact => {
       const msgs = allMessages.filter(m => m.contact_id === contact.id);
       const lastMsg = msgs[0];
-      const unread = msgs.filter(m => !m.letto && m.ruolo === 'user');
+      const unread = msgs.filter(m => !m.letto && m.ruolo === 'user' && !readIds.has(contact.id));
       const lastResponder = lastMsg?.ruolo;
       return {
         contact_id: contact.id,
@@ -42,9 +46,10 @@ export default function Inbox() {
         lastMessageTime: lastMsg?.created_date,
         unreadCount: unread.length,
         lastResponder,
+        archiviata: archived.includes(contact.id),
       };
     }).sort((a, b) => new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0));
-  }, [contacts, allMessages]);
+  }, [contacts, allMessages, readIds, archived]);
 
   const activeMessages = useMemo(() => {
     if (!activeConv) return [];
@@ -55,6 +60,30 @@ export default function Inbox() {
     if (!activeConv) return null;
     return contacts.find(c => c.id === activeConv.contact_id) || null;
   }, [activeConv, contacts]);
+
+  const handleSelect = (conv) => {
+    setActiveConv(conv);
+    // Mark messages as read locally
+    setReadIds(prev => new Set([...prev, conv.contact_id]));
+  };
+
+  const handleMarkRead = (conv) => {
+    setReadIds(prev => new Set([...prev, conv.contact_id]));
+  };
+
+  const handleArchive = (conv) => {
+    setArchived(prev => prev.includes(conv.contact_id) ? prev : [...prev, conv.contact_id]);
+    if (activeConv?.contact_id === conv.contact_id) setActiveConv(null);
+  };
+
+  const handleDelete = async (conv) => {
+    const msgs = allMessages.filter(m => m.contact_id === conv.contact_id);
+    await Promise.all(msgs.map(m => base44.entities.Message.delete(m.id)));
+    await base44.entities.Contact.delete(conv.contact_id);
+    queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    queryClient.invalidateQueries({ queryKey: ['all-messages'] });
+    if (activeConv?.contact_id === conv.contact_id) setActiveConv(null);
+  };
 
   const handleSendMessage = async (text, ruolo) => {
     await base44.entities.Message.create({
@@ -76,7 +105,6 @@ export default function Inbox() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left panel */}
         <div className="w-72 border-r border-border flex flex-col shrink-0">
           <div className="p-3 border-b border-border">
             <Tabs value={filter} onValueChange={setFilter}>
@@ -85,6 +113,7 @@ export default function Inbox() {
                 <TabsTrigger value="whatsapp" className="flex-1 text-xs">WA</TabsTrigger>
                 <TabsTrigger value="instagram" className="flex-1 text-xs">IG</TabsTrigger>
                 <TabsTrigger value="non_letti" className="flex-1 text-xs">🔴</TabsTrigger>
+                <TabsTrigger value="archiviati" className="flex-1 text-xs">📦</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -92,13 +121,15 @@ export default function Inbox() {
             <ConversationList
               conversations={conversations}
               activeId={activeConv?.contact_id}
-              onSelect={setActiveConv}
+              onSelect={handleSelect}
+              onMarkRead={handleMarkRead}
+              onArchive={handleArchive}
+              onDelete={handleDelete}
               filter={filter}
             />
           </div>
         </div>
 
-        {/* Chat */}
         <ChatView
           conversation={activeConv}
           messages={activeMessages}
@@ -106,7 +137,6 @@ export default function Inbox() {
           onRefresh={() => queryClient.invalidateQueries({ queryKey: ['all-messages'] })}
         />
 
-        {/* Contact sidebar */}
         <ContactSidebar
           contact={activeContact}
           businessId={business?.id}
