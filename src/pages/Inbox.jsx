@@ -13,7 +13,6 @@ export default function Inbox() {
   const queryClient = useQueryClient();
   const [activeConv, setActiveConv] = useState(null);
   const [filter, setFilter] = useState('tutti');
-  const [archived, setArchived] = useState([]);
   const [readIds, setReadIds] = useState(new Set());
 
   const { data: contacts = [] } = useQuery({
