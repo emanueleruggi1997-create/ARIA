@@ -19,11 +19,18 @@ const STATI = [
 
 export default function ContactSidebar({ contact, businessId, onRefresh }) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [stato, setStato] = useState(contact?.stato || 'lead');
   const [note, setNote] = useState(contact?.note || '');
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(null); // 'ok' | 'err'
+  const [saveStatus, setSaveStatus] = useState(null);
   const [converting, setConverting] = useState(false);
+
+  const { data: emailContacts = [] } = useQuery({
+    queryKey: ['contacts-email', businessId],
+    queryFn: () => base44.entities.ContactEmail.filter({ business_id: businessId }),
+    enabled: !!businessId,
+  });
 
   useEffect(() => {
     if (contact) {
@@ -31,6 +38,26 @@ export default function ContactSidebar({ contact, businessId, onRefresh }) {
       setNote(contact.note || '');
     }
   }, [contact?.id]);
+
+  const emailContact = contact ? emailContacts.find(c => c.nome === contact.nome || (contact.numero && c.email?.includes(contact.numero))) : null;
+  const isSubscribed = emailContact?.stato === 'attivo';
+
+  const handleToggleMailingList = async () => {
+    if (!contact) return;
+    if (emailContact) {
+      await base44.entities.ContactEmail.update(emailContact.id, { stato: isSubscribed ? 'disiscritto' : 'attivo' });
+    } else {
+      await base44.entities.ContactEmail.create({
+        business_id: businessId,
+        nome: contact.nome,
+        email: '',
+        tags: [],
+        fonte: contact.canale || 'manuale',
+        stato: 'attivo',
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ['contacts-email'] });
+  };
 
   const handleSave = async () => {
     if (!contact) return;
