@@ -55,7 +55,7 @@ export default function SocialManager() {
   const pubblicati = posts.filter(p => p.stato === 'pubblicato');
 
   const renderGrid = (list, emptyMsg) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
       {list.map(p => (
         <PostCard key={p.id} post={p} onDelete={handleDelete} onDuplicate={handleDuplicate} onChangeStato={handleChangeStato} />
       ))}
@@ -64,7 +64,7 @@ export default function SocialManager() {
   );
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Social Manager</h1>
@@ -72,9 +72,13 @@ export default function SocialManager() {
             {bozze.length} bozze · {schedulati.length} schedulati · {pubblicati.length} pubblicati
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
+        <Button onClick={() => setShowCreate(true)} className="hidden md:flex">
           <Plus className="w-4 h-4 mr-2" /> Nuovo Post
         </Button>
+        <button onClick={() => setShowCreate(true)}
+          className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center">
+          <Plus className="w-6 h-6 text-white" />
+        </button>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
