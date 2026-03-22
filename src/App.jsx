@@ -16,6 +16,7 @@ import Analytics from '@/pages/Analytics';
 import Settings from '@/pages/Settings';
 import Admin from '@/pages/Admin';
 import Onboarding from '@/pages/Onboarding';
+import SystemCheck from '@/pages/SystemCheck';
 import AppLayout from '@/components/layout/AppLayout';
 
 const AppContent = () => {

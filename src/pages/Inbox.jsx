@@ -4,7 +4,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import ConversationList from '@/components/inbox/ConversationList';
 import ChatView from '@/components/inbox/ChatView';
+import ContactSidebar from '@/components/inbox/ContactSidebar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MessageSquare } from 'lucide-react';
 
 export default function Inbox() {
   const { business } = useBusiness();
@@ -29,13 +31,17 @@ export default function Inbox() {
       const msgs = allMessages.filter(m => m.contact_id === contact.id);
       const lastMsg = msgs[0];
       const unread = msgs.filter(m => !m.letto && m.ruolo === 'user');
+      const lastResponder = lastMsg?.ruolo;
       return {
         contact_id: contact.id,
         nome: contact.nome,
         canale: contact.canale,
+        stato: contact.stato,
+        numero: contact.numero,
         lastMessage: lastMsg?.testo || '',
         lastMessageTime: lastMsg?.created_date,
         unreadCount: unread.length,
+        lastResponder,
       };
     }).sort((a, b) => new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0));
   }, [contacts, allMessages]);
@@ -44,6 +50,11 @@ export default function Inbox() {
     if (!activeConv) return [];
     return allMessages.filter(m => m.contact_id === activeConv.contact_id).reverse();
   }, [activeConv, allMessages]);
+
+  const activeContact = useMemo(() => {
+    if (!activeConv) return null;
+    return contacts.find(c => c.id === activeConv.contact_id) || null;
+  }, [activeConv, contacts]);
 
   const handleSendMessage = async (text, ruolo) => {
     await base44.entities.Message.create({
@@ -59,35 +70,47 @@ export default function Inbox() {
 
   return (
     <div className="h-screen flex flex-col">
-      {/* Page header */}
-      <div className="h-14 px-6 flex items-center border-b border-border shrink-0">
+      <div className="h-14 px-6 flex items-center border-b border-border shrink-0 gap-3">
+        <MessageSquare className="w-5 h-5 text-primary" />
         <h1 className="text-lg font-bold text-foreground">Inbox</h1>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         {/* Left panel */}
-        <div className="w-80 border-r border-border flex flex-col shrink-0">
+        <div className="w-72 border-r border-border flex flex-col shrink-0">
           <div className="p-3 border-b border-border">
             <Tabs value={filter} onValueChange={setFilter}>
               <TabsList className="w-full bg-secondary">
                 <TabsTrigger value="tutti" className="flex-1 text-xs">Tutti</TabsTrigger>
                 <TabsTrigger value="whatsapp" className="flex-1 text-xs">WA</TabsTrigger>
                 <TabsTrigger value="instagram" className="flex-1 text-xs">IG</TabsTrigger>
-                <TabsTrigger value="non_letti" className="flex-1 text-xs">Non letti</TabsTrigger>
+                <TabsTrigger value="non_letti" className="flex-1 text-xs">🔴</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
-            <ConversationList conversations={conversations} activeId={activeConv?.contact_id} onSelect={setActiveConv} filter={filter} />
+            <ConversationList
+              conversations={conversations}
+              activeId={activeConv?.contact_id}
+              onSelect={setActiveConv}
+              filter={filter}
+            />
           </div>
         </div>
 
         {/* Chat */}
-        <ChatView 
-          conversation={activeConv} 
-          messages={activeMessages} 
-          onSendMessage={handleSendMessage} 
+        <ChatView
+          conversation={activeConv}
+          messages={activeMessages}
+          onSendMessage={handleSendMessage}
           onRefresh={() => queryClient.invalidateQueries({ queryKey: ['all-messages'] })}
+        />
+
+        {/* Contact sidebar */}
+        <ContactSidebar
+          contact={activeContact}
+          businessId={business?.id}
+          onRefresh={() => queryClient.invalidateQueries({ queryKey: ['contacts'] })}
         />
       </div>
     </div>
