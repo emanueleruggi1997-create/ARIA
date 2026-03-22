@@ -59,7 +59,7 @@ export default function Settings() {
   const igConnected = !!form.ig_username;
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-2xl">
+    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Impostazioni</h1>
         <Button variant="ghost" className="text-destructive text-sm" onClick={() => base44.auth.logout()}>
@@ -68,7 +68,7 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="generale">
-        <TabsList className="bg-secondary w-full">
+        <TabsList className="bg-secondary w-full overflow-x-auto flex-nowrap">
           <TabsTrigger value="generale" className="flex-1 text-xs">⚙️ Generale</TabsTrigger>
           <TabsTrigger value="connessioni" className="flex-1 text-xs">🔗 Connessioni</TabsTrigger>
           <TabsTrigger value="piano" className="flex-1 text-xs">💳 Piano</TabsTrigger>
