@@ -37,6 +37,7 @@ const STATUS_MAP = {
 export default function AgentConfig() {
   const { business, refreshBusiness } = useBusiness();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('identita');
   const [saving, setSaving] = useState(false);
   const [autoSaved, setAutoSaved] = useState(false);
   const [form, setForm] = useState({

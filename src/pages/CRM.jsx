@@ -214,6 +214,7 @@ function LeadsKanban({ businessId }) {
 
 export default function CRM() {
   const { business } = useBusiness();
+  const [crmTab, setCrmTab] = useState('lead');
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">

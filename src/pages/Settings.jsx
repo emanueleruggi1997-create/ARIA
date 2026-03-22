@@ -21,6 +21,7 @@ export default function Settings() {
   const { business, refreshBusiness } = useBusiness();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('generale');
   const [saving, setSaving] = useState(false);
   const [testingWa, setTestingWa] = useState(false);
   const [waStatus, setWaStatus] = useState(null);
