@@ -70,43 +70,55 @@ export default function CRM() {
             <span className="text-xs text-muted-foreground">Conversione: {convRate}%</span>
           </div>
         </div>
-        {/* Desktop button */}
         <Button onClick={() => setShowCreate(true)} className="hidden md:flex">
           <Plus className="w-4 h-4 mr-2" /> Nuovo Lead
         </Button>
-        {/* Mobile FAB */}
         <button onClick={() => setShowCreate(true)}
           className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center">
           <Plus className="w-6 h-6 text-white" />
         </button>
       </div>
 
+      {/* Empty state */}
+      {leads.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+          <div className="text-5xl mb-4">👥</div>
+          <p className="text-base font-medium text-foreground">Nessun lead ancora</p>
+          <p className="text-sm mt-1 mb-4">Aggiungi il tuo primo lead per iniziare</p>
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="w-4 h-4 mr-2" /> Aggiungi primo lead
+          </Button>
+        </div>
+      )}
+
       {/* Kanban */}
-      <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
-        {columns.map(col => {
-          const colLeads = leads.filter(l => l.stato === col.id);
-          return (
-            <div key={col.id} className="min-w-[85vw] md:min-w-[240px] md:flex-1 snap-start shrink-0">
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <div className={`w-2 h-2 rounded-full ${col.color}`} />
-                <h3 className="text-sm font-semibold text-foreground">{col.label}</h3>
-                <span className="text-xs text-muted-foreground ml-auto">{colLeads.length}</span>
+      {leads.length > 0 && (
+        <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
+          {columns.map(col => {
+            const colLeads = leads.filter(l => l.stato === col.id);
+            return (
+              <div key={col.id} className="min-w-[85vw] md:min-w-[240px] md:flex-1 snap-start shrink-0">
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <div className={`w-2 h-2 rounded-full ${col.color}`} />
+                  <h3 className="text-sm font-semibold text-foreground">{col.label}</h3>
+                  <span className="text-xs text-muted-foreground ml-auto">{colLeads.length}</span>
+                </div>
+                <div className="space-y-2 bg-secondary/30 rounded-xl p-2 min-h-[200px]">
+                  {colLeads.map(lead => (
+                    <LeadCard
+                      key={lead.id}
+                      lead={lead}
+                      onClick={setSelectedLead}
+                      onDelete={handleDeleteLead}
+                      onMove={handleMoveLead}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2 bg-secondary/30 rounded-xl p-2 min-h-[200px]">
-                {colLeads.map(lead => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    onClick={setSelectedLead}
-                    onDelete={handleDeleteLead}
-                    onMove={handleMoveLead}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       <LeadDetailModal
         lead={selectedLead}
