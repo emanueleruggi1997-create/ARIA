@@ -68,13 +68,17 @@ export default function Settings() {
         </Button>
       </div>
 
-      <Tabs defaultValue="generale">
-        <TabsList className="bg-secondary w-full overflow-x-auto flex-nowrap scrollbar-none snap-x">
-          <TabsTrigger value="generale" className="shrink-0 snap-start text-xs px-4 min-w-[80px]">⚙️ Generale</TabsTrigger>
-          <TabsTrigger value="connessioni" className="shrink-0 snap-start text-xs px-4 min-w-[100px]">🔗 Connessioni</TabsTrigger>
-          <TabsTrigger value="piano" className="shrink-0 snap-start text-xs px-4 min-w-[72px]">💳 Piano</TabsTrigger>
-          <TabsTrigger value="notifiche" className="shrink-0 snap-start text-xs px-4 min-w-[90px]">🔔 Notifiche</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <MobileTabSelect
+          value={activeTab}
+          onValueChange={setActiveTab}
+          tabs={[
+            { value: 'generale', label: '⚙️ Generale' },
+            { value: 'connessioni', label: '🔗 Connessioni' },
+            { value: 'piano', label: '💳 Piano' },
+            { value: 'notifiche', label: '🔔 Notifiche' },
+          ]}
+        />
 
         {/* Generale */}
         <TabsContent value="generale" className="space-y-4 mt-4">

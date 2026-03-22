@@ -173,14 +173,18 @@ ${form.escalation_rules.length > 0 ? form.escalation_rules.join('\n') : 'Mai'}`;
         </div>
       </div>
 
-      <Tabs defaultValue="identita">
-        <TabsList className="bg-secondary w-full justify-start overflow-x-auto scrollbar-none flex-nowrap snap-x">
-          <TabsTrigger value="identita" className="shrink-0 snap-start text-xs px-3 min-w-[80px]">👤 Identità</TabsTrigger>
-          <TabsTrigger value="business" className="shrink-0 snap-start text-xs px-3 min-w-[80px]">🏢 Business</TabsTrigger>
-          <TabsTrigger value="comportamento" className="shrink-0 snap-start text-xs px-3 min-w-[110px]">⚙️ Comportamento</TabsTrigger>
-          <TabsTrigger value="simulatore" className="shrink-0 snap-start text-xs px-3 min-w-[90px]">💬 Simulatore</TabsTrigger>
-          <TabsTrigger value="prompt" className="shrink-0 snap-start text-xs px-3 min-w-[120px]">🧠 Prompt Avanzato</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <MobileTabSelect
+          value={activeTab}
+          onValueChange={setActiveTab}
+          tabs={[
+            { value: 'identita', label: '👤 Identità' },
+            { value: 'business', label: '🏢 Business' },
+            { value: 'comportamento', label: '⚙️ Comportamento' },
+            { value: 'simulatore', label: '💬 Simulatore' },
+            { value: 'prompt', label: '🧠 Prompt Avanzato' },
+          ]}
+        />
 
         {/* Tab Identità */}
         <TabsContent value="identita" className="space-y-4 mt-4">

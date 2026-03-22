@@ -223,13 +223,17 @@ export default function CRM() {
       </div>
 
       <Tabs defaultValue="lead">
-        <TabsList className="bg-secondary w-full overflow-x-auto flex-nowrap scrollbar-none snap-x">
-          <TabsTrigger value="lead" className="shrink-0 snap-start text-xs px-3 min-w-[72px]">👥 Lead</TabsTrigger>
-          <TabsTrigger value="contatti" className="shrink-0 snap-start text-xs px-3 min-w-[86px]">📋 Contatti</TabsTrigger>
-          <TabsTrigger value="template" className="shrink-0 snap-start text-xs px-3 min-w-[130px]">🎨 Email Marketing</TabsTrigger>
-          <TabsTrigger value="campagne" className="shrink-0 snap-start text-xs px-3 min-w-[90px]">🚀 Campagne</TabsTrigger>
-          <TabsTrigger value="statistiche" className="shrink-0 snap-start text-xs px-3 min-w-[100px]">📊 Statistiche</TabsTrigger>
-        </TabsList>
+        <MobileTabSelect
+          value={crmTab}
+          onValueChange={setCrmTab}
+          tabs={[
+            { value: 'lead', label: '👥 Lead' },
+            { value: 'contatti', label: '📋 Contatti' },
+            { value: 'template', label: '🎨 Email Marketing' },
+            { value: 'campagne', label: '🚀 Campagne' },
+            { value: 'statistiche', label: '📊 Statistiche' },
+          ]}
+        />
 
         <TabsContent value="lead" className="mt-4">
           <LeadsKanban businessId={business?.id} />
