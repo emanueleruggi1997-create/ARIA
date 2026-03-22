@@ -44,15 +44,22 @@ export default function Analytics() {
     enabled: !!business?.id,
   });
 
-  // Messages by channel over 30 days
-  const waMessages = messages.filter(m => m.canale === 'whatsapp').length;
-  const igMessages = messages.filter(m => m.canale === 'instagram').length;
-  const channelData = [
-    { name: 'Settimana 1', whatsapp: Math.round(waMessages * 0.2), instagram: Math.round(igMessages * 0.2) },
-    { name: 'Settimana 2', whatsapp: Math.round(waMessages * 0.25), instagram: Math.round(igMessages * 0.3) },
-    { name: 'Settimana 3', whatsapp: Math.round(waMessages * 0.3), instagram: Math.round(igMessages * 0.25) },
-    { name: 'Settimana 4', whatsapp: Math.round(waMessages * 0.25), instagram: Math.round(igMessages * 0.25) },
-  ];
+  // Messages by channel — real weekly buckets (last 4 weeks)
+  const channelData = Array.from({ length: 4 }, (_, i) => {
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - (3 - i) * 7 - 6);
+    const weekEnd = new Date();
+    weekEnd.setDate(weekEnd.getDate() - (3 - i) * 7 + 1);
+    const weekMsgs = messages.filter(m => {
+      const d = new Date(m.created_date);
+      return d >= weekStart && d <= weekEnd;
+    });
+    return {
+      name: `Sett. ${i + 1}`,
+      whatsapp: weekMsgs.filter(m => m.canale === 'whatsapp').length,
+      instagram: weekMsgs.filter(m => m.canale === 'instagram').length,
+    };
+  });
 
   // Leads by status
   const leadStatusData = ['nuovo', 'qualificato', 'preventivo_inviato', 'chiuso_vinto', 'chiuso_perso'].map(s => ({
