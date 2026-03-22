@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { startOfMonth, endOfMonth, eachDayOfInterval, format, isToday, isSameDay } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 
 export default function CalendarGrid({ posts, onDayClick }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const touchStartX = useRef(null);
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);

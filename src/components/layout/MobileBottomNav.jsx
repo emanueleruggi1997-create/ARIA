@@ -7,7 +7,7 @@ import { base44 } from '@/api/base44Client';
 const mainNav = [
   { path: '/', icon: LayoutDashboard, label: 'Home' },
   { path: '/inbox', icon: MessageSquare, label: 'Inbox' },
-  { path: '/crm', icon: Users, label: 'CRM' },
+  { path: '/crm', icon: Users, label: 'CRM' }, // CRM & Email
   { path: '/social', icon: Calendar, label: 'Social' },
 ];
 

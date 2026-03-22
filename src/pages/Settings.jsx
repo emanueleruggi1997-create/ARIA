@@ -11,9 +11,9 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 const PIANI = [
-  { id: 'starter', label: 'Starter', prezzo: '99€/mese', desc: '1 account, 20 post/mese', features: ['1 business', '20 post/mese', 'AI di base'] },
-  { id: 'pro', label: 'Pro', prezzo: '199€/mese', desc: '3 account, 60 post/mese', features: ['3 business', '60 post/mese', 'AI avanzata', 'Analytics'] },
-  { id: 'agency', label: 'Agency', prezzo: '399€/mese', desc: 'Illimitato, white label', features: ['Illimitato', 'White label', 'API access', 'Supporto prioritario'] },
+  { id: 'starter', label: 'Starter', prezzo: '99€/mese', desc: '1 business, 1.000 email/mese', features: ['1 business', '20 post/mese', '1.000 email/mese', 'AI di base'] },
+  { id: 'pro', label: 'Pro', prezzo: '199€/mese', desc: '3 business, 10.000 email/mese', features: ['3 business', '60 post/mese', '10.000 email/mese', 'AI avanzata', 'Analytics'] },
+  { id: 'agency', label: 'Agency', prezzo: '399€/mese', desc: 'Illimitato, email illimitate', features: ['Illimitato', 'Email illimitate', 'White label', 'API access', 'Supporto prioritario'] },
 ];
 
 export default function Settings() {
