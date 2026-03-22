@@ -4,7 +4,7 @@ import {
   LayoutDashboard, MessageSquare, Users, Calendar, 
   Bot, BarChart3, Settings, Shield, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { useBusiness } from '@/lib/useBusinessContext';
+import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { cn } from '@/lib/utils';
 
 const navItems = [

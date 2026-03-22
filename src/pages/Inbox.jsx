@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useBusiness } from '@/lib/useBusinessContext';
+import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import ConversationList from '@/components/inbox/ConversationList';
 import ChatView from '@/components/inbox/ChatView';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';

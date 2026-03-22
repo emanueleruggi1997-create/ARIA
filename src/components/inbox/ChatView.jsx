@@ -5,7 +5,7 @@ import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { base44 } from '@/api/base44Client';
-import { useBusiness } from '@/lib/useBusinessContext';
+import { useBusiness } from '@/lib/useBusinessContext.jsx';
 
 export default function ChatView({ conversation, messages, onSendMessage, onRefresh }) {
   const [text, setText] = useState('');

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useBusiness } from '@/lib/useBusinessContext';
+import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import LeadCard from '@/components/crm/LeadCard';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
 import { Button } from '@/components/ui/button';

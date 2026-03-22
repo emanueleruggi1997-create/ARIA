@@ -1,7 +1,7 @@
 import React from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { useBusiness } from '@/lib/useBusinessContext';
+import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import KpiCard from '@/components/dashboard/KpiCard';
 import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
 import MessagesChart from '@/components/dashboard/MessagesChart';

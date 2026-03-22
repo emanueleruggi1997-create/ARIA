@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Bot, ArrowRight, ArrowLeft, Check } from 'lucide-react';
-import { useBusiness } from '@/lib/useBusinessContext';
+import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { cn } from '@/lib/utils';
 
 const steps = ['Business', 'Canali', 'Configurazione'];

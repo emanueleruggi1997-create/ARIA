@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, FileText, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { useBusiness } from '@/lib/useBusinessContext';
+import { useBusiness } from '@/lib/useBusinessContext.jsx';
 
 const statoLabels = {
   nuovo: 'Nuovo', qualificato: 'Qualificato', preventivo_inviato: 'Preventivo Inviato',
