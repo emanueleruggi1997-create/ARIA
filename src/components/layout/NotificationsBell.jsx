@@ -20,8 +20,15 @@ export default function NotificationsBell() {
 
   const markAllRead = () => setNotifications(p => p.map(n => ({ ...n, read: true })));
 
+  const toggleOpen = () => {
+    if (!open) {
+      // Mark all as read when opening
+      setNotifications(p => p.map(n => ({ ...n, read: true })));
+    }
+    setOpen(v => !v);
+  };
+
   const handleClick = (n) => {
-    setNotifications(p => p.map(x => x.id === n.id ? { ...x, read: true } : x));
     setOpen(false);
     navigate(n.path);
   };
@@ -29,7 +36,7 @@ export default function NotificationsBell() {
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={toggleOpen}
         className="relative w-9 h-9 rounded-xl bg-secondary border border-border flex items-center justify-center hover:border-primary/30 transition-all"
       >
         <Bell className="w-4 h-4 text-foreground" />
@@ -46,22 +53,20 @@ export default function NotificationsBell() {
           <div className="absolute right-0 top-11 z-50 w-80 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <p className="text-sm font-semibold text-foreground">Notifiche</p>
-              {unread > 0 && (
-                <button onClick={markAllRead} className="text-xs text-primary hover:underline">
-                  Segna tutte come lette
-                </button>
-              )}
+              <button onClick={markAllRead} className="text-xs text-primary hover:underline">
+                Segna tutte come lette
+              </button>
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-border">
               {notifications.map(n => (
                 <button
                   key={n.id}
                   onClick={() => handleClick(n)}
-                  className={cn("w-full text-left px-4 py-3 hover:bg-secondary/50 transition-colors", !n.read && "bg-primary/5")}
+                  className={cn("w-full text-left px-4 py-3 hover:bg-secondary/50 transition-colors relative", !n.read && "bg-primary/5")}
                 >
-                  <p className="text-sm text-foreground">{n.text}</p>
+                  {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-primary absolute right-4 top-1/2 -translate-y-1/2" />}
+                  <p className="text-sm text-foreground pr-4">{n.text}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{n.time}</p>
-                  {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-primary absolute right-4 mt-[-18px]" />}
                 </button>
               ))}
             </div>
