@@ -100,7 +100,18 @@ export default function SocialManager() {
           <TabsTrigger value="pubblicati">Pubblicati ({pubblicati.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="calendario" className="mt-4">
-          <CalendarGrid posts={posts} onDayClick={handleDayClick} />
+          {posts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <div className="text-5xl mb-4">📱</div>
+              <p className="text-base font-medium text-foreground">Nessun post ancora</p>
+              <p className="text-sm mt-1 mb-4">Crea il tuo primo contenuto social</p>
+              <Button onClick={() => setShowCreate(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Crea primo post
+              </Button>
+            </div>
+          ) : (
+            <CalendarGrid posts={posts} onDayClick={handleDayClick} />
+          )}
         </TabsContent>
         <TabsContent value="bozze" className="mt-4">{renderGrid(bozze, false)}</TabsContent>
         <TabsContent value="schedulati" className="mt-4">{renderGrid(schedulati, false)}</TabsContent>
