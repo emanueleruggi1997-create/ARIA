@@ -31,6 +31,7 @@ function LeadsKanban({ businessId }) {
   const [showCreate, setShowCreate] = useState(false);
   const [showAddToMailingList, setShowAddToMailingList] = useState(null);
   const [newLead, setNewLead] = useState({ contact_nome: '', tipo_progetto: '', canale: 'whatsapp' });
+  const [mobileFilter, setMobileFilter] = useState('tutti');
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads', businessId],
