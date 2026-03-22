@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
+import MobileTabSelect from '@/components/ui/MobileTabSelect';
 import { Bot, Save, Loader2, RotateCcw, Copy } from 'lucide-react';
 import AgentSimulator from '@/components/agent/AgentSimulator';
 import AgentAvatar, { AVATAR_COLORS } from '@/components/AgentAvatar';
