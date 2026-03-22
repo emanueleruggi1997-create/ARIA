@@ -19,8 +19,22 @@ export default function CalendarGrid({ posts, onDayClick }) {
   const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
   const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
 
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) nextMonth(); // swipe LEFT → next month
+      else prevMonth();          // swipe RIGHT → prev month
+    }
+    touchStartX.current = null;
+  };
+
   return (
-    <div className="bg-card border border-border rounded-xl p-5">
+    <div className="bg-card border border-border rounded-xl p-5"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-foreground capitalize">
           {format(currentMonth, 'MMMM yyyy', { locale: it })}
