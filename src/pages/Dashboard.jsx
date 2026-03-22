@@ -10,15 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-const mockChartData = [
-  { giorno: 'Lun', messaggi: 12 },
-  { giorno: 'Mar', messaggi: 19 },
-  { giorno: 'Mer', messaggi: 8 },
-  { giorno: 'Gio', messaggi: 24 },
-  { giorno: 'Ven', messaggi: 17 },
-  { giorno: 'Sab', messaggi: 6 },
-  { giorno: 'Dom', messaggi: 3 },
-];
+const GIORNI_LABELS = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 
 export default function Dashboard() {
   const { business } = useBusiness();
@@ -41,7 +33,7 @@ export default function Dashboard() {
     enabled: !!business?.id,
   });
 
-  const unreadMessages = messages.filter(m => !m.letto);
+  const unreadMessages = messages.filter(m => !m.letto && m.ruolo === 'user');
   const todayMessages = messages.filter(m => {
     const d = new Date(m.created_date);
     const now = new Date();
@@ -50,6 +42,17 @@ export default function Dashboard() {
   const activeLeads = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato));
   const aiMessages = messages.filter(m => m.ruolo === 'assistant');
   const aiRate = messages.length > 0 ? Math.round((aiMessages.length / messages.length) * 100) : 0;
+
+  // Build real chart data from last 7 days
+  const chartData = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dateStr = d.toDateString();
+    return {
+      giorno: GIORNI_LABELS[d.getDay()],
+      messaggi: messages.filter(m => new Date(m.created_date).toDateString() === dateStr).length,
+    };
+  });
 
   const statoLabels = {
     nuovo: 'Nuovo',
@@ -83,7 +86,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart */}
         <div className="lg:col-span-2">
-          <MessagesChart data={mockChartData} />
+          <MessagesChart data={chartData} />
         </div>
 
         {/* Recent leads */}
