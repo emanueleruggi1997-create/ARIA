@@ -23,7 +23,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   return (
     <aside className={cn(
-      "fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border z-40 flex flex-col transition-all duration-300",
+      "hidden md:flex fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border z-40 flex-col transition-all duration-300",
       collapsed ? "w-[68px]" : "w-[240px]"
     )}>
       {/* Logo */}
