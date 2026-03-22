@@ -173,12 +173,12 @@ ${form.escalation_rules.length > 0 ? form.escalation_rules.join('\n') : 'Mai'}`;
       </div>
 
       <Tabs defaultValue="identita">
-        <TabsList className="bg-secondary w-full justify-start overflow-x-auto scrollbar-none flex-nowrap">
-          <TabsTrigger value="identita" className="text-xs">👤 Identità</TabsTrigger>
-          <TabsTrigger value="business" className="text-xs">🏢 Business</TabsTrigger>
-          <TabsTrigger value="comportamento" className="text-xs">⚙️ Comportamento</TabsTrigger>
-          <TabsTrigger value="simulatore" className="text-xs">💬 Simulatore</TabsTrigger>
-          <TabsTrigger value="prompt" className="text-xs">🧠 Prompt Avanzato</TabsTrigger>
+        <TabsList className="bg-secondary w-full justify-start overflow-x-auto scrollbar-none flex-nowrap snap-x">
+          <TabsTrigger value="identita" className="shrink-0 snap-start text-xs px-3 min-w-[80px]">👤 Identità</TabsTrigger>
+          <TabsTrigger value="business" className="shrink-0 snap-start text-xs px-3 min-w-[80px]">🏢 Business</TabsTrigger>
+          <TabsTrigger value="comportamento" className="shrink-0 snap-start text-xs px-3 min-w-[110px]">⚙️ Comportamento</TabsTrigger>
+          <TabsTrigger value="simulatore" className="shrink-0 snap-start text-xs px-3 min-w-[90px]">💬 Simulatore</TabsTrigger>
+          <TabsTrigger value="prompt" className="shrink-0 snap-start text-xs px-3 min-w-[120px]">🧠 Prompt Avanzato</TabsTrigger>
         </TabsList>
 
         {/* Tab Identità */}
@@ -186,14 +186,14 @@ ${form.escalation_rules.length > 0 ? form.escalation_rules.join('\n') : 'Mai'}`;
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             <div>
               <Label>Avatar agente</Label>
-              <div className="flex items-center gap-3 mt-2">
+              <div className="flex items-start gap-4 mt-2">
                 <AgentAvatar nome={form.nome_agente} color={form.avatar_agente || '#3B6EF8'} size="lg" />
-                <div className="flex gap-2 flex-wrap">
+                <div className="grid grid-cols-5 gap-2 flex-1">
                   {AVATAR_COLORS.map(c => (
                     <button key={c.id} onClick={() => updateField('avatar_agente', c.id)}
                       title={c.label}
                       style={{ background: c.id }}
-                      className={cn("w-8 h-8 rounded-full border-2 transition-all",
+                      className={cn("w-10 h-10 rounded-full border-2 transition-all",
                         form.avatar_agente === c.id ? 'border-white scale-110' : 'border-transparent hover:border-white/50'
                       )} />
                   ))}

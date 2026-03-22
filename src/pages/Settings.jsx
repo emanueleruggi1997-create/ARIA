@@ -68,11 +68,11 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="generale">
-        <TabsList className="bg-secondary w-full overflow-x-auto flex-nowrap">
-          <TabsTrigger value="generale" className="flex-1 text-xs">⚙️ Generale</TabsTrigger>
-          <TabsTrigger value="connessioni" className="flex-1 text-xs">🔗 Connessioni</TabsTrigger>
-          <TabsTrigger value="piano" className="flex-1 text-xs">💳 Piano</TabsTrigger>
-          <TabsTrigger value="notifiche" className="flex-1 text-xs">🔔 Notifiche</TabsTrigger>
+        <TabsList className="bg-secondary w-full overflow-x-auto flex-nowrap scrollbar-none snap-x">
+          <TabsTrigger value="generale" className="shrink-0 snap-start text-xs px-4 min-w-[80px]">⚙️ Generale</TabsTrigger>
+          <TabsTrigger value="connessioni" className="shrink-0 snap-start text-xs px-4 min-w-[100px]">🔗 Connessioni</TabsTrigger>
+          <TabsTrigger value="piano" className="shrink-0 snap-start text-xs px-4 min-w-[72px]">💳 Piano</TabsTrigger>
+          <TabsTrigger value="notifiche" className="shrink-0 snap-start text-xs px-4 min-w-[90px]">🔔 Notifiche</TabsTrigger>
         </TabsList>
 
         {/* Generale */}
@@ -89,7 +89,7 @@ export default function Settings() {
                 <Input value={form.settore} onChange={e => setForm(p => ({ ...p, settore: e.target.value }))} className="mt-1 bg-secondary border-border" />
               </div>
             </div>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Salva
             </Button>
@@ -160,7 +160,7 @@ export default function Settings() {
             </Button>
           </div>
 
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto">
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Salva connessioni
           </Button>
@@ -212,7 +212,7 @@ export default function Settings() {
               <Label>Email per notifiche</Label>
               <Input value={form.email_notifica} onChange={e => setForm(p => ({ ...p, email_notifica: e.target.value }))} className="mt-1 bg-secondary border-border" placeholder="email@esempio.com" />
             </div>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
               Salva
             </Button>

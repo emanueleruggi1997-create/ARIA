@@ -40,30 +40,30 @@ export default function CalendarGrid({ posts, onDayClick }) {
           {format(currentMonth, 'MMMM yyyy', { locale: it })}
         </h3>
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={prevMonth}><ChevronLeft className="w-4 h-4" /></Button>
-          <Button variant="ghost" size="icon" className="w-7 h-7" onClick={nextMonth}><ChevronRight className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" className="w-11 h-11" onClick={prevMonth}><ChevronLeft className="w-5 h-5" /></Button>
+          <Button variant="ghost" size="icon" className="w-11 h-11" onClick={nextMonth}><ChevronRight className="w-5 h-5" /></Button>
         </div>
       </div>
 
       <div className="grid grid-cols-7 gap-px">
-        {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(d => (
-          <div key={d} className="text-center text-[10px] font-medium text-muted-foreground pb-2">{d}</div>
+        {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((d, i) => (
+          <div key={i} className="text-center text-xs font-medium text-muted-foreground pb-2">{d}</div>
         ))}
-        {Array(paddedStart).fill(null).map((_, i) => <div key={`pad-${i}`} className="aspect-square" />)}
+        {Array(paddedStart).fill(null).map((_, i) => <div key={`pad-${i}`} className="min-h-[44px]" />)}
         {days.map(day => {
           const dayPosts = posts.filter(p => p.scheduled_at && isSameDay(new Date(p.scheduled_at), day));
           return (
             <div key={day.toISOString()}
               onClick={() => onDayClick?.(day)}
               className={cn(
-                "aspect-square rounded-lg p-1 text-center relative cursor-pointer transition-colors",
+                "min-h-[44px] rounded-lg p-1 flex flex-col items-center justify-start cursor-pointer transition-colors pt-2",
                 isToday(day) ? 'bg-primary/10 border border-primary/30' : 'hover:bg-secondary',
               )}>
-              <span className={cn("text-xs", isToday(day) ? 'font-bold text-primary' : 'text-muted-foreground')}>
+              <span className={cn("text-base font-medium leading-none", isToday(day) ? 'font-bold text-primary' : 'text-foreground')}>
                 {format(day, 'd')}
               </span>
               {dayPosts.length > 0 && (
-                <div className="flex justify-center gap-0.5 mt-0.5">
+                <div className="flex justify-center gap-0.5 mt-1.5">
                   {dayPosts.slice(0, 3).map((p, i) => (
                     <div key={i} className={cn("w-1.5 h-1.5 rounded-full",
                       p.stato === 'pubblicato' ? 'bg-green-400' : p.stato === 'schedulato' ? 'bg-blue-400' : 'bg-muted-foreground'
