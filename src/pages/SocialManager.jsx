@@ -94,12 +94,16 @@ export default function SocialManager() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="bg-secondary">
-          <TabsTrigger value="calendario">Calendario</TabsTrigger>
-          <TabsTrigger value="bozze">Bozze ({bozze.length})</TabsTrigger>
-          <TabsTrigger value="schedulati">Schedulati ({schedulati.length})</TabsTrigger>
-          <TabsTrigger value="pubblicati">Pubblicati ({pubblicati.length})</TabsTrigger>
-        </TabsList>
+        <MobileTabSelect
+          value={tab}
+          onValueChange={setTab}
+          tabs={[
+            { value: 'calendario', label: '📅 Calendario' },
+            { value: 'bozze', label: `📝 Bozze (${bozze.length})` },
+            { value: 'schedulati', label: `⏰ Schedulati (${schedulati.length})` },
+            { value: 'pubblicati', label: `✅ Pubblicati (${pubblicati.length})` },
+          ]}
+        />
         <TabsContent value="calendario" className="mt-4">
           {posts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
