@@ -1,36 +1,35 @@
 import React, { useState } from 'react';
 import { Bell } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
-
-const MOCK_NOTIFICATIONS = [
-  { id: 1, text: '🤖 Agente ha risposto a Marco Rossi', time: '2 min fa', path: '/inbox', read: false },
-  { id: 2, text: '⚠️ Messaggio scalato da Giulia Bianchi', time: '15 min fa', path: '/inbox', read: false },
-  { id: 3, text: '✅ Post pubblicato su Instagram', time: '1 ora fa', path: '/social', read: false },
-  { id: 4, text: '🎯 Nuovo lead qualificato: Luca Ferrari', time: '2 ore fa', path: '/crm', read: true },
-  { id: 5, text: '🤖 Agente ha risposto a Anna Verdi', time: '3 ore fa', path: '/inbox', read: true },
-];
+import { base44 } from '@/api/base44Client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { format } from 'date-fns';
 
 export default function NotificationsBell() {
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
   const navigate = useNavigate();
+  const { business } = useBusiness();
+  const queryClient = useQueryClient();
 
-  const unread = notifications.filter(n => !n.read).length;
+  const { data: unreadMessages = [] } = useQuery({
+    queryKey: ['unread-notifications', business?.id],
+    queryFn: () => base44.entities.Message.filter(
+      { business_id: business?.id, letto: false, ruolo: 'user' },
+      '-created_date',
+      10
+    ),
+    enabled: !!business?.id,
+    refetchInterval: 30000,
+  });
 
-  const markAllRead = () => setNotifications(p => p.map(n => ({ ...n, read: true })));
-
-  const toggleOpen = () => {
-    if (!open) {
-      // Mark all as read when opening
-      setNotifications(p => p.map(n => ({ ...n, read: true })));
+  const toggleOpen = async () => {
+    if (!open && unreadMessages.length > 0) {
+      await Promise.all(unreadMessages.map(m => base44.entities.Message.update(m.id, { letto: true })));
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications', business?.id] });
+      queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
     }
     setOpen(v => !v);
-  };
-
-  const handleClick = (n) => {
-    setOpen(false);
-    navigate(n.path);
   };
 
   return (
@@ -40,9 +39,9 @@ export default function NotificationsBell() {
         className="relative w-9 h-9 rounded-xl bg-secondary border border-border flex items-center justify-center hover:border-primary/30 transition-all"
       >
         <Bell className="w-4 h-4 text-foreground" />
-        {unread > 0 && (
+        {unreadMessages.length > 0 && (
           <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-            {unread}
+            {unreadMessages.length > 9 ? '9+' : unreadMessages.length}
           </span>
         )}
       </button>
@@ -51,22 +50,28 @@ export default function NotificationsBell() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-11 z-50 w-80 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div className="px-4 py-3 border-b border-border">
               <p className="text-sm font-semibold text-foreground">Notifiche</p>
-              <button onClick={markAllRead} className="text-xs text-primary hover:underline">
-                Segna tutte come lette
-              </button>
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-border">
-              {notifications.map(n => (
+              {unreadMessages.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Bell className="w-6 h-6 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Nessuna notifica</p>
+                </div>
+              ) : unreadMessages.map(msg => (
                 <button
-                  key={n.id}
-                  onClick={() => handleClick(n)}
-                  className={cn("w-full text-left px-4 py-3 hover:bg-secondary/50 transition-colors relative", !n.read && "bg-primary/5")}
+                  key={msg.id}
+                  onClick={() => { setOpen(false); navigate('/inbox'); }}
+                  className="w-full text-left px-4 py-3 hover:bg-secondary/50 transition-colors bg-primary/5"
                 >
-                  {!n.read && <div className="w-1.5 h-1.5 rounded-full bg-primary absolute right-4 top-1/2 -translate-y-1/2" />}
-                  <p className="text-sm text-foreground pr-4">{n.text}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{n.time}</p>
+                  <p className="text-sm text-foreground">
+                    {msg.canale === 'whatsapp' ? '📱' : '📸'} Nuovo messaggio {msg.canale === 'whatsapp' ? 'WhatsApp' : 'Instagram'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">{msg.testo}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
+                  </p>
                 </button>
               ))}
             </div>
