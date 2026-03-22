@@ -48,6 +48,7 @@ const AppContent = () => {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/system-check" element={<SystemCheck />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
