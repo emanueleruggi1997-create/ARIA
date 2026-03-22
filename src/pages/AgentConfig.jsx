@@ -10,8 +10,9 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Bot, Save, Loader2, RotateCcw, Copy, Power } from 'lucide-react';
+import { Bot, Save, Loader2, RotateCcw, Copy } from 'lucide-react';
 import AgentSimulator from '@/components/agent/AgentSimulator';
+import AgentAvatar, { AVATAR_COLORS } from '@/components/AgentAvatar';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import debounce from 'lodash/debounce';
@@ -24,7 +25,7 @@ const ESCALATION_OPTS = [
   'Richiesta rimborso',
   'Domanda tecnica complessa',
 ];
-const AVATAR_OPTS = ['🤖', '👩', '👨', '⚡', '🎯'];
+
 
 const STATUS_MAP = {
   attivo: { label: 'ATTIVO', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/30', dot: 'bg-green-500' },
@@ -181,15 +182,18 @@ ${form.escalation_rules.length > 0 ? form.escalation_rules.join('\n') : 'Mai'}`;
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">
             <div>
               <Label>Avatar agente</Label>
-              <div className="flex gap-2 mt-2">
-                {AVATAR_OPTS.map(a => (
-                  <button key={a} onClick={() => updateField('avatar_agente', a)}
-                    className={cn("w-10 h-10 text-xl rounded-xl border transition-all",
-                      form.avatar_agente === a ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/30'
-                    )}>
-                    {a}
-                  </button>
-                ))}
+              <div className="flex items-center gap-3 mt-2">
+                <AgentAvatar nome={form.nome_agente} color={form.avatar_agente || '#3B6EF8'} size="lg" />
+                <div className="flex gap-2 flex-wrap">
+                  {AVATAR_COLORS.map(c => (
+                    <button key={c.id} onClick={() => updateField('avatar_agente', c.id)}
+                      title={c.label}
+                      style={{ background: c.id }}
+                      className={cn("w-8 h-8 rounded-full border-2 transition-all",
+                        form.avatar_agente === c.id ? 'border-white scale-110' : 'border-transparent hover:border-white/50'
+                      )} />
+                  ))}
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
