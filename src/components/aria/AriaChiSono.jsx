@@ -2,7 +2,10 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Save, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import AriaRobot from './AriaRobot';
 
 const COLORS = [
   { id: '#3B6EF8', label: 'Blu' },
@@ -19,33 +22,50 @@ const TONI = [
   { id: 'diretto', emoji: '⚡', label: 'Diretto', desc: 'Breve, concreto, va al punto' },
 ];
 
-export default function AriaChiSono({ form, updateField, ariaName, ariaColor }) {
+const MOODS = [
+  { id: 'felice',     emoji: '😊', label: 'Felice',     desc: 'Galleggia piano, cuoricini' },
+  { id: 'divertito',  emoji: '😂', label: 'Divertito',  desc: 'Oscillazione, stelle' },
+  { id: 'triste',     emoji: '😢', label: 'Triste',     desc: 'Lento, lacrime' },
+  { id: 'arrabbiato', emoji: '😠', label: 'Arrabbiato', desc: 'Vibra, fiamme' },
+  { id: 'eccitato',   emoji: '🤩', label: 'Eccitato',   desc: 'Salti, coriandoli' },
+  { id: 'stanco',     emoji: '😴', label: 'Stanco',     desc: 'Dondola, ZZZ' },
+  { id: 'innamorato', emoji: '🥰', label: 'Innamorato', desc: 'Trema di gioia, cuori' },
+  { id: 'energico',   emoji: '⚡', label: 'Energico',   desc: 'Rimbalza, fulmini' },
+];
+
+export default function AriaChiSono({ form, updateField, ariaName, ariaColor, onSave, saving }) {
+  const currentMood = form.robot_mood || form.aria_mood || 'felice';
+
   return (
     <div className="space-y-6">
-      {/* Live preview */}
+
+      {/* 1 — Preview robot animato + info */}
       <div
-        className="flex items-center gap-4 p-4 rounded-2xl border"
+        className="flex items-center gap-5 p-5 rounded-2xl border"
         style={{ background: `${ariaColor}0D`, borderColor: `${ariaColor}33` }}
       >
-        <div
-          className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold text-white shrink-0 transition-all duration-300"
-          style={{ background: ariaColor, boxShadow: `0 0 16px ${ariaColor}44` }}
-        >
-          {ariaName[0]?.toUpperCase()}
+        <div className="shrink-0">
+          <AriaRobot color={ariaColor} mood={currentMood} width={80} height={105} />
         </div>
         <div>
-          <p className="font-bold text-foreground text-lg transition-all duration-300">{ariaName}</p>
+          <p className="text-2xl font-bold text-foreground transition-all">{ariaName}</p>
           <p className="text-sm text-muted-foreground">{form.ruolo_agente || 'Assistente personale'}</p>
-          <p className="text-xs mt-1" style={{ color: ariaColor }}>
-            {TONI.find(t => t.id === form.tono)?.emoji} {TONI.find(t => t.id === form.tono)?.desc || ''}
-          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: `${ariaColor}20`, color: ariaColor }}>
+              {TONI.find(t => t.id === form.tono)?.emoji} {TONI.find(t => t.id === form.tono)?.label}
+            </span>
+            <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-secondary text-muted-foreground">
+              {MOODS.find(m => m.id === currentMood)?.emoji} {MOODS.find(m => m.id === currentMood)?.label}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-5">
-        <h2 className="text-base font-semibold text-foreground">Personalizza {ariaName} come vuoi</h2>
+      {/* 3+4 — Form personalizzazione */}
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-6">
+        <h2 className="text-base font-semibold text-foreground">Personalizza {ariaName}</h2>
 
-        {/* Name */}
+        {/* Nome */}
         <div>
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nome</Label>
           <Input
@@ -57,7 +77,7 @@ export default function AriaChiSono({ form, updateField, ariaName, ariaColor }) 
           />
         </div>
 
-        {/* Role */}
+        {/* Ruolo */}
         <div>
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ruolo</Label>
           <Input
@@ -68,7 +88,7 @@ export default function AriaChiSono({ form, updateField, ariaName, ariaColor }) 
           />
         </div>
 
-        {/* Tone */}
+        {/* Tono */}
         <div>
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 block">Tono di voce</Label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -78,9 +98,7 @@ export default function AriaChiSono({ form, updateField, ariaName, ariaColor }) 
                 onClick={() => updateField('tono', t.id)}
                 className={cn(
                   "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center cursor-pointer",
-                  form.tono === t.id
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border bg-secondary hover:border-primary/40'
+                  form.tono === t.id ? 'border-primary bg-primary/10' : 'border-border bg-secondary hover:border-primary/40'
                 )}
               >
                 <span className="text-2xl">{t.emoji}</span>
@@ -91,7 +109,7 @@ export default function AriaChiSono({ form, updateField, ariaName, ariaColor }) 
           </div>
         </div>
 
-        {/* Language */}
+        {/* Lingua */}
         <div>
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Lingua</Label>
           <Select value={form.lingua} onValueChange={v => updateField('lingua', v)}>
@@ -104,7 +122,7 @@ export default function AriaChiSono({ form, updateField, ariaName, ariaColor }) 
           </Select>
         </div>
 
-        {/* Color */}
+        {/* Colore */}
         <div>
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 block">Colore di {ariaName}</Label>
           <div className="flex gap-3 flex-wrap">
@@ -117,13 +135,61 @@ export default function AriaChiSono({ form, updateField, ariaName, ariaColor }) 
                 style={{
                   background: c.id,
                   border: form.avatar_agente === c.id ? '3px solid white' : '3px solid transparent',
-                  boxShadow: form.avatar_agente === c.id ? `0 0 12px ${c.id}88` : 'none',
+                  boxShadow: form.avatar_agente === c.id ? `0 0 14px ${c.id}99` : 'none',
                 }}
               />
             ))}
           </div>
         </div>
+
+        {/* Umore — griglia 4x2 */}
+        <div>
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 block">Umore di {ariaName}</Label>
+          <div className="grid grid-cols-4 gap-2">
+            {MOODS.map(m => {
+              const active = currentMood === m.id;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => updateField('robot_mood', m.id)}
+                  style={{
+                    background: active ? `${ariaColor}18` : '#0F1219',
+                    border: active ? `1.5px solid ${ariaColor}` : '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: 12,
+                    padding: 12,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    transform: active ? 'scale(1.02)' : 'scale(1)',
+                    minHeight: 90,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
+                  }}
+                  onMouseEnter={e => { if (!active) { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}}
+                  onMouseLeave={e => { if (!active) { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}}
+                >
+                  <span style={{ fontSize: 32, lineHeight: 1 }}>{m.emoji}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: active ? ariaColor : '#F0F4FF', marginTop: 4 }}>{m.label}</span>
+                  <span style={{ fontSize: 10, color: '#6B7280', textAlign: 'center', lineHeight: 1.3 }}>{m.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
+
+      {/* Pulsante salva */}
+      <Button
+        onClick={onSave}
+        disabled={saving}
+        className="w-full font-semibold text-white"
+        style={{ background: ariaColor, minHeight: 48, borderRadius: 12, fontSize: 15 }}
+      >
+        {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+        Salva e Aggiorna {ariaName}
+      </Button>
     </div>
   );
 }
