@@ -92,8 +92,6 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     return () => document.removeEventListener('click', handler);
   }, [panelOpen, expanded]);
 
-  const eyeBlink = thinking ? true : blink;
-
   const handleClick = (e) => {
     e.stopPropagation();
     setClicked(true);
