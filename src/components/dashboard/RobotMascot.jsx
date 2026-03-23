@@ -60,14 +60,6 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setBlink(true);
-      setTimeout(() => setBlink(false), 150);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
     if (newMessageCount > prevMsgCount.current && prevMsgCount.current > 0) {
       setSpecialAnim('jump');
       setTimeout(() => setSpecialAnim(null), 1000);
