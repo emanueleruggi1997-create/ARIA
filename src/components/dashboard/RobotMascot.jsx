@@ -100,11 +100,6 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     if (panelOpen) setExpanded(false);
   };
 
-  const robotAnimClass = thinking ? 'robot-thinking'
-    : specialAnim === 'jump' ? 'robot-jump'
-    : specialAnim === 'spin' ? 'robot-spin'
-    : 'robot-idle';
-
   // Check mobile
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
