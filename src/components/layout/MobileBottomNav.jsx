@@ -63,8 +63,22 @@ export default function MobileBottomNav() {
                     location.pathname === item.path ? 'text-primary' : 'text-foreground hover:bg-secondary/50'
                   )}
                 >
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-[15px] font-medium">{item.label}</span>
+                  {item.isAria ? (
+                    <div className="relative">
+                      <div
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                        style={{ background: ariaColor }}
+                      >
+                        {ariaName[0]?.toUpperCase()}
+                      </div>
+                      {ariaActive && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border border-[#0F1219]" />
+                      )}
+                    </div>
+                  ) : (
+                    <item.icon className="w-5 h-5" />
+                  )}
+                  <span className="text-[15px] font-medium">{item.isAria ? ariaName : item.label}</span>
                 </button>
               ))}
               <button
