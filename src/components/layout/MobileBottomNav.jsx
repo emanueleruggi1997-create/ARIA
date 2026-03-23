@@ -23,6 +23,10 @@ export default function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { business } = useBusiness();
+  const ariaColor = business?.robot_color || business?.avatar_agente || '#3B6EF8';
+  const ariaName = business?.robot_name || business?.nome_agente || 'ARIA';
+  const ariaActive = business?.stato_agente === 'attivo';
 
   const handleLogout = async () => {
     await base44.auth.logout('/');
