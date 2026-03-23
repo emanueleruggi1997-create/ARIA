@@ -15,42 +15,8 @@ const COLORS = [
 const MOODS = [
   { id: 'felice', label: '😊 Felice' },
   { id: 'stanco', label: '😴 Stanco' },
-  { id: 'energia', label: '⚡ Energico' },
+  { id: 'energico', label: '⚡ Energico' },
 ];
-
-function RobotEyes({ color, mood, blink }) {
-  if (mood === 'stanco') {
-    return (
-      <>
-        <rect x="10" y="19" width="10" height="5" rx="2" fill={color} opacity={blink ? 0.1 : 1} style={{ transition: 'opacity 0.15s' }} />
-        <rect x="28" y="19" width="10" height="5" rx="2" fill={color} opacity={blink ? 0.1 : 1} style={{ transition: 'opacity 0.15s' }} />
-      </>
-    );
-  }
-  if (mood === 'energia') {
-    const starPath = (cx, cy, r = 5) => {
-      const pts = [];
-      for (let i = 0; i < 8; i++) {
-        const angle = (i * Math.PI) / 4 - Math.PI / 2;
-        const radius = i % 2 === 0 ? r : r * 0.45;
-        pts.push(`${cx + radius * Math.cos(angle)},${cy + radius * Math.sin(angle)}`);
-      }
-      return `M ${pts.join(' L ')} Z`;
-    };
-    return (
-      <>
-        <path d={starPath(15, 22)} fill={color} opacity={blink ? 0.1 : 1} style={{ transition: 'opacity 0.15s' }} />
-        <path d={starPath(33, 22)} fill={color} opacity={blink ? 0.1 : 1} style={{ transition: 'opacity 0.15s' }} />
-      </>
-    );
-  }
-  return (
-    <>
-      <circle cx="15" cy="22" r="5" fill={color} opacity={blink ? 0.1 : 1} style={{ transition: 'opacity 0.15s' }} />
-      <circle cx="33" cy="22" r="5" fill={color} opacity={blink ? 0.1 : 1} style={{ transition: 'opacity 0.15s' }} />
-    </>
-  );
-}
 
 export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, business, activeLeads = 0, scheduledPosts = 0, lastLead = null }) {
   const [name, setName] = useState('ARIA');
