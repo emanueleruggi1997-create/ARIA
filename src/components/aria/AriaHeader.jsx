@@ -15,12 +15,10 @@ export default function AriaHeader({ form, ariaName, ariaColor, autoSaved, busin
 
   const generateGreeting = async () => {
     setLoadingGreeting(true);
-    const { data: messages = [] } = await base44.entities.Message.filter(
-      { business_id: business.id, letto: false },
-    ).catch(() => ({ data: [] }));
-    const { data: leads = [] } = await base44.entities.Lead.filter(
-      { business_id: business.id },
-    ).catch(() => ({ data: [] }));
+    let messages = [];
+    let leads = [];
+    try { messages = await base44.entities.Message.filter({ business_id: business.id, letto: false }); } catch {}
+    try { leads = await base44.entities.Lead.filter({ business_id: business.id }); } catch {}
 
     const unread = Array.isArray(messages) ? messages.length : 0;
     const activeLeads = Array.isArray(leads)
