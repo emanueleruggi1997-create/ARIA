@@ -43,6 +43,7 @@ export default function Dashboard() {
   const activeLeads = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato));
   const aiMessages = messages.filter(m => m.ruolo === 'assistant');
   const aiRate = messages.length > 0 ? Math.round((aiMessages.length / messages.length) * 100) : 0;
+  const unreadCount = unreadMessages.length;
 
   // Build real chart data from last 7 days
   const chartData = Array.from({ length: 7 }, (_, i) => {
