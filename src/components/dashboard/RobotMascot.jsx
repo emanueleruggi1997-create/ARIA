@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { base44 } from '@/api/base44Client';
 import RobotChat from './RobotChat';
 
 const COLORS = [
@@ -15,17 +16,6 @@ const MOODS = [
   { id: 'stanco', label: '😴 Stanco' },
   { id: 'energia', label: '⚡ Energia' },
 ];
-
-function loadPrefs() {
-  try {
-    const raw = localStorage.getItem('robot_prefs');
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-function savePrefs(prefs) {
-  try { localStorage.setItem('robot_prefs', JSON.stringify(prefs)); } catch {}
-}
 
 function RobotEyes({ color, mood, blink }) {
   if (mood === 'stanco') {
@@ -53,7 +43,6 @@ function RobotEyes({ color, mood, blink }) {
       </>
     );
   }
-  // Felice — default round
   return (
     <>
       <circle cx="15" cy="22" r="5" fill={color} opacity={blink ? 0.1 : 1} style={{ transition: 'opacity 0.15s' }} />
@@ -63,10 +52,12 @@ function RobotEyes({ color, mood, blink }) {
 }
 
 export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, business, activeLeads = 0, scheduledPosts = 0, lastLead = null }) {
-  const prefs = loadPrefs();
-  const [name, setName] = useState(prefs?.name || 'ARIA');
-  const [color, setColor] = useState(prefs?.color || '#3B6EF8');
-  const [mood, setMood] = useState(prefs?.mood || 'felice');
+  const [name, setName] = useState('ARIA');
+  const [color, setColor] = useState('#3B6EF8');
+  const [mood, setMood] = useState('felice');
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [saved, setSaved] = useState(false);
+
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('chat');
   const [blink, setBlink] = useState(false);
@@ -74,10 +65,36 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   const [clicked, setClicked] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [proactiveBubble, setProactiveBubble] = useState(null);
+
   const panelRef = useRef(null);
   const robotRef = useRef(null);
   const prevMsgCount = useRef(newMessageCount);
   const prevAiCount = useRef(aiResponseCount);
+
+  // FIX 3 — Load prefs from DB
+  useEffect(() => {
+    if (!business?.id) return;
+    setName(business.robot_name || 'ARIA');
+    setColor(business.robot_color || '#3B6EF8');
+    setMood(business.robot_mood || 'felice');
+    setPrefsLoaded(true);
+  }, [business?.id]);
+
+  // FIX 3 — Save prefs to DB
+  const savePrefs = async (updates) => {
+    if (!business?.id) return;
+    const next = { name, color, mood, ...updates };
+    if (updates.name !== undefined) setName(updates.name);
+    if (updates.color !== undefined) setColor(updates.color);
+    if (updates.mood !== undefined) setMood(updates.mood);
+    await base44.entities.Business.update(business.id, {
+      robot_name: updates.name !== undefined ? updates.name : name,
+      robot_color: updates.color !== undefined ? updates.color : color,
+      robot_mood: updates.mood !== undefined ? updates.mood : mood,
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1500);
+  };
 
   // Blink every 4s
   useEffect(() => {
@@ -88,7 +105,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     return () => clearInterval(interval);
   }, []);
 
-  // New message → jump animation + proactive bubble
+  // New message → jump + proactive bubble
   useEffect(() => {
     if (newMessageCount > prevMsgCount.current && prevMsgCount.current > 0) {
       setSpecialAnim('jump');
@@ -123,21 +140,12 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     return () => document.removeEventListener('mousedown', handler);
   }, [panelOpen]);
 
-  // Thinking → blink eyes continuously
   const eyeBlink = thinking ? true : blink;
 
   const handleClick = () => {
     setClicked(true);
     setTimeout(() => setClicked(false), 400);
     setPanelOpen(p => !p);
-  };
-
-  const updatePrefs = (updates) => {
-    const next = { name, color, mood, ...updates };
-    if (updates.name !== undefined) setName(updates.name);
-    if (updates.color !== undefined) setColor(updates.color);
-    if (updates.mood !== undefined) setMood(updates.mood);
-    savePrefs(next);
   };
 
   const robotAnimClass = thinking
@@ -147,6 +155,15 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     : specialAnim === 'spin'
     ? 'robot-spin'
     : 'robot-idle';
+
+  // FIX 2 — back arrow handler
+  const handleBack = () => {
+    if (activeTab === 'chat') {
+      setActiveTab('config');
+    } else {
+      setPanelOpen(false);
+    }
+  };
 
   return (
     <>
@@ -177,42 +194,41 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
           60% { transform: scale(0.9); }
           100% { transform: scale(1); }
         }
-        .robot-idle { animation: robotIdle 3s ease-in-out infinite; }
-        .robot-jump { animation: robotJump 1s ease-in-out; }
-        .robot-spin { animation: robotSpin 0.5s linear; }
-        .robot-click { animation: robotClick 0.4s ease-in-out; }
-        .robot-wrapper {
-          opacity: 0.75;
-          transition: opacity 0.3s ease, transform 0.3s ease;
-          cursor: pointer;
-        }
-        .robot-wrapper:hover {
-          opacity: 1;
-          transform: scale(1.05);
-        }
-        .robot-head-hover:hover .robot-head {
-          transform: rotate(-3deg);
-          transition: transform 0.3s ease;
-        }
-        .antenna-anim {
-          transform-origin: 24px 6px;
-          animation: antennaWave 2s ease-in-out infinite;
-        }
-        .robot-panel {
-          animation: fadeInUp 0.2s ease-out;
+        @keyframes robotThink {
+          0%, 100% { transform: translateY(0) rotate(-2deg); }
+          50% { transform: translateY(-4px) rotate(2deg); }
         }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes robotThink {
-          0%, 100% { transform: translateY(0) rotate(-2deg); }
-          50% { transform: translateY(-4px) rotate(2deg); }
-        }
+        .robot-idle { animation: robotIdle 3s ease-in-out infinite; }
+        .robot-jump { animation: robotJump 1s ease-in-out; }
+        .robot-spin { animation: robotSpin 0.5s linear; }
+        .robot-click { animation: robotClick 0.4s ease-in-out; }
         .robot-thinking { animation: robotThink 0.8s ease-in-out infinite; }
-        .proactive-bubble {
-          animation: fadeInUp 0.3s ease-out;
+        .robot-wrapper {
+          opacity: 0.75;
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          cursor: pointer;
         }
+        .robot-wrapper:hover { opacity: 1; transform: scale(1.05); }
+        .antenna-anim {
+          transform-origin: 24px 6px;
+          animation: antennaWave 2s ease-in-out infinite;
+        }
+        .robot-panel { animation: fadeInUp 0.2s ease-out; }
+        .proactive-bubble { animation: fadeInUp 0.3s ease-out; }
+        .back-btn {
+          width: 32px; height: 32px;
+          background: rgba(255,255,255,0.06);
+          border: none; border-radius: 8px;
+          color: #F0F4FF; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 16px; transition: background 0.2s;
+          flex-shrink: 0;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.12); }
       `}</style>
 
       <div style={{ position: 'fixed', bottom: 90, right: 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
@@ -245,32 +261,43 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
             boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 20px ${color}11`,
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
           }}>
-            {/* Tab bar */}
+            {/* Header bar — FIX 2: back arrow + tab title + close */}
             <div style={{
-              display: 'flex', alignItems: 'center',
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 10px 0',
               borderBottom: '1px solid rgba(255,255,255,0.06)',
-              flexShrink: 0,
+              flexShrink: 0, paddingBottom: 8,
             }}>
-              {[
-                { id: 'chat', label: '💬 Chatta' },
-                { id: 'config', label: '⚙️ Personalizza' },
-              ].map(tab => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    flex: 1, padding: '10px 0',
-                    background: 'none', border: 'none',
-                    borderBottom: activeTab === tab.id ? `2px solid ${color}` : '2px solid transparent',
-                    color: activeTab === tab.id ? '#F0F4FF' : '#6B7280',
-                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                    fontFamily: 'Inter, sans-serif', transition: 'all 0.2s',
-                    marginBottom: -1,
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              {/* Back arrow */}
+              <button className="back-btn" onClick={handleBack} title={activeTab === 'chat' ? 'Vai a Personalizza' : 'Chiudi'}>
+                ←
+              </button>
+
+              {/* Tab buttons */}
+              <div style={{ display: 'flex', flex: 1 }}>
+                {[
+                  { id: 'chat', label: '💬 Chatta' },
+                  { id: 'config', label: '⚙️ Personalizza' },
+                ].map(tab => (
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      flex: 1, padding: '4px 0',
+                      background: 'none', border: 'none',
+                      borderBottom: activeTab === tab.id ? `2px solid ${color}` : '2px solid transparent',
+                      color: activeTab === tab.id ? '#F0F4FF' : '#6B7280',
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'Inter, sans-serif', transition: 'all 0.2s',
+                      marginBottom: -9,
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Close × */}
               <button onClick={() => setPanelOpen(false)}
-                style={{ padding: '0 12px', color: '#6B7280', fontSize: 16, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                style={{ color: '#6B7280', fontSize: 18, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, lineHeight: 1, paddingBottom: 4 }}>
                 ×
               </button>
             </div>
@@ -289,12 +316,17 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
               />
             ) : (
               <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
+                {/* Saved indicator */}
+                {saved && (
+                  <div style={{ fontSize: 11, color: '#10B981', marginBottom: 10, textAlign: 'right' }}>✓ Salvato</div>
+                )}
+
                 {/* Name */}
                 <div style={{ marginBottom: 14 }}>
                   <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Nome</label>
                   <input
                     value={name}
-                    onChange={e => updatePrefs({ name: e.target.value })}
+                    onChange={e => savePrefs({ name: e.target.value })}
                     maxLength={12}
                     style={{
                       width: '100%', boxSizing: 'border-box',
@@ -311,7 +343,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
                   <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Colore</label>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {COLORS.map(c => (
-                      <button key={c.id} onClick={() => updatePrefs({ color: c.id })} title={c.label}
+                      <button key={c.id} onClick={() => savePrefs({ color: c.id })} title={c.label}
                         style={{
                           width: 26, height: 26, borderRadius: '50%',
                           background: c.id, border: color === c.id ? '2px solid white' : '2px solid transparent',
@@ -327,7 +359,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
                   <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Umore</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                     {MOODS.map(m => (
-                      <button key={m.id} onClick={() => updatePrefs({ mood: m.id })}
+                      <button key={m.id} onClick={() => savePrefs({ mood: m.id })}
                         style={{
                           background: mood === m.id ? `${color}22` : 'transparent',
                           border: `1px solid ${mood === m.id ? color : '#2A2F3E'}`,
@@ -347,7 +379,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
           </div>
         )}
 
-        {/* Robot */}
+        {/* Robot — FIX 1: scaled up on desktop */}
         <div
           ref={robotRef}
           className={`robot-wrapper ${clicked ? 'robot-click' : ''}`}
@@ -358,15 +390,15 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
               viewBox="0 0 48 80"
               xmlns="http://www.w3.org/2000/svg"
               style={{
-                width: 'clamp(60px, 8vw, 80px)',
-                height: 'clamp(75px, 10vw, 100px)',
+                width: 'clamp(80px, 10vw, 120px)',
+                height: 'clamp(100px, 13vw, 150px)',
                 display: 'block',
               }}
             >
               {/* Antenna */}
               <g className="antenna-anim">
-                <line x1="24" y1="8" x2="24" y2="2" stroke={color} strokeWidth="2" strokeLinecap="round" />
-                <circle cx="24" cy="2" r="2.5" fill={color} />
+                <line x1="24" y1="8" x2="24" y2="1" stroke={color} strokeWidth="2" strokeLinecap="round" />
+                <circle cx="24" cy="1" r="2.5" fill={color} />
               </g>
 
               {/* Head */}
@@ -400,10 +432,10 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
           </div>
         </div>
 
-        {/* Name label */}
+        {/* Name label — FIX 1: font-size 12px */}
         {name && (
           <div style={{
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: '0.15em',
             textTransform: 'uppercase',
