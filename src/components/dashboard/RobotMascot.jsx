@@ -100,39 +100,37 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     if (panelOpen) setExpanded(false);
   };
 
-  // Check mobile
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  // Check mobile (reactive)
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
-  // Panel dimensions
-  const panelStyle = (() => {
-    if (!panelOpen) return { display: 'none' };
-    if (expanded && isMobile) {
-      return {
-        position: 'fixed', inset: 0,
-        width: '100vw', height: '100vh',
-        borderRadius: 0, zIndex: 100,
-        bottom: 0, right: 0,
-      };
-    }
-    if (expanded) {
-      return {
-        position: 'fixed',
-        width: 680, height: '80vh',
-        top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        borderRadius: 20, zIndex: 100,
-      };
-    }
-    return {
-      position: 'absolute',
-      bottom: isMobile ? 'auto' : 90,
-      right: 0,
-      width: isMobile ? 'calc(100vw - 48px)' : 420,
-      height: 580,
-      borderRadius: 20,
-      zIndex: 50,
-    };
-  })();
+  // Small panel style (non-expanded, inside fixed wrapper)
+  const smallPanelStyle = !panelOpen || expanded ? { display: 'none' } : {
+    position: 'absolute',
+    bottom: isMobile ? 'auto' : 90,
+    right: 0,
+    width: isMobile ? 'calc(100vw - 48px)' : 420,
+    height: 580,
+    borderRadius: 20,
+    zIndex: 50,
+  };
+
+  // Expanded panel style (rendered outside wrapper via separate element)
+  const expandedPanelStyle = !panelOpen || !expanded ? { display: 'none' } : isMobile ? {
+    position: 'fixed', inset: 0,
+    width: '100vw', height: '100vh',
+    borderRadius: 0, zIndex: 200,
+  } : {
+    position: 'fixed',
+    width: 680, height: '80vh',
+    top: '50%', left: '50%',
+    transform: 'translate(-50%, -50%)',
+    borderRadius: 20, zIndex: 200,
+  };
 
   return (
     <>
