@@ -7,6 +7,7 @@ import TabGenerale from '@/components/settings/TabGenerale';
 import TabConnessioni from '@/components/settings/TabConnessioni';
 import TabPiano from '@/components/settings/TabPiano';
 import TabNotifiche from '@/components/settings/TabNotifiche';
+import TabAspetto from '@/components/settings/TabAspetto';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 
@@ -15,6 +16,7 @@ const TABS = [
   { value: 'connessioni', label: '🔗 Connessioni' },
   { value: 'piano', label: '💳 Piano' },
   { value: 'notifiche', label: '🔔 Notifiche' },
+  { value: 'aspetto', label: '🎨 Aspetto' },
 ];
 
 export default function Settings() {
@@ -122,6 +124,10 @@ export default function Settings() {
 
         <TabsContent value="notifiche" className="mt-4">
           <TabNotifiche form={form} setForm={setForm} saving={saving} onSave={() => handleSave()} />
+        </TabsContent>
+
+        <TabsContent value="aspetto" className="mt-4">
+          <TabAspetto business={business} onSave={handlePartialSave} />
         </TabsContent>
       </Tabs>
     </div>
