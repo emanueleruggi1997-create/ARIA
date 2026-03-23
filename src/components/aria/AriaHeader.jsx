@@ -84,7 +84,7 @@ Sii caldo, diretto, in italiano. Inizia con "Ciao!" o simile. Non usare virgolet
           </div>
 
           {autoSaved && (
-            <span className="text-xs text-green-400 font-medium">✓ ARIA aggiornata</span>
+            <span className="text-xs text-green-400 font-semibold">✓ ARIA aggiornata!</span>
           )}
         </div>
 

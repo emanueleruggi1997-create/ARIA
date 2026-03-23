@@ -74,11 +74,11 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   // FIX 3 — Load prefs from DB
   useEffect(() => {
     if (!business?.id) return;
-    setName(business.robot_name || 'ARIA');
-    setColor(business.robot_color || '#3B6EF8');
-    setMood(business.robot_mood || 'felice');
+    setName(business.aria_name || business.robot_name || 'ARIA');
+    setColor(business.aria_color || business.robot_color || '#3B6EF8');
+    setMood(business.aria_mood || business.robot_mood || 'felice');
     setPrefsLoaded(true);
-  }, [business?.id]);
+  }, [business?.id, business?.aria_name, business?.aria_color, business?.aria_mood]);
 
   // FIX 3 — Save prefs to DB
   const savePrefs = async (updates) => {
