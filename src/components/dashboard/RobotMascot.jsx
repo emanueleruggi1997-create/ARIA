@@ -145,12 +145,41 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         .proactive-bubble { animation: fadeInUp 0.3s ease-out; }
       `}</style>
 
-      {/* Expanded backdrop */}
+      {/* Expanded backdrop (outside fixed wrapper) */}
       {panelOpen && expanded && !isMobile && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 99 }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 199 }}
           onClick={() => { setExpanded(false); }}
         />
+      )}
+
+      {/* EXPANDED PANEL — rendered outside the fixed wrapper so position:fixed works correctly */}
+      {panelOpen && expanded && (
+        <div
+          ref={panelRef}
+          className="robot-panel"
+          style={{
+            ...expandedPanelStyle,
+            background: '#0A0D14',
+            border: `1px solid ${color}4D`,
+            boxShadow: `0 24px 80px rgba(0,0,0,0.6), 0 0 30px ${color}18`,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <AriaChatCore
+            color={color} name={name} mood={mood} business={business} form={null}
+            unreadCount={newMessageCount} activeLeads={activeLeads}
+            scheduledPosts={scheduledPosts} lastLead={lastLead}
+            onThinking={setThinking}
+            onClose={() => { setPanelOpen(false); setExpanded(false); }}
+            expanded={true}
+            onToggleExpand={() => setExpanded(false)}
+            isMobile={isMobile}
+          />
+        </div>
       )}
 
       <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
@@ -171,39 +200,29 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
           </div>
         )}
 
-        {/* Main panel */}
+        {/* SMALL PANEL — inside the fixed wrapper */}
         <div
-          ref={panelRef}
           className="robot-panel"
           style={{
-            ...panelStyle,
+            ...smallPanelStyle,
             background: '#0A0D14',
             border: `1px solid ${color}4D`,
-            boxShadow: expanded
-              ? `0 24px 80px rgba(0,0,0,0.6), 0 0 30px ${color}18`
-              : `0 20px 60px rgba(0,0,0,0.5), 0 0 20px ${color}11`,
-            display: panelOpen ? 'flex' : 'none',
+            boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 20px ${color}11`,
+            display: panelOpen && !expanded ? 'flex' : 'none',
             flexDirection: 'column',
             overflow: 'hidden',
-            transition: 'width 0.3s ease, height 0.3s ease, border-radius 0.3s ease',
           }}
           onClick={e => e.stopPropagation()}
         >
           {activeTab === 'chat' ? (
             <AriaChatCore
-              color={color}
-              name={name}
-              mood={mood}
-              business={business}
-              form={null}
-              unreadCount={newMessageCount}
-              activeLeads={activeLeads}
-              scheduledPosts={scheduledPosts}
-              lastLead={lastLead}
+              color={color} name={name} mood={mood} business={business} form={null}
+              unreadCount={newMessageCount} activeLeads={activeLeads}
+              scheduledPosts={scheduledPosts} lastLead={lastLead}
               onThinking={setThinking}
               onClose={() => { setPanelOpen(false); setExpanded(false); }}
-              expanded={expanded}
-              onToggleExpand={() => setExpanded(e => !e)}
+              expanded={false}
+              onToggleExpand={() => setExpanded(true)}
               isMobile={isMobile}
             />
           ) : (
