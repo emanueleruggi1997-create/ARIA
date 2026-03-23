@@ -12,7 +12,7 @@ const navItems = [
   { path: '/inbox', icon: MessageSquare, label: 'Inbox' },
   { path: '/crm', icon: Users, label: 'CRM & Email' },
   { path: '/social', icon: Calendar, label: 'Social Manager' },
-  { path: '/agent', icon: Bot, label: 'Agente AI' },
+  { path: '/agent', icon: null, label: 'ARIA' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/settings', icon: Settings, label: 'Impostazioni' },
 ];
