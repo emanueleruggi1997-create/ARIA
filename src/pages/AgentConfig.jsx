@@ -9,12 +9,12 @@ import AriaCosaSo from '@/components/aria/AriaCosaSo';
 import AriaComportamento from '@/components/aria/AriaComportamento';
 import AriaParlami from '@/components/aria/AriaParlami';
 import AriaAvanzato from '@/components/aria/AriaAvanzato';
-import debounce from 'lodash/debounce';
 
 export default function AgentConfig() {
   const { business, refreshBusiness } = useBusiness();
   const [activeTab, setActiveTab] = useState('chi-sono');
-  const [autoSaved, setAutoSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({
     nome_agente: 'ARIA', ruolo_agente: '', tono: 'professionale', lingua: 'Italiano',
     avatar_agente: '#3B6EF8', servizi: '', prezzi: '', cose_da_non_fare: '', faq: '',
@@ -22,17 +22,20 @@ export default function AgentConfig() {
     giorni_attivi: ['lun','mar','mer','gio','ven'], fuori_orario_attivo: true,
     messaggio_fuori_orario: '', escalation_rules: [], email_notifica: '', ai_prompt: '',
     stato_agente: 'attivo',
-    robot_name: 'ARIA', robot_color: '#3B6EF8', robot_mood: 'felice',
+    robot_mood: 'felice', aria_mood: 'felice',
   });
 
   useEffect(() => {
     if (business) {
+      const color = business.aria_color || business.avatar_agente || business.robot_color || '#3B6EF8';
+      const name = business.aria_name || business.nome_agente || business.robot_name || 'ARIA';
+      const mood = business.aria_mood || business.robot_mood || 'felice';
       setForm({
-        nome_agente: business.nome_agente || 'ARIA',
+        nome_agente: name,
         ruolo_agente: business.ruolo_agente || '',
         tono: business.tono || 'professionale',
         lingua: business.lingua || 'Italiano',
-        avatar_agente: business.avatar_agente || business.robot_color || '#3B6EF8',
+        avatar_agente: color,
         servizi: business.servizi || '',
         prezzi: business.prezzi || '',
         cose_da_non_fare: business.cose_da_non_fare || '',
@@ -47,35 +50,36 @@ export default function AgentConfig() {
         email_notifica: business.email_notifica || '',
         ai_prompt: business.ai_prompt || '',
         stato_agente: business.stato_agente || 'attivo',
-        robot_name: business.robot_name || business.nome_agente || 'ARIA',
-        robot_color: business.robot_color || business.avatar_agente || '#3B6EF8',
-        robot_mood: business.robot_mood || 'felice',
+        robot_mood: mood,
+        aria_mood: mood,
       });
     }
   }, [business?.id]);
 
-  const autoSave = useCallback(
-    debounce(async (data) => {
-      if (!business?.id) return;
-      await base44.entities.Business.update(business.id, {
-        ...data,
-        // Keep robot in sync with ARIA name/color
-        robot_name: data.nome_agente || data.robot_name,
-        robot_color: data.avatar_agente || data.robot_color,
-      });
-      setAutoSaved(true);
-      setTimeout(() => setAutoSaved(false), 2000);
-    }, 1200),
-    [business]
-  );
-
   const updateField = (field, value) => {
-    const updated = { ...form, [field]: value };
-    // Keep robot_name and robot_color in sync
-    if (field === 'nome_agente') updated.robot_name = value;
-    if (field === 'avatar_agente') updated.robot_color = value;
-    setForm(updated);
-    autoSave(updated);
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Explicit save — writes canonical aria_* fields + legacy robot_* fields for dashboard sync
+  const handleSave = async () => {
+    if (!business?.id) return;
+    setSaving(true);
+    const payload = {
+      ...form,
+      // Canonical fields
+      aria_name: form.nome_agente,
+      aria_color: form.avatar_agente,
+      aria_mood: form.robot_mood,
+      // Legacy sync
+      robot_name: form.nome_agente,
+      robot_color: form.avatar_agente,
+      robot_mood: form.robot_mood,
+    };
+    await base44.entities.Business.update(business.id, payload);
+    await refreshBusiness();
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   };
 
   const ariaName = form.nome_agente || 'ARIA';
@@ -95,7 +99,7 @@ export default function AgentConfig() {
         form={form}
         ariaName={ariaName}
         ariaColor={ariaColor}
-        autoSaved={autoSaved}
+        autoSaved={saved}
         business={business}
         onToggle={() => updateField('stato_agente', form.stato_agente === 'attivo' ? 'off' : 'attivo')}
       />
@@ -104,7 +108,14 @@ export default function AgentConfig() {
         <MobileTabSelect value={activeTab} onValueChange={setActiveTab} tabs={tabs} />
 
         <TabsContent value="chi-sono" className="mt-5">
-          <AriaChiSono form={form} updateField={updateField} ariaName={ariaName} ariaColor={ariaColor} />
+          <AriaChiSono
+            form={form}
+            updateField={updateField}
+            ariaName={ariaName}
+            ariaColor={ariaColor}
+            onSave={handleSave}
+            saving={saving}
+          />
         </TabsContent>
 
         <TabsContent value="cosa-so" className="mt-5">
@@ -120,7 +131,7 @@ export default function AgentConfig() {
         </TabsContent>
 
         <TabsContent value="avanzato" className="mt-5">
-          <AriaAvanzato form={form} updateField={updateField} business={business} autoSaved={autoSaved} />
+          <AriaAvanzato form={form} updateField={updateField} business={business} autoSaved={saved} />
         </TabsContent>
       </Tabs>
     </div>
