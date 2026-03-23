@@ -1,32 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import MobileTabSelect from '@/components/ui/MobileTabSelect';
-import { useToast } from '@/components/ui/use-toast';
-import { Save, Loader2, Bell, LogOut, Link2, CreditCard, Wifi, RotateCcw, Check, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+import TabGenerale from '@/components/settings/TabGenerale';
+import TabConnessioni from '@/components/settings/TabConnessioni';
+import TabPiano from '@/components/settings/TabPiano';
+import TabNotifiche from '@/components/settings/TabNotifiche';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
 
-const PIANI = [
-  { id: 'starter', label: 'Starter', prezzo: '99€/mese', desc: '1 business, 1.000 email/mese', features: ['1 business', '20 post/mese', '1.000 email/mese', 'AI di base'] },
-  { id: 'pro', label: 'Pro', prezzo: '199€/mese', desc: '3 business, 10.000 email/mese', features: ['3 business', '60 post/mese', '10.000 email/mese', 'AI avanzata', 'Analytics'] },
-  { id: 'agency', label: 'Agency', prezzo: '399€/mese', desc: 'Illimitato, email illimitate', features: ['Illimitato', 'Email illimitate', 'White label', 'API access', 'Supporto prioritario'] },
+const TABS = [
+  { value: 'generale', label: '⚙️ Generale' },
+  { value: 'connessioni', label: '🔗 Connessioni' },
+  { value: 'piano', label: '💳 Piano' },
+  { value: 'notifiche', label: '🔔 Notifiche' },
 ];
 
 export default function Settings() {
   const { business, refreshBusiness } = useBusiness();
-  const { toast } = useToast();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('generale');
   const [saving, setSaving] = useState(false);
-  const [testingWa, setTestingWa] = useState(false);
-  const [waStatus, setWaStatus] = useState(null);
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({
-    nome: '', settore: '', piano: 'starter', wa_number: '', ig_username: '', email_notifica: ''
+    nome: '', settore: '', citta: '', telefono: '', sito_web: '', piva: '',
+    piano: 'starter',
+    wa_number: '', wa_api_key: '', wa_connesso: false,
+    ig_username: '', ig_connesso: false,
+    fb_username: '', fb_connesso: false,
+    email_provider: 'gmail', email_smtp_host: '', email_smtp_porta: '',
+    email_smtp_user: '', email_smtp_pass: '', email_connessa: false,
+    email_notifica: '',
+    notif_escalation: true, notif_report_settimanale: false, notif_limite_piano: true,
   });
 
   useEffect(() => {
@@ -34,195 +39,89 @@ export default function Settings() {
       setForm({
         nome: business.nome || '',
         settore: business.settore || '',
+        citta: business.citta || '',
+        telefono: business.telefono || '',
+        sito_web: business.sito_web || '',
+        piva: business.piva || '',
         piano: business.piano || 'starter',
         wa_number: business.wa_number || '',
+        wa_api_key: business.wa_api_key || '',
+        wa_connesso: !!business.wa_connesso,
         ig_username: business.ig_username || '',
+        ig_connesso: !!business.ig_connesso,
+        fb_username: business.fb_username || '',
+        fb_connesso: !!business.fb_connesso,
+        email_provider: business.email_provider || 'gmail',
+        email_smtp_host: business.email_smtp_host || '',
+        email_smtp_porta: business.email_smtp_porta || '',
+        email_smtp_user: business.email_smtp_user || '',
+        email_smtp_pass: business.email_smtp_pass || '',
+        email_connessa: !!business.email_connessa,
         email_notifica: business.email_notifica || '',
+        notif_escalation: business.notif_escalation !== false,
+        notif_report_settimanale: !!business.notif_report_settimanale,
+        notif_limite_piano: business.notif_limite_piano !== false,
       });
     }
-  }, [business]);
+  }, [business?.id]);
 
-  const handleSave = async () => {
+  // Listen for "go to piano tab" event from child
+  useEffect(() => {
+    const handler = (e) => setActiveTab(e.detail);
+    document.addEventListener('settings-goto-tab', handler);
+    return () => document.removeEventListener('settings-goto-tab', handler);
+  }, []);
+
+  const showSaved = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleSave = async (extraFields = {}) => {
     setSaving(true);
-    await base44.entities.Business.update(business.id, form);
+    const data = { ...form, ...extraFields };
+    await base44.entities.Business.update(business.id, data);
     await refreshBusiness();
-    toast({ title: '✅ Impostazioni salvate!' });
     setSaving(false);
+    showSaved();
   };
 
-  const testWa = async () => {
-    setTestingWa(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setWaStatus(form.wa_number ? 'ok' : 'err');
-    setTestingWa(false);
+  const handlePartialSave = async (fields) => {
+    if (!business?.id) return;
+    await base44.entities.Business.update(business.id, fields);
+    await refreshBusiness();
+    showSaved();
   };
-
-  const waConnected = !!form.wa_number;
-  const igConnected = !!form.ig_username;
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Impostazioni</h1>
-        <Button variant="ghost" className="text-destructive text-sm" onClick={() => base44.auth.logout()}>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Impostazioni</h1>
+          {saved && <p className="text-xs text-green-400 mt-0.5">✓ Salvato</p>}
+        </div>
+        <Button variant="ghost" className="text-muted-foreground hover:text-destructive text-sm" onClick={() => base44.auth.logout()}>
           <LogOut className="w-4 h-4 mr-2" /> Esci
         </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <MobileTabSelect
-          value={activeTab}
-          onValueChange={setActiveTab}
-          tabs={[
-            { value: 'generale', label: '⚙️ Generale' },
-            { value: 'connessioni', label: '🔗 Connessioni' },
-            { value: 'piano', label: '💳 Piano' },
-            { value: 'notifiche', label: '🔔 Notifiche' },
-          ]}
-        />
+        <MobileTabSelect value={activeTab} onValueChange={setActiveTab} tabs={TABS} />
 
-        {/* Generale */}
-        <TabsContent value="generale" className="space-y-4 mt-4">
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-semibold">Informazioni Business</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Nome Business</Label>
-                <Input value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} className="mt-1 bg-secondary border-border" />
-              </div>
-              <div>
-                <Label>Settore</Label>
-                <Input value={form.settore} onChange={e => setForm(p => ({ ...p, settore: e.target.value }))} className="mt-1 bg-secondary border-border" />
-              </div>
-            </div>
-            <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto">
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Salva
-            </Button>
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-4">
-            <Button variant="outline" size="sm" onClick={() => navigate('/system-check')}>
-              🔧 System Check — verifica funzionamento
-            </Button>
-          </div>
+        <TabsContent value="generale" className="mt-4">
+          <TabGenerale form={form} setForm={setForm} saving={saving} onSave={() => handleSave()} />
         </TabsContent>
 
-        {/* Connessioni */}
-        <TabsContent value="connessioni" className="space-y-4 mt-4">
-          {/* WhatsApp */}
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📱</span>
-              <h2 className="text-sm font-semibold">WhatsApp Business</h2>
-              <div className={cn("ml-auto flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full",
-                waConnected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-              )}>
-                {waConnected ? <><Check className="w-3 h-3" /> CONNESSO</> : <><X className="w-3 h-3" /> NON CONNESSO</>}
-              </div>
-            </div>
-            <div>
-              <Label>Numero collegato</Label>
-              <Input value={form.wa_number} onChange={e => setForm(p => ({ ...p, wa_number: e.target.value }))} placeholder="+39 333 1234567" className="mt-1 bg-secondary border-border" />
-            </div>
-            <div className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-2">
-              Provider: <span className="text-foreground font-medium">360dialog</span> · Messaggi questo mese: <span className="text-primary font-medium">247</span>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={testWa} disabled={testingWa}>
-                {testingWa ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Wifi className="w-3 h-3 mr-1" />}
-                Testa connessione
-              </Button>
-              {waStatus === 'ok' && <span className="text-green-400 text-xs self-center">Connesso ✅</span>}
-              {waStatus === 'err' && <span className="text-red-400 text-xs self-center">Errore ❌</span>}
-              <Button variant="outline" size="sm" className="ml-auto">
-                <RotateCcw className="w-3 h-3 mr-1" /> Ricollega
-              </Button>
-            </div>
-          </div>
-
-          {/* Instagram */}
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📸</span>
-              <h2 className="text-sm font-semibold">Instagram Business</h2>
-              <div className={cn("ml-auto flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full",
-                igConnected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-              )}>
-                {igConnected ? <><Check className="w-3 h-3" /> CONNESSO</> : <><X className="w-3 h-3" /> NON CONNESSO</>}
-              </div>
-            </div>
-            <div>
-              <Label>Account</Label>
-              <Input value={form.ig_username} onChange={e => setForm(p => ({ ...p, ig_username: e.target.value }))} placeholder="@tuobusiness" className="mt-1 bg-secondary border-border" />
-            </div>
-            {igConnected && (
-              <div className="text-xs text-muted-foreground bg-secondary/50 rounded-lg p-2">
-                DM ricevuti questo mese: <span className="text-primary font-medium">83</span>
-              </div>
-            )}
-            <Button variant="outline" size="sm">
-              <RotateCcw className="w-3 h-3 mr-1" /> Ricollega Instagram
-            </Button>
-          </div>
-
-          <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto">
-            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Salva connessioni
-          </Button>
+        <TabsContent value="connessioni" className="mt-4">
+          <TabConnessioni form={form} setForm={setForm} onSave={handlePartialSave} />
         </TabsContent>
 
-        {/* Piano */}
-        <TabsContent value="piano" className="space-y-4 mt-4">
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <CreditCard className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-semibold">Piano abbonamento</h2>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Piano attuale: <span className="font-bold text-primary capitalize">{form.piano}</span> · Prossimo rinnovo: 22/04/2026
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {PIANI.map(p => (
-                <button key={p.id} onClick={() => setForm(prev => ({ ...prev, piano: p.id }))}
-                  className={cn("text-left p-4 rounded-xl border transition-all",
-                    form.piano === p.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/20'
-                  )}>
-                  <p className="text-sm font-semibold text-foreground">{p.label}</p>
-                  <p className="text-lg font-bold text-primary mt-1">{p.prezzo}</p>
-                  <ul className="mt-2 space-y-0.5">
-                    {p.features.map(f => (
-                      <li key={f} className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Check className="w-3 h-3 text-green-400 shrink-0" /> {f}
-                      </li>
-                    ))}
-                  </ul>
-                </button>
-              ))}
-            </div>
-            <Button onClick={handleSave} disabled={saving} className="w-full">
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Aggiorna piano
-            </Button>
-          </div>
+        <TabsContent value="piano" className="mt-4">
+          <TabPiano form={form} setForm={setForm} onSave={handlePartialSave} />
         </TabsContent>
 
-        {/* Notifiche */}
-        <TabsContent value="notifiche" className="space-y-4 mt-4">
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-semibold">Notifiche email</h2>
-            </div>
-            <div>
-              <Label>Email per notifiche</Label>
-              <Input value={form.email_notifica} onChange={e => setForm(p => ({ ...p, email_notifica: e.target.value }))} className="mt-1 bg-secondary border-border" placeholder="email@esempio.com" />
-            </div>
-            <Button onClick={handleSave} disabled={saving} className="w-full md:w-auto">
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-              Salva
-            </Button>
-          </div>
+        <TabsContent value="notifiche" className="mt-4">
+          <TabNotifiche form={form} setForm={setForm} saving={saving} onSave={() => handleSave()} />
         </TabsContent>
       </Tabs>
     </div>
