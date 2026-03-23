@@ -288,7 +288,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
           />
         </div>
 
-        {name && (
+        {name && !isMobile && (
           <div style={{ fontSize:12,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color,opacity:0.8,fontFamily:'Inter,sans-serif',marginTop:2 }}>
             {name}
           </div>
