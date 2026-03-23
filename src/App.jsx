@@ -13,7 +13,7 @@ import CRM from '@/pages/CRM';
 import SocialManager from '@/pages/SocialManager';
 import AgentConfig from '@/pages/AgentConfig';
 import Analytics from '@/pages/Analytics';
-import Settings from '@/pages/Settings';
+import Settings from '@/pages/Settings.jsx';
 import Admin from '@/pages/Admin';
 import Onboarding from '@/pages/Onboarding';
 import SystemCheck from '@/pages/SystemCheck';
