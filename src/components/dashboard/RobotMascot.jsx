@@ -373,7 +373,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
               <rect x="6" y="8" width="36" height="26" rx="8" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
 
               {/* Eyes */}
-              <RobotEyes color={color} mood={mood} blink={blink} />
+              <RobotEyes color={color} mood={mood} blink={eyeBlink} />
 
               {/* Mouth */}
               <rect x="16" y="29" width="16" height="2.5" rx="1.25" fill={color} opacity="0.5" />
