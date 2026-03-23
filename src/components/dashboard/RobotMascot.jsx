@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import RobotChat from './RobotChat';
+import AriaChatCore from '@/components/aria/AriaChatCore';
 
 const COLORS = [
   { id: '#3B6EF8', label: 'Blu' },
@@ -14,7 +14,7 @@ const COLORS = [
 const MOODS = [
   { id: 'felice', label: '😊 Felice' },
   { id: 'stanco', label: '😴 Stanco' },
-  { id: 'energia', label: '⚡ Energia' },
+  { id: 'energia', label: '⚡ Energico' },
 ];
 
 function RobotEyes({ color, mood, blink }) {
@@ -55,11 +55,11 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   const [name, setName] = useState('ARIA');
   const [color, setColor] = useState('#3B6EF8');
   const [mood, setMood] = useState('felice');
-  const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('chat');
+  const [expanded, setExpanded] = useState(false);
   const [blink, setBlink] = useState(false);
   const [specialAnim, setSpecialAnim] = useState(null);
   const [clicked, setClicked] = useState(false);
@@ -71,19 +71,16 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   const prevMsgCount = useRef(newMessageCount);
   const prevAiCount = useRef(aiResponseCount);
 
-  // FIX 3 — Load prefs from DB
+  // Load prefs from DB
   useEffect(() => {
     if (!business?.id) return;
     setName(business.aria_name || business.robot_name || 'ARIA');
     setColor(business.aria_color || business.robot_color || '#3B6EF8');
     setMood(business.aria_mood || business.robot_mood || 'felice');
-    setPrefsLoaded(true);
   }, [business?.id, business?.aria_name, business?.aria_color, business?.aria_mood]);
 
-  // FIX 3 — Save prefs to DB
   const savePrefs = async (updates) => {
     if (!business?.id) return;
-    const next = { name, color, mood, ...updates };
     if (updates.name !== undefined) setName(updates.name);
     if (updates.color !== undefined) setColor(updates.color);
     if (updates.mood !== undefined) setMood(updates.mood);
@@ -96,7 +93,6 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     setTimeout(() => setSaved(false), 1500);
   };
 
-  // Blink every 4s
   useEffect(() => {
     const interval = setInterval(() => {
       setBlink(true);
@@ -105,7 +101,6 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     return () => clearInterval(interval);
   }, []);
 
-  // New message → jump + proactive bubble
   useEffect(() => {
     if (newMessageCount > prevMsgCount.current && prevMsgCount.current > 0) {
       setSpecialAnim('jump');
@@ -118,7 +113,6 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     prevMsgCount.current = newMessageCount;
   }, [newMessageCount, panelOpen]);
 
-  // AI response → spin animation
   useEffect(() => {
     if (aiResponseCount > prevAiCount.current) {
       setSpecialAnim('spin');
@@ -127,20 +121,18 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     prevAiCount.current = aiResponseCount;
   }, [aiResponseCount]);
 
-  // Click outside to close panel
+  // Close panel on outside click (only when not expanded)
   useEffect(() => {
-    if (!panelOpen) return;
+    if (!panelOpen || expanded) return;
     const handler = (e) => {
-      const inPanel = panelRef.current?.contains(e.target);
-      const inRobot = robotRef.current?.contains(e.target);
-      if (!inPanel && !inRobot) {
+      if (!panelRef.current?.contains(e.target) && !robotRef.current?.contains(e.target)) {
         setPanelOpen(false);
+        setExpanded(false);
       }
     };
-    // Use 'click' instead of 'mousedown' so internal button handlers fire first
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
-  }, [panelOpen]);
+  }, [panelOpen, expanded]);
 
   const eyeBlink = thinking ? true : blink;
 
@@ -149,92 +141,80 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     setClicked(true);
     setTimeout(() => setClicked(false), 400);
     setPanelOpen(p => !p);
+    if (panelOpen) setExpanded(false);
   };
 
-  const robotAnimClass = thinking
-    ? 'robot-thinking'
-    : specialAnim === 'jump'
-    ? 'robot-jump'
-    : specialAnim === 'spin'
-    ? 'robot-spin'
+  const robotAnimClass = thinking ? 'robot-thinking'
+    : specialAnim === 'jump' ? 'robot-jump'
+    : specialAnim === 'spin' ? 'robot-spin'
     : 'robot-idle';
 
-  // FIX 2 — back arrow handler
-  const handleBack = () => {
-    if (activeTab === 'chat') {
-      setActiveTab('config');
-    } else {
-      setPanelOpen(false);
+  // Check mobile
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // Panel dimensions
+  const panelStyle = (() => {
+    if (!panelOpen) return { display: 'none' };
+    if (expanded && isMobile) {
+      return {
+        position: 'fixed', inset: 0,
+        width: '100vw', height: '100vh',
+        borderRadius: 0, zIndex: 100,
+        bottom: 0, right: 0,
+      };
     }
-  };
+    if (expanded) {
+      return {
+        position: 'fixed',
+        width: 680, height: '80vh',
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        borderRadius: 20, zIndex: 100,
+      };
+    }
+    return {
+      position: 'absolute',
+      bottom: isMobile ? 'auto' : 90,
+      right: 0,
+      width: isMobile ? 'calc(100vw - 48px)' : 420,
+      height: 580,
+      borderRadius: 20,
+      zIndex: 50,
+    };
+  })();
 
   return (
     <>
       <style>{`
-        @keyframes robotIdle {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        @keyframes antennaWave {
-          0%, 100% { transform: rotate(-5deg); }
-          50% { transform: rotate(5deg); }
-        }
-        @keyframes robotJump {
-          0% { transform: translateY(0px) scale(1); }
-          20% { transform: translateY(-20px) scale(1.15); }
-          40% { transform: translateY(-10px) scale(1.1); }
-          60% { transform: translateY(-18px) scale(1.12); }
-          80% { transform: translateY(-4px) scale(1.05); }
-          100% { transform: translateY(0px) scale(1); }
-        }
-        @keyframes robotSpin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes robotClick {
-          0% { transform: scale(1); }
-          30% { transform: scale(1.2); }
-          60% { transform: scale(0.9); }
-          100% { transform: scale(1); }
-        }
-        @keyframes robotThink {
-          0%, 100% { transform: translateY(0) rotate(-2deg); }
-          50% { transform: translateY(-4px) rotate(2deg); }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes robotIdle { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+        @keyframes antennaWave { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+        @keyframes robotJump { 0% { transform: translateY(0px) scale(1); } 20% { transform: translateY(-20px) scale(1.15); } 40% { transform: translateY(-10px) scale(1.1); } 60% { transform: translateY(-18px) scale(1.12); } 80% { transform: translateY(-4px) scale(1.05); } 100% { transform: translateY(0px) scale(1); } }
+        @keyframes robotSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes robotClick { 0% { transform: scale(1); } 30% { transform: scale(1.2); } 60% { transform: scale(0.9); } 100% { transform: scale(1); } }
+        @keyframes robotThink { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4px) rotate(2deg); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes panelExpand { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:scale(1); } }
         .robot-idle { animation: robotIdle 3s ease-in-out infinite; }
         .robot-jump { animation: robotJump 1s ease-in-out; }
         .robot-spin { animation: robotSpin 0.5s linear; }
         .robot-click { animation: robotClick 0.4s ease-in-out; }
         .robot-thinking { animation: robotThink 0.8s ease-in-out infinite; }
-        .robot-wrapper {
-          opacity: 0.75;
-          transition: opacity 0.3s ease, transform 0.3s ease;
-          cursor: pointer;
-        }
+        .robot-wrapper { opacity: 0.75; transition: opacity 0.3s ease, transform 0.3s ease; cursor: pointer; }
         .robot-wrapper:hover { opacity: 1; transform: scale(1.05); }
-        .antenna-anim {
-          transform-origin: 24px 6px;
-          animation: antennaWave 2s ease-in-out infinite;
-        }
-        .robot-panel { animation: fadeInUp 0.2s ease-out; }
+        .antenna-anim { transform-origin: 24px 6px; animation: antennaWave 2s ease-in-out infinite; }
+        .robot-panel { animation: panelExpand 0.25s ease-out; }
         .proactive-bubble { animation: fadeInUp 0.3s ease-out; }
-        .back-btn {
-          width: 32px; height: 32px;
-          background: rgba(255,255,255,0.06);
-          border: none; border-radius: 8px;
-          color: #F0F4FF; cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 16px; transition: background 0.2s;
-          flex-shrink: 0;
-        }
-        .back-btn:hover { background: rgba(255,255,255,0.12); }
       `}</style>
 
-      <div style={{ position: 'fixed', bottom: 90, right: 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+      {/* Expanded backdrop */}
+      {panelOpen && expanded && !isMobile && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 99 }}
+          onClick={() => { setExpanded(false); }}
+        />
+      )}
+
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
 
         {/* Proactive bubble */}
         {proactiveBubble && !panelOpen && (
@@ -252,201 +232,114 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
           </div>
         )}
 
-        {/* Main tabbed panel */}
-        {panelOpen && (
-          <div ref={panelRef} className="robot-panel" style={{
-            background: '#0F1219',
+        {/* Main panel */}
+        <div
+          ref={panelRef}
+          className="robot-panel"
+          style={{
+            ...panelStyle,
+            background: '#0A0D14',
             border: `1px solid ${color}4D`,
-            borderRadius: 16,
-            width: 'min(280px, 90vw)',
-            height: 380,
-            marginBottom: 8,
-            boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 20px ${color}11`,
-            display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          }}>
-            {/* Header bar — FIX 2: back arrow + tab title + close */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '8px 10px 0',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
-              flexShrink: 0, paddingBottom: 8,
-            }}>
-              {/* Back arrow */}
-              <button className="back-btn" onClick={(e) => { e.stopPropagation(); handleBack(); }} title={activeTab === 'chat' ? 'Vai a Personalizza' : 'Chiudi'}>
-                ←
-              </button>
-
-              {/* Tab buttons */}
-              <div style={{ display: 'flex', flex: 1 }}>
-                {[
-                  { id: 'chat', label: '💬 Chatta' },
-                  { id: 'config', label: '⚙️ Personalizza' },
-                ].map(tab => (
-                  <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                    style={{
-                      flex: 1, padding: '4px 0',
-                      background: 'none', border: 'none',
-                      borderBottom: activeTab === tab.id ? `2px solid ${color}` : '2px solid transparent',
-                      color: activeTab === tab.id ? '#F0F4FF' : '#6B7280',
-                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                      fontFamily: 'Inter, sans-serif', transition: 'all 0.2s',
-                      marginBottom: -9,
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+            boxShadow: expanded
+              ? `0 24px 80px rgba(0,0,0,0.6), 0 0 30px ${color}18`
+              : `0 20px 60px rgba(0,0,0,0.5), 0 0 20px ${color}11`,
+            display: panelOpen ? 'flex' : 'none',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            transition: 'width 0.3s ease, height 0.3s ease, border-radius 0.3s ease',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {activeTab === 'chat' ? (
+            <AriaChatCore
+              color={color}
+              name={name}
+              mood={mood}
+              business={business}
+              form={null}
+              unreadCount={newMessageCount}
+              activeLeads={activeLeads}
+              scheduledPosts={scheduledPosts}
+              lastLead={lastLead}
+              onThinking={setThinking}
+              onClose={() => { setPanelOpen(false); setExpanded(false); }}
+              expanded={expanded}
+              onToggleExpand={() => setExpanded(e => !e)}
+              isMobile={isMobile}
+            />
+          ) : (
+            /* Config tab */
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              {/* Config header */}
+              <div style={{
+                padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)',
+                display: 'flex', alignItems: 'center', gap: 8, background: '#0A0D14', flexShrink: 0,
+              }}>
+                <button onClick={() => setActiveTab('chat')} style={{ width:32,height:32,borderRadius:8,background:'rgba(255,255,255,0.05)',border:'none',color:'#F0F4FF',cursor:'pointer',fontSize:16,fontFamily:'Inter,sans-serif',flexShrink:0 }}>←</button>
+                <span style={{ fontSize:13,fontWeight:700,color:'#F0F4FF',flex:1 }}>Personalizza {name}</span>
+                <button onClick={() => setPanelOpen(false)} style={{ color:'#6B7280',fontSize:18,background:'none',border:'none',cursor:'pointer',lineHeight:1 }}>×</button>
               </div>
 
-              {/* Close × */}
-              <button onClick={(e) => { e.stopPropagation(); setPanelOpen(false); }}
-                style={{ color: '#6B7280', fontSize: 18, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, lineHeight: 1, paddingBottom: 4 }}>
-                ×
-              </button>
-            </div>
+              <div style={{ padding:16,overflowY:'auto',flex:1 }}>
+                {saved && <div style={{ fontSize:11,color:'#10B981',marginBottom:10,textAlign:'right' }}>✓ Salvato</div>}
 
-            {/* Tab content */}
-            {activeTab === 'chat' ? (
-              <RobotChat
-                color={color}
-                name={name}
-                business={business}
-                unreadCount={newMessageCount}
-                activeLeads={activeLeads}
-                scheduledPosts={scheduledPosts}
-                lastLead={lastLead}
-                onThinking={setThinking}
-              />
-            ) : (
-              <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
-                {/* Saved indicator */}
-                {saved && (
-                  <div style={{ fontSize: 11, color: '#10B981', marginBottom: 10, textAlign: 'right' }}>✓ Salvato</div>
-                )}
-
-                {/* Name */}
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Nome</label>
-                  <input
-                    value={name}
-                    onChange={e => savePrefs({ name: e.target.value })}
-                    maxLength={12}
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      background: '#1A1F2E', border: '1px solid #2A2F3E',
-                      borderRadius: 6, padding: '6px 10px',
-                      color: '#F0F4FF', fontSize: 13, outline: 'none',
-                      fontFamily: 'Inter, sans-serif',
-                    }}
-                  />
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ fontSize:10,fontWeight:700,letterSpacing:'0.1em',color:'#6B7280',textTransform:'uppercase',display:'block',marginBottom:5 }}>Nome</label>
+                  <input value={name} onChange={e => savePrefs({ name: e.target.value })} maxLength={12}
+                    style={{ width:'100%',boxSizing:'border-box',background:'#1A1F2E',border:'1px solid #2A2F3E',borderRadius:6,padding:'6px 10px',color:'#F0F4FF',fontSize:13,outline:'none',fontFamily:'Inter,sans-serif' }} />
                 </div>
 
-                {/* Color */}
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Colore</label>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ fontSize:10,fontWeight:700,letterSpacing:'0.1em',color:'#6B7280',textTransform:'uppercase',display:'block',marginBottom:8 }}>Colore</label>
+                  <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
                     {COLORS.map(c => (
                       <button key={c.id} onClick={() => savePrefs({ color: c.id })} title={c.label}
-                        style={{
-                          width: 26, height: 26, borderRadius: '50%',
-                          background: c.id, border: color === c.id ? '2px solid white' : '2px solid transparent',
-                          cursor: 'pointer', padding: 0, transition: 'transform 0.15s',
-                        }}
-                      />
+                        style={{ width:26,height:26,borderRadius:'50%',background:c.id,border:color===c.id?'2px solid white':'2px solid transparent',cursor:'pointer',padding:0,transition:'transform 0.15s' }} />
                     ))}
                   </div>
                 </div>
 
-                {/* Mood */}
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Umore</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={{ fontSize:10,fontWeight:700,letterSpacing:'0.1em',color:'#6B7280',textTransform:'uppercase',display:'block',marginBottom:8 }}>Umore</label>
+                  <div style={{ display:'flex',flexDirection:'column',gap:5 }}>
                     {MOODS.map(m => (
                       <button key={m.id} onClick={() => savePrefs({ mood: m.id })}
-                        style={{
-                          background: mood === m.id ? `${color}22` : 'transparent',
-                          border: `1px solid ${mood === m.id ? color : '#2A2F3E'}`,
-                          borderRadius: 7, padding: '5px 10px',
-                          color: mood === m.id ? '#F0F4FF' : '#6B7280',
-                          fontSize: 12, cursor: 'pointer', textAlign: 'left',
-                          transition: 'all 0.2s', fontFamily: 'Inter, sans-serif',
-                        }}
-                      >
+                        style={{ background:mood===m.id?`${color}22`:'transparent',border:`1px solid ${mood===m.id?color:'#2A2F3E'}`,borderRadius:7,padding:'5px 10px',color:mood===m.id?'#F0F4FF':'#6B7280',fontSize:12,cursor:'pointer',textAlign:'left',transition:'all 0.2s',fontFamily:'Inter,sans-serif' }}>
                         {m.label}
                       </button>
                     ))}
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
 
-        {/* Robot — FIX 1: scaled up on desktop */}
-        <div
-          ref={robotRef}
-          className={`robot-wrapper ${clicked ? 'robot-click' : ''}`}
-          onClick={handleClick}
-        >
+        {/* Robot button */}
+        <div ref={robotRef} className={`robot-wrapper ${clicked ? 'robot-click' : ''}`} onClick={handleClick}>
           <div className={robotAnimClass}>
-            <svg
-              viewBox="0 0 48 80"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{
-                width: 'clamp(80px, 10vw, 120px)',
-                height: 'clamp(100px, 13vw, 150px)',
-                display: 'block',
-              }}
-            >
-              {/* Antenna */}
+            <svg viewBox="0 0 48 80" xmlns="http://www.w3.org/2000/svg"
+              style={{ width:'clamp(80px, 10vw, 110px)', height:'clamp(100px, 13vw, 140px)', display:'block' }}>
               <g className="antenna-anim">
                 <line x1="24" y1="8" x2="24" y2="1" stroke={color} strokeWidth="2" strokeLinecap="round" />
                 <circle cx="24" cy="1" r="2.5" fill={color} />
               </g>
-
-              {/* Head */}
               <rect x="6" y="8" width="36" height="26" rx="8" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-
-              {/* Eyes */}
               <RobotEyes color={color} mood={mood} blink={eyeBlink} />
-
-              {/* Mouth */}
               <rect x="16" y="29" width="16" height="2.5" rx="1.25" fill={color} opacity="0.5" />
-
-              {/* Body */}
               <rect x="9" y="36" width="30" height="26" rx="8" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-
-              {/* Body detail */}
               <rect x="15" y="42" width="18" height="10" rx="4" fill={color} opacity="0.15" />
               <circle cx="24" cy="47" r="3" fill={color} opacity="0.4" />
-
-              {/* Left arm */}
               <rect x="0" y="37" width="8" height="18" rx="4" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-
-              {/* Right arm */}
               <rect x="40" y="37" width="8" height="18" rx="4" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-
-              {/* Left leg */}
               <rect x="13" y="63" width="9" height="14" rx="4" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-
-              {/* Right leg */}
               <rect x="26" y="63" width="9" height="14" rx="4" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
             </svg>
           </div>
         </div>
 
-        {/* Name label — FIX 1: font-size 12px */}
         {name && (
-          <div style={{
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color,
-            opacity: 0.8,
-            fontFamily: 'Inter, sans-serif',
-            marginTop: 2,
-          }}>
+          <div style={{ fontSize:12,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color,opacity:0.8,fontFamily:'Inter,sans-serif',marginTop:2 }}>
             {name}
           </div>
         )}
