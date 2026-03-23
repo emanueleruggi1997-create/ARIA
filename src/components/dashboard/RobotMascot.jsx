@@ -140,7 +140,9 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     savePrefs(next);
   };
 
-  const robotAnimClass = specialAnim === 'jump'
+  const robotAnimClass = thinking
+    ? 'robot-thinking'
+    : specialAnim === 'jump'
     ? 'robot-jump'
     : specialAnim === 'spin'
     ? 'robot-spin'
