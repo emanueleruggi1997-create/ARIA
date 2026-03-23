@@ -318,25 +318,12 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
 
         {/* Robot button */}
         <div ref={robotRef} className={`robot-wrapper ${clicked ? 'robot-click' : ''}`} onClick={handleClick}>
-          <div className={robotAnimClass}>
-            <svg viewBox="0 0 48 80" xmlns="http://www.w3.org/2000/svg"
-              style={{ width:'clamp(80px, 10vw, 110px)', height:'clamp(100px, 13vw, 140px)', display:'block' }}>
-              <g className="antenna-anim">
-                <line x1="24" y1="8" x2="24" y2="1" stroke={color} strokeWidth="2" strokeLinecap="round" />
-                <circle cx="24" cy="1" r="2.5" fill={color} />
-              </g>
-              <rect x="6" y="8" width="36" height="26" rx="8" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-              <RobotEyes color={color} mood={mood} blink={eyeBlink} />
-              <rect x="16" y="29" width="16" height="2.5" rx="1.25" fill={color} opacity="0.5" />
-              <rect x="9" y="36" width="30" height="26" rx="8" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-              <rect x="15" y="42" width="18" height="10" rx="4" fill={color} opacity="0.15" />
-              <circle cx="24" cy="47" r="3" fill={color} opacity="0.4" />
-              <rect x="0" y="37" width="8" height="18" rx="4" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-              <rect x="40" y="37" width="8" height="18" rx="4" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-              <rect x="13" y="63" width="9" height="14" rx="4" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-              <rect x="26" y="63" width="9" height="14" rx="4" fill="#1A1F2E" stroke={color} strokeWidth="1.5" />
-            </svg>
-          </div>
+          <RobotARIA
+            size={isMobile ? 80 : 110}
+            color={color}
+            mood={mood}
+            animated={true}
+          />
         </div>
 
         {name && (
