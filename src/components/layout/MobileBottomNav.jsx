@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, MessageSquare, Users, Calendar, Menu, Bot, BarChart3, Settings, Shield, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
+import { useBusiness } from '@/lib/useBusinessContext.jsx';
 
 const mainNav = [
   { path: '/', icon: LayoutDashboard, label: 'Home' },
