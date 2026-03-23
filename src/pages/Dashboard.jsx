@@ -134,7 +134,14 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-      <RobotMascot newMessageCount={unreadCount} aiResponseCount={aiMessages.length} />
+      <RobotMascot
+        newMessageCount={unreadCount}
+        aiResponseCount={aiMessages.length}
+        business={business}
+        activeLeads={activeLeads.length}
+        scheduledPosts={posts.length}
+        lastLead={leads[0] || null}
+      />
     </div>
   );
 }
