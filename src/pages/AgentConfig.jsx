@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
