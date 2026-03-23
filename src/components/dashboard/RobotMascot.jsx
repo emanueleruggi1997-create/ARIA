@@ -62,15 +62,18 @@ function RobotEyes({ color, mood, blink }) {
   );
 }
 
-export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0 }) {
+export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, business, activeLeads = 0, scheduledPosts = 0, lastLead = null }) {
   const prefs = loadPrefs();
   const [name, setName] = useState(prefs?.name || 'ARIA');
   const [color, setColor] = useState(prefs?.color || '#3B6EF8');
   const [mood, setMood] = useState(prefs?.mood || 'felice');
   const [panelOpen, setPanelOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('chat');
   const [blink, setBlink] = useState(false);
-  const [specialAnim, setSpecialAnim] = useState(null); // 'jump' | 'spin'
+  const [specialAnim, setSpecialAnim] = useState(null);
   const [clicked, setClicked] = useState(false);
+  const [thinking, setThinking] = useState(false);
+  const [proactiveBubble, setProactiveBubble] = useState(null);
   const panelRef = useRef(null);
   const robotRef = useRef(null);
   const prevMsgCount = useRef(newMessageCount);
