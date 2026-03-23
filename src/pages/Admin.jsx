@@ -1,92 +1,66 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Shield, DollarSign, Users } from 'lucide-react';
-import KpiCard from '@/components/dashboard/KpiCard';
+import { useQuery } from '@tanstack/react-query';
+import { Shield } from 'lucide-react';
+import AdminBusiness from '@/components/admin/AdminBusiness';
+import AdminPerformance from '@/components/admin/AdminPerformance';
+import AdminLogs from '@/components/admin/AdminLogs';
+import AdminSistema from '@/components/admin/AdminSistema';
 
-const pianoPrezzo = { starter: 99, pro: 199, agency: 399 };
+const TABS = [
+  { id: 'business',     label: '👥 Business' },
+  { id: 'performance',  label: '⚡ Performance' },
+  { id: 'log',          label: '📋 Log' },
+  { id: 'sistema',      label: '🔧 Sistema' },
+];
 
 export default function Admin() {
-  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState('business');
+  const [logFilter, setLogFilter] = useState('Tutti');
 
   const { data: businesses = [], isLoading } = useQuery({
     queryKey: ['admin-businesses'],
     queryFn: () => base44.entities.Business.list('-created_date'),
   });
 
-  const activeBusinesses = businesses.filter(b => b.attivo !== false);
-  const mrr = activeBusinesses.reduce((sum, b) => sum + (pianoPrezzo[b.piano] || 0), 0);
-
-  const handleToggle = async (business) => {
-    await base44.entities.Business.update(business.id, { attivo: !business.attivo });
-    queryClient.invalidateQueries({ queryKey: ['admin-businesses'] });
+  const goToLogs = (filter = 'ERROR') => {
+    setLogFilter(filter);
+    setActiveTab('log');
   };
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="w-6 h-6 text-primary" />
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
+    <div className="p-4 md:p-6 lg:p-8 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
+          <Shield className="w-5 h-5 text-destructive" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-destructive text-white">ADMIN</span>
+          </div>
           <p className="text-xs text-muted-foreground">Solo owner Emaral Group</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KpiCard title="Business totali" value={businesses.length} icon={Users} />
-        <KpiCard title="Business attivi" value={activeBusinesses.length} icon={Shield} />
-        <KpiCard title="MRR Totale" value={`€${mrr.toLocaleString()}`} icon={DollarSign} />
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-secondary rounded-xl overflow-x-auto scrollbar-none">
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            className={`flex-1 min-w-fit px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
+              activeTab === t.id ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left text-xs font-medium text-muted-foreground p-4">Business</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-4">Settore</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-4">Piano</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-4">MRR</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-4">Stato</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-4">Azioni</th>
-              </tr>
-            </thead>
-            <tbody>
-              {businesses.map(b => (
-                <tr key={b.id} className="border-b border-border hover:bg-secondary/30 transition-colors">
-                  <td className="p-4">
-                    <p className="text-sm font-medium text-foreground">{b.nome}</p>
-                    <p className="text-xs text-muted-foreground">{b.created_by}</p>
-                  </td>
-                  <td className="p-4 text-sm text-muted-foreground">{b.settore || '—'}</td>
-                  <td className="p-4">
-                    <Badge variant="outline" className="text-xs capitalize">{b.piano}</Badge>
-                  </td>
-                  <td className="p-4 text-sm font-medium text-foreground">€{pianoPrezzo[b.piano] || 0}</td>
-                  <td className="p-4">
-                    <Badge className={b.attivo !== false ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}>
-                      {b.attivo !== false ? 'Attivo' : 'Disattivo'}
-                    </Badge>
-                  </td>
-                  <td className="p-4">
-                    <Switch checked={b.attivo !== false} onCheckedChange={() => handleToggle(b)} />
-                  </td>
-                </tr>
-              ))}
-              {businesses.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">
-                    {isLoading ? 'Caricamento...' : 'Nessun business registrato'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Tab content */}
+      {activeTab === 'business' && <AdminBusiness businesses={businesses} isLoading={isLoading} />}
+      {activeTab === 'performance' && <AdminPerformance onGoToLogs={() => goToLogs('ERROR')} />}
+      {activeTab === 'log' && <AdminLogs key={logFilter} initialFilter={logFilter} />}
+      {activeTab === 'sistema' && <AdminSistema businessCount={businesses.length} />}
     </div>
   );
 }

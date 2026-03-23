@@ -14,7 +14,8 @@ const INFO = [
   { label: 'Uptime', value: '99.7%' },
 ];
 
-function ActionButton({ icon: Icon, label, desc, color = '#3B6EF8', onClick, status }) {
+function ActionButton({ icon: IconComp, label, desc, color = '#3B6EF8', onClick, status }) {
+  const Icon = IconComp;
   return (
     <div className="bg-card border border-border rounded-xl p-4 flex items-start gap-4">
       <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}18` }}>
