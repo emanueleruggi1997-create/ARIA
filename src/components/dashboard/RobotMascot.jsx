@@ -271,7 +271,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
               flexShrink: 0, paddingBottom: 8,
             }}>
               {/* Back arrow */}
-              <button className="back-btn" onClick={handleBack} title={activeTab === 'chat' ? 'Vai a Personalizza' : 'Chiudi'}>
+              <button className="back-btn" onClick={(e) => { e.stopPropagation(); handleBack(); }} title={activeTab === 'chat' ? 'Vai a Personalizza' : 'Chiudi'}>
                 ←
               </button>
 
