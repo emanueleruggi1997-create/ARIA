@@ -12,7 +12,7 @@ const mainNav = [
 ];
 
 const menuItems = [
-  { path: '/agent', icon: Bot, label: 'Agente AI' },
+  { path: '/agent', icon: Bot, label: 'ARIA', isAria: true },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/settings', icon: Settings, label: 'Impostazioni' },
   { path: '/admin', icon: Shield, label: 'Admin' },
