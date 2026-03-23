@@ -134,6 +134,7 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      <RobotMascot newMessageCount={unreadCount} aiResponseCount={aiMessages.length} />
     </div>
   );
 }
