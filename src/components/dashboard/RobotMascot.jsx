@@ -205,7 +205,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
           </div>
         )}
 
-        {/* SMALL PANEL — inside the fixed wrapper */}
+        {/* SMALL PANEL — desktop only, non-expanded */}
         <div
           className="robot-panel"
           style={{
@@ -213,7 +213,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
             background: '#0A0D14',
             border: `1px solid ${color}4D`,
             boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 20px ${color}11`,
-            display: panelOpen && !expanded ? 'flex' : 'none',
+            display: showSmall ? 'flex' : 'none',
             flexDirection: 'column',
             overflow: 'hidden',
           }}
