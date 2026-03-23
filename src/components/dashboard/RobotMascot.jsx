@@ -108,22 +108,27 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  // Small panel style (non-expanded, inside fixed wrapper)
-  const smallPanelStyle = !panelOpen || expanded ? { display: 'none' } : {
+  // On mobile, panel always opens fullscreen; on desktop use small/expanded logic
+  const showFullscreen = panelOpen && (isMobile || expanded);
+  const showSmall = panelOpen && !isMobile && !expanded;
+
+  // Small panel style (desktop only, non-expanded)
+  const smallPanelStyle = {
     position: 'absolute',
-    bottom: isMobile ? 'auto' : 90,
+    bottom: 90,
     right: 0,
-    width: isMobile ? 'calc(100vw - 48px)' : 420,
+    width: 420,
     height: 580,
     borderRadius: 20,
     zIndex: 50,
   };
 
-  // Expanded panel style (rendered outside wrapper via separate element)
-  const expandedPanelStyle = !panelOpen || !expanded ? { display: 'none' } : isMobile ? {
+  // Fullscreen/expanded panel style
+  const expandedPanelStyle = isMobile ? {
     position: 'fixed', inset: 0,
-    width: '100vw', height: '100vh',
+    width: '100vw', height: '100dvh',
     borderRadius: 0, zIndex: 200,
+    top: 0, left: 0,
   } : {
     position: 'fixed',
     width: 680, height: '80vh',
