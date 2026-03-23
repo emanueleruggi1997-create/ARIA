@@ -215,79 +215,135 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         }
       `}</style>
 
-      <div style={{ position: 'fixed', bottom: 90, right: 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <div style={{ position: 'fixed', bottom: 90, right: 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
 
-        {/* Config Panel */}
+        {/* Proactive bubble */}
+        {proactiveBubble && !panelOpen && (
+          <div className="proactive-bubble"
+            onClick={() => { setPanelOpen(true); setActiveTab('chat'); setProactiveBubble(null); }}
+            style={{
+              background: '#0F1219', border: `1px solid ${color}66`,
+              borderRadius: 20, padding: '6px 12px',
+              fontSize: 11, color: '#F0F4FF', cursor: 'pointer',
+              boxShadow: `0 4px 16px ${color}33`,
+              marginBottom: 4, whiteSpace: 'nowrap',
+            }}
+          >
+            {proactiveBubble}
+          </div>
+        )}
+
+        {/* Main tabbed panel */}
         {panelOpen && (
           <div ref={panelRef} className="robot-panel" style={{
             background: '#0F1219',
             border: `1px solid ${color}4D`,
-            borderRadius: 12,
-            padding: 16,
-            width: 200,
+            borderRadius: 16,
+            width: 'min(280px, 90vw)',
+            height: 380,
             marginBottom: 8,
-            boxShadow: `0 0 20px ${color}22`,
+            boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 20px ${color}11`,
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
           }}>
-            {/* Close */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-              <button onClick={() => setPanelOpen(false)} style={{ color: '#6B7280', fontSize: 16, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+            {/* Tab bar */}
+            <div style={{
+              display: 'flex', alignItems: 'center',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              flexShrink: 0,
+            }}>
+              {[
+                { id: 'chat', label: '💬 Chatta' },
+                { id: 'config', label: '⚙️ Personalizza' },
+              ].map(tab => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    flex: 1, padding: '10px 0',
+                    background: 'none', border: 'none',
+                    borderBottom: activeTab === tab.id ? `2px solid ${color}` : '2px solid transparent',
+                    color: activeTab === tab.id ? '#F0F4FF' : '#6B7280',
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif', transition: 'all 0.2s',
+                    marginBottom: -1,
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+              <button onClick={() => setPanelOpen(false)}
+                style={{ padding: '0 12px', color: '#6B7280', fontSize: 16, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                ×
+              </button>
             </div>
 
-            {/* Name */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Nome</label>
-              <input
-                value={name}
-                onChange={e => updatePrefs({ name: e.target.value })}
-                maxLength={12}
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  background: '#1A1F2E', border: '1px solid #2A2F3E',
-                  borderRadius: 6, padding: '5px 8px',
-                  color: '#F0F4FF', fontSize: 12, outline: 'none',
-                  fontFamily: 'Inter, sans-serif',
-                }}
+            {/* Tab content */}
+            {activeTab === 'chat' ? (
+              <RobotChat
+                color={color}
+                name={name}
+                business={business}
+                unreadCount={newMessageCount}
+                activeLeads={activeLeads}
+                scheduledPosts={scheduledPosts}
+                lastLead={lastLead}
+                onThinking={setThinking}
               />
-            </div>
-
-            {/* Color */}
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Colore</label>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {COLORS.map(c => (
-                  <button key={c.id} onClick={() => updatePrefs({ color: c.id })}
-                    title={c.label}
+            ) : (
+              <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
+                {/* Name */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Nome</label>
+                  <input
+                    value={name}
+                    onChange={e => updatePrefs({ name: e.target.value })}
+                    maxLength={12}
                     style={{
-                      width: 24, height: 24, borderRadius: '50%',
-                      background: c.id, border: color === c.id ? '2px solid white' : '2px solid transparent',
-                      cursor: 'pointer', transition: 'transform 0.2s',
-                      padding: 0,
+                      width: '100%', boxSizing: 'border-box',
+                      background: '#1A1F2E', border: '1px solid #2A2F3E',
+                      borderRadius: 6, padding: '6px 10px',
+                      color: '#F0F4FF', fontSize: 13, outline: 'none',
+                      fontFamily: 'Inter, sans-serif',
                     }}
                   />
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Mood */}
-            <div>
-              <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Umore</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {MOODS.map(m => (
-                  <button key={m.id} onClick={() => updatePrefs({ mood: m.id })}
-                    style={{
-                      background: mood === m.id ? `${color}22` : 'transparent',
-                      border: `1px solid ${mood === m.id ? color : '#2A2F3E'}`,
-                      borderRadius: 6, padding: '4px 8px',
-                      color: mood === m.id ? '#F0F4FF' : '#6B7280',
-                      fontSize: 11, cursor: 'pointer', textAlign: 'left',
-                      transition: 'all 0.2s', fontFamily: 'Inter, sans-serif',
-                    }}
-                  >
-                    {m.label}
-                  </button>
-                ))}
+                {/* Color */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Colore</label>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {COLORS.map(c => (
+                      <button key={c.id} onClick={() => updatePrefs({ color: c.id })} title={c.label}
+                        style={{
+                          width: 26, height: 26, borderRadius: '50%',
+                          background: c.id, border: color === c.id ? '2px solid white' : '2px solid transparent',
+                          cursor: 'pointer', padding: 0, transition: 'transform 0.15s',
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mood */}
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6B7280', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Umore</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    {MOODS.map(m => (
+                      <button key={m.id} onClick={() => updatePrefs({ mood: m.id })}
+                        style={{
+                          background: mood === m.id ? `${color}22` : 'transparent',
+                          border: `1px solid ${mood === m.id ? color : '#2A2F3E'}`,
+                          borderRadius: 7, padding: '5px 10px',
+                          color: mood === m.id ? '#F0F4FF' : '#6B7280',
+                          fontSize: 12, cursor: 'pointer', textAlign: 'left',
+                          transition: 'all 0.2s', fontFamily: 'Inter, sans-serif',
+                        }}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
