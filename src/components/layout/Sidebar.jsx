@@ -45,6 +45,11 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const isAria = item.path === '/agent';
+          const ariaColor = business?.robot_color || business?.avatar_agente || '#3B6EF8';
+          const ariaName = business?.robot_name || business?.nome_agente || 'ARIA';
+          const ariaActive = business?.stato_agente === 'attivo';
+
           return (
             <Link
               key={item.path}
@@ -56,8 +61,22 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
-              <item.icon className={cn("w-[18px] h-[18px] shrink-0", isActive && "text-primary")} />
-              {!collapsed && <span>{item.label}</span>}
+              {isAria ? (
+                <div className="relative shrink-0">
+                  <div
+                    className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                    style={{ background: ariaColor }}
+                  >
+                    {ariaName[0]?.toUpperCase()}
+                  </div>
+                  {ariaActive && (
+                    <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border border-sidebar" />
+                  )}
+                </div>
+              ) : (
+                <item.icon className={cn("w-[18px] h-[18px] shrink-0", isActive && "text-primary")} />
+              )}
+              {!collapsed && <span>{isAria ? ariaName : item.label}</span>}
             </Link>
           );
         })}
