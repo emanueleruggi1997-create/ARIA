@@ -123,6 +123,9 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     return () => document.removeEventListener('mousedown', handler);
   }, [panelOpen]);
 
+  // Thinking → blink eyes continuously
+  const eyeBlink = thinking ? true : blink;
+
   const handleClick = () => {
     setClicked(true);
     setTimeout(() => setClicked(false), 400);
