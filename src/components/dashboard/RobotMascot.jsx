@@ -274,7 +274,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         </div>
 
         {/* Robot button */}
-        <div ref={robotRef} className={`robot-wrapper ${clicked ? 'robot-click' : ''}`} onClick={handleClick}>
+        <div ref={robotRef} className={`robot-wrapper ${clicked ? 'robot-click' : ''}`} onClick={handleClick} style={{ position: 'relative', zIndex: 51 }}>
           <RobotARIA
             size={isMobile ? 80 : 110}
             color={color}
