@@ -5,6 +5,7 @@ import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import KpiCard from '@/components/dashboard/KpiCard';
 import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
 import MessagesChart from '@/components/dashboard/MessagesChart';
+import RobotMascot from '@/components/dashboard/RobotMascot';
 import { MessageSquare, Users, Calendar, Zap, Bot } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
