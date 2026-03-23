@@ -88,14 +88,18 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     return () => clearInterval(interval);
   }, []);
 
-  // New message → jump animation
+  // New message → jump animation + proactive bubble
   useEffect(() => {
-    if (newMessageCount > prevMsgCount.current) {
+    if (newMessageCount > prevMsgCount.current && prevMsgCount.current > 0) {
       setSpecialAnim('jump');
       setTimeout(() => setSpecialAnim(null), 1000);
+      if (!panelOpen) {
+        setProactiveBubble(`💬 Hai ${newMessageCount} nuov${newMessageCount === 1 ? 'o' : 'i'} messagg${newMessageCount === 1 ? 'io' : 'i'}!`);
+        setTimeout(() => setProactiveBubble(null), 5000);
+      }
     }
     prevMsgCount.current = newMessageCount;
-  }, [newMessageCount]);
+  }, [newMessageCount, panelOpen]);
 
   // AI response → spin animation
   useEffect(() => {
