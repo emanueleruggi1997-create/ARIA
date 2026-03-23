@@ -131,13 +131,15 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   useEffect(() => {
     if (!panelOpen) return;
     const handler = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target) &&
-          robotRef.current && !robotRef.current.contains(e.target)) {
+      const inPanel = panelRef.current?.contains(e.target);
+      const inRobot = robotRef.current?.contains(e.target);
+      if (!inPanel && !inRobot) {
         setPanelOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    // Use 'click' instead of 'mousedown' so internal button handlers fire first
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
   }, [panelOpen]);
 
   const eyeBlink = thinking ? true : blink;
