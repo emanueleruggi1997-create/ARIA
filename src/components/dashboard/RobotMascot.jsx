@@ -137,22 +137,12 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   return (
     <>
       <style>{`
-        @keyframes robotIdle { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
-        @keyframes antennaWave { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
-        @keyframes robotJump { 0% { transform: translateY(0px) scale(1); } 20% { transform: translateY(-20px) scale(1.15); } 40% { transform: translateY(-10px) scale(1.1); } 60% { transform: translateY(-18px) scale(1.12); } 80% { transform: translateY(-4px) scale(1.05); } 100% { transform: translateY(0px) scale(1); } }
-        @keyframes robotSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes robotClick { 0% { transform: scale(1); } 30% { transform: scale(1.2); } 60% { transform: scale(0.9); } 100% { transform: scale(1); } }
-        @keyframes robotThink { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4px) rotate(2deg); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes panelExpand { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:scale(1); } }
-        .robot-idle { animation: robotIdle 3s ease-in-out infinite; }
-        .robot-jump { animation: robotJump 1s ease-in-out; }
-        .robot-spin { animation: robotSpin 0.5s linear; }
+        @keyframes robotClick { 0% { transform: scale(1); } 30% { transform: scale(1.2); } 60% { transform: scale(0.9); } 100% { transform: scale(1); } }
         .robot-click { animation: robotClick 0.4s ease-in-out; }
-        .robot-thinking { animation: robotThink 0.8s ease-in-out infinite; }
         .robot-wrapper { opacity: 0.75; transition: opacity 0.3s ease, transform 0.3s ease; cursor: pointer; }
         .robot-wrapper:hover { opacity: 1; transform: scale(1.05); }
-        .antenna-anim { transform-origin: 24px 6px; animation: antennaWave 2s ease-in-out infinite; }
         .robot-panel { animation: panelExpand 0.25s ease-out; }
         .proactive-bubble { animation: fadeInUp 0.3s ease-out; }
       `}</style>
