@@ -181,7 +181,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
             onThinking={setThinking}
             onClose={() => { setPanelOpen(false); setExpanded(false); }}
             expanded={true}
-            onToggleExpand={() => setExpanded(false)}
+            onToggleExpand={() => isMobile ? null : setExpanded(false)}
             isMobile={isMobile}
           />
         </div>
