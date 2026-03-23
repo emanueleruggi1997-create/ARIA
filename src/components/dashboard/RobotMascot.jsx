@@ -27,7 +27,6 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   const [panelOpen, setPanelOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('chat');
   const [expanded, setExpanded] = useState(false);
-  const [blink, setBlink] = useState(false);
   const [specialAnim, setSpecialAnim] = useState(null);
   const [clicked, setClicked] = useState(false);
   const [thinking, setThinking] = useState(false);
