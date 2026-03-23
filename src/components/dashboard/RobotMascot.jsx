@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import AriaChatCore from '@/components/aria/AriaChatCore';
+import RobotARIA from '@/components/aria/RobotARIA';
 
 const COLORS = [
   { id: '#3B6EF8', label: 'Blu' },
