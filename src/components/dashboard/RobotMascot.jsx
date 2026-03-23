@@ -187,7 +187,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         </div>
       )}
 
-      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+      <div style={{ position: 'fixed', bottom: isMobile ? 80 : 24, right: isMobile ? 12 : 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
 
         {/* Proactive bubble */}
         {proactiveBubble && !panelOpen && (
