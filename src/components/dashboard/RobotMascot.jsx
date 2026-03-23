@@ -150,16 +150,16 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         .proactive-bubble { animation: fadeInUp 0.3s ease-out; }
       `}</style>
 
-      {/* Expanded backdrop (outside fixed wrapper) */}
-      {panelOpen && expanded && !isMobile && (
+      {/* Backdrop for desktop expanded */}
+      {showFullscreen && !isMobile && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 199 }}
           onClick={() => { setExpanded(false); }}
         />
       )}
 
-      {/* EXPANDED PANEL — rendered outside the fixed wrapper so position:fixed works correctly */}
-      {panelOpen && expanded && (
+      {/* FULLSCREEN/EXPANDED PANEL */}
+      {showFullscreen && (
         <div
           ref={panelRef}
           className="robot-panel"
