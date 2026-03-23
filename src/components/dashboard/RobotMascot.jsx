@@ -298,7 +298,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
               </div>
 
               {/* Close × */}
-              <button onClick={() => setPanelOpen(false)}
+              <button onClick={(e) => { e.stopPropagation(); setPanelOpen(false); }}
                 style={{ color: '#6B7280', fontSize: 18, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, lineHeight: 1, paddingBottom: 4 }}>
                 ×
               </button>
