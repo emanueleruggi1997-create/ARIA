@@ -205,6 +205,14 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes robotThink {
+          0%, 100% { transform: translateY(0) rotate(-2deg); }
+          50% { transform: translateY(-4px) rotate(2deg); }
+        }
+        .robot-thinking { animation: robotThink 0.8s ease-in-out infinite; }
+        .proactive-bubble {
+          animation: fadeInUp 0.3s ease-out;
+        }
       `}</style>
 
       <div style={{ position: 'fixed', bottom: 90, right: 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
