@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import RobotChat from './RobotChat';
 
 const COLORS = [
   { id: '#3B6EF8', label: 'Blu' },
