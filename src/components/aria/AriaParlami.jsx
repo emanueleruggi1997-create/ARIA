@@ -11,12 +11,14 @@ export default function AriaParlami({ form, ariaName, ariaColor, business }) {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
+  // Mobile: 100dvh - mobile header (56px) - bottom nav (64px) - page padding (32px) - tab selector (~60px) - aria header (~80px)
+  // Desktop: 100vh - sidebar header - page padding - tabs - aria header
   return (
     <div
       className="rounded-2xl overflow-hidden border border-border"
       style={{
-        height: isMobile ? 'calc(100dvh - 180px)' : 'calc(100vh - 220px)',
-        minHeight: isMobile ? 400 : 420,
+        height: isMobile ? 'calc(100dvh - 310px)' : 'calc(100vh - 280px)',
+        minHeight: isMobile ? 320 : 420,
       }}
     >
       <AriaChatCore
