@@ -538,11 +538,12 @@ export default function AriaChatCore({
 
       {/* ── MESSAGES ── */}
       <div style={{
-        flex: 1, overflowY: 'auto',
+        flex: 1,
+        minHeight: 0, // CRITICO: permette al flex di shrinkare correttamente
+        overflowY: 'auto',
         padding: isMobile ? '12px 12px' : '14px 16px',
         display: 'flex', flexDirection: 'column', gap: 4,
         background: '#0D1017',
-        // Fix iOS momentum scroll
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain',
       }}>

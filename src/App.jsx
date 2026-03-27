@@ -18,6 +18,7 @@ import Admin from '@/pages/Admin';
 import Onboarding from '@/pages/Onboarding';
 import SystemCheck from '@/pages/SystemCheck';
 import AppLayout from '@/components/layout/AppLayout';
+import AriaChat from '@/pages/AriaChat';
 
 const AppContent = () => {
   const { business, loading } = useBusiness();
@@ -39,7 +40,9 @@ const AppContent = () => {
 
   return (
     <Routes>
-      <Route element={<AppLayout />}>
+    {/* Rotta chat ARIA mobile — senza AppLayout (no header, no bottom nav) */}
+    <Route path="/aria-chat" element={<AriaChat />} />
+    <Route element={<AppLayout />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/crm" element={<CRM />} />

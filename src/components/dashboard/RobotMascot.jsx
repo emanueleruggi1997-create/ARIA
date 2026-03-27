@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import AriaChatCore from '@/components/aria/AriaChatCore';
 import RobotARIA from '@/components/aria/RobotARIA';
@@ -19,6 +20,7 @@ const MOODS = [
 ];
 
 export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, business, activeLeads = 0, scheduledPosts = 0, lastLead = null }) {
+  const navigate = useNavigate();
   const [name, setName] = useState('ARIA');
   const [color, setColor] = useState('#3B6EF8');
   const [mood, setMood] = useState('felice');
@@ -103,6 +105,11 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     e.stopPropagation();
     setClicked(true);
     setTimeout(() => setClicked(false), 400);
+    // Su mobile apri la route dedicata, su desktop usa il pannello overlay
+    if (isMobile) {
+      navigate('/aria-chat');
+      return;
+    }
     setPanelOpen(p => !p);
     if (panelOpen) setExpanded(false);
   };
@@ -195,8 +202,8 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         />
       )}
 
-      {/* SINGLE CHAT PANEL — same instance, style changes between small/fullscreen */}
-      {panelOpen && (
+      {/* SINGLE CHAT PANEL — solo desktop, su mobile si usa /aria-chat */}
+      {panelOpen && !isMobile && (
         <div
           ref={panelRef}
           className="robot-panel"
