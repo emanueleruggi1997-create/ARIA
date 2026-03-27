@@ -1,0 +1,66 @@
+{
+  "name": "MetaConnection",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID utente Base44"
+    },
+    "access_token": {
+      "type": "string",
+      "description": "Meta long-lived access token"
+    },
+    "meta_user_id": {
+      "type": "string",
+      "description": "Meta user ID"
+    },
+    "meta_user_name": {
+      "type": "string",
+      "description": "Meta user display name"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "disconnected",
+        "error"
+      ],
+      "default": "connected"
+    },
+    "connected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "fb_connected": {
+      "type": "boolean",
+      "default": false
+    },
+    "fb_page_id": {
+      "type": "string"
+    },
+    "fb_page_name": {
+      "type": "string"
+    },
+    "fb_page_token": {
+      "type": "string",
+      "description": "Page-level access token per Facebook"
+    },
+    "ig_connected": {
+      "type": "boolean",
+      "default": false
+    },
+    "ig_account_id": {
+      "type": "string"
+    },
+    "ig_account_name": {
+      "type": "string"
+    },
+    "business_id": {
+      "type": "string",
+      "description": "ID del business collegato"
+    }
+  },
+  "required": [
+    "user_id"
+  ]
+}

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Eye, EyeOff, Copy, Loader2, ExternalLink, Lock } from 'lucide-react';
+import MetaConnectionCard from '@/components/settings/MetaConnectionCard';
 
 /* ── SVG Icons ── */
 const IgIcon = () => (
@@ -433,12 +434,28 @@ function CardEmail({ form, setForm, onSave }) {
 }
 
 /* ── Main Export ── */
-export default function TabConnessioni({ form, setForm, onSave }) {
+export default function TabConnessioni({ form, setForm, onSave, business }) {
+  const [metaConnection, setMetaConnection] = useState(null);
+  const [metaLoading, setMetaLoading] = useState(true);
+
   const handlePartialSave = (fields) => onSave(fields);
   const onUpgrade = () => {
-    // trigger parent to switch to piano tab
     document.dispatchEvent(new CustomEvent('settings-goto-tab', { detail: 'piano' }));
   };
+
+  const loadMetaConnection = async () => {
+    if (!business?.id) return;
+    try {
+      const user = await base44.auth.me();
+      const conns = await base44.entities.MetaConnection.filter({ user_id: user.id });
+      setMetaConnection(conns.length > 0 ? conns[0] : null);
+    } catch {}
+    setMetaLoading(false);
+  };
+
+  useEffect(() => {
+    loadMetaConnection();
+  }, [business?.id]);
 
   return (
     <div className="space-y-3">
@@ -446,8 +463,17 @@ export default function TabConnessioni({ form, setForm, onSave }) {
         <h2 className="text-base font-semibold text-foreground">Collega i tuoi canali</h2>
         <p className="text-sm text-muted-foreground mt-0.5">Connetti i tuoi account per far lavorare ARIA</p>
       </div>
-      <CardInstagram form={form} setForm={setForm} onSave={handlePartialSave} />
-      <CardFacebook form={form} setForm={setForm} onSave={handlePartialSave} />
+
+      {metaLoading ? (
+        <div style={{ padding: 20, textAlign: 'center', color: '#6B7280', fontSize: 12 }}>Caricamento connessione Meta...</div>
+      ) : (
+        <MetaConnectionCard
+          connection={metaConnection}
+          businessId={business?.id}
+          onRefresh={loadMetaConnection}
+        />
+      )}
+
       <CardWhatsApp form={form} setForm={setForm} onSave={handlePartialSave} onUpgrade={onUpgrade} />
       <CardEmail form={form} setForm={setForm} onSave={handlePartialSave} />
     </div>
