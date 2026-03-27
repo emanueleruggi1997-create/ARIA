@@ -115,8 +115,8 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  // On mobile, panel always opens fullscreen; on desktop use small/expanded logic
-  const showFullscreen = panelOpen && (isMobile || expanded);
+  // On mobile always fullscreen; on desktop small or expanded
+  const showFullscreen = isMobile || expanded;
   const showSmall = panelOpen && !isMobile && !expanded;
 
   // Small panel style (desktop only, non-expanded)
@@ -145,21 +145,31 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     borderRadius: 20, zIndex: 200,
   };
 
-  // Compute panel style based on state — single panel, style changes
-  const panelStyle = showFullscreen
+  // Compute panel style — on mobile always fullscreen fixed, on desktop small or expanded
+  const panelStyle = isMobile
     ? {
         position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        width: isMobile ? '100dvw' : 680,
-        height: isMobile ? '100dvh' : '80vh',
-        ...(isMobile ? {} : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', right: 'auto', bottom: 'auto' }),
-        borderRadius: isMobile ? 0 : 20,
+        top: 0, left: 0,
+        width: '100dvw',
+        height: '100dvh',
+        borderRadius: 0,
+        zIndex: 200,
+      }
+    : expanded
+    ? {
+        position: 'fixed',
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 680,
+        height: '80vh',
+        borderRadius: 20,
         zIndex: 200,
       }
     : {
         position: 'absolute',
         bottom: 90, right: 0,
-        width: 420, height: 580,
+        width: 420,
+        height: 580,
         borderRadius: 20,
         zIndex: 50,
       };
@@ -209,8 +219,8 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
             scheduledPosts={scheduledPosts} lastLead={lastLead}
             onThinking={setThinking}
             onClose={() => { setPanelOpen(false); setExpanded(false); }}
-            expanded={showFullscreen}
-            onToggleExpand={() => isMobile ? null : setExpanded(e => !e)}
+            expanded={isMobile || expanded}
+            onToggleExpand={isMobile ? null : () => setExpanded(e => !e)}
             isMobile={isMobile}
           />
         </div>
