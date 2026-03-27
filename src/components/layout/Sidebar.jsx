@@ -4,6 +4,8 @@ import {
   LayoutDashboard, MessageSquare, Users, Calendar, 
   Bot, BarChart3, Settings, Shield, ChevronLeft, ChevronRight
 } from 'lucide-react';
+
+const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/93eb01793_emaralagentai.png';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { cn } from '@/lib/utils';
 
@@ -29,9 +31,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <Bot className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <img src={LOGO_URL} alt="Emaral" className="w-8 h-8 rounded-lg shrink-0 object-cover" />
           {!collapsed && (
             <div className="whitespace-nowrap">
               <p className="text-sm font-bold text-foreground tracking-tight">Emaral Agent AI</p>

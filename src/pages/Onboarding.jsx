@@ -122,7 +122,7 @@ export default function Onboarding() {
         {/* Steps */}
         <div className="flex items-center justify-center gap-2 mb-8">
           {STEPS.map((s, i) => (
-            <React.Fragment key={s}>
+            <div key={s} className="flex items-center gap-2">
               <div className="flex flex-col items-center gap-1">
                 <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold",
                   i < step ? "bg-green-500 text-white" : i === step ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
@@ -132,7 +132,7 @@ export default function Onboarding() {
                 <span className="text-[10px] text-muted-foreground hidden sm:block">{s}</span>
               </div>
               {i < STEPS.length - 1 && <div className={cn("w-10 h-0.5 mb-4", i < step ? "bg-green-500" : "bg-secondary")} />}
-            </React.Fragment>
+            </div>
           ))}
         </div>
 
