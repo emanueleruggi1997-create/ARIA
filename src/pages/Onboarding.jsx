@@ -205,17 +205,9 @@ export default function Onboarding() {
 
           {/* Step 2 - Instagram */}
           {step === 2 && (
-            <>
+            <div className="space-y-4">
               <h2 className="text-xl font-bold">Collega Instagram Business</h2>
-              {!igConnected ? (
-                <button
-                  onClick={connectIg}
-                  className="w-full py-4 rounded-xl font-bold text-white text-lg"
-                  style={{ background: 'linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)' }}
-                >
-                  📸 Connetti con Instagram
-                </button>
-              ) : (
+              {igConnected ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
                     <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
@@ -239,14 +231,21 @@ export default function Onboarding() {
                     <Switch checked={form.ig_autopublish} onCheckedChange={v => set('ig_autopublish', v)} />
                   </div>
                 </div>
-              )}
-              {igModal && !igConnected && (
+              ) : igModal ? (
                 <div className="p-4 bg-secondary rounded-xl text-center">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
                   <p className="text-sm">Connessione in corso...</p>
                 </div>
+              ) : (
+                <button
+                  onClick={connectIg}
+                  className="w-full py-4 rounded-xl font-bold text-white text-lg"
+                  style={{ background: 'linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)' }}
+                >
+                  📸 Connetti con Instagram
+                </button>
               )}
-            </>
+            </div>
           )}
 
           {/* Step 3 - Agente */}
