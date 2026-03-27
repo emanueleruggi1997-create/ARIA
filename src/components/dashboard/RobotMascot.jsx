@@ -145,6 +145,25 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     borderRadius: 20, zIndex: 200,
   };
 
+  // Compute panel style based on state — single panel, style changes
+  const panelStyle = showFullscreen
+    ? {
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        width: isMobile ? '100dvw' : 680,
+        height: isMobile ? '100dvh' : '80vh',
+        ...(isMobile ? {} : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', right: 'auto', bottom: 'auto' }),
+        borderRadius: isMobile ? 0 : 20,
+        zIndex: 200,
+      }
+    : {
+        position: 'absolute',
+        bottom: 90, right: 0,
+        width: 420, height: 580,
+        borderRadius: 20,
+        zIndex: 50,
+      };
+
   return (
     <>
       <style>{`
@@ -162,20 +181,22 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
       {showFullscreen && !isMobile && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', zIndex: 199 }}
-          onClick={() => { setExpanded(false); }}
+          onClick={() => setExpanded(false)}
         />
       )}
 
-      {/* FULLSCREEN/EXPANDED PANEL */}
-      {showFullscreen && (
+      {/* SINGLE CHAT PANEL — same instance, style changes between small/fullscreen */}
+      {panelOpen && (
         <div
           ref={panelRef}
           className="robot-panel"
           style={{
-            ...expandedPanelStyle,
+            ...panelStyle,
             background: '#0A0D14',
             border: `1px solid ${color}4D`,
-            boxShadow: `0 24px 80px rgba(0,0,0,0.6), 0 0 30px ${color}18`,
+            boxShadow: showFullscreen
+              ? `0 24px 80px rgba(0,0,0,0.6), 0 0 30px ${color}18`
+              : `0 20px 60px rgba(0,0,0,0.5), 0 0 20px ${color}11`,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -188,8 +209,8 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
             scheduledPosts={scheduledPosts} lastLead={lastLead}
             onThinking={setThinking}
             onClose={() => { setPanelOpen(false); setExpanded(false); }}
-            expanded={true}
-            onToggleExpand={() => isMobile ? null : setExpanded(false)}
+            expanded={showFullscreen}
+            onToggleExpand={() => isMobile ? null : setExpanded(e => !e)}
             isMobile={isMobile}
           />
         </div>
@@ -200,7 +221,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         {/* Proactive bubble */}
         {proactiveBubble && !panelOpen && (
           <div className="proactive-bubble"
-            onClick={() => { setPanelOpen(true); setActiveTab('chat'); setProactiveBubble(null); }}
+            onClick={() => { setPanelOpen(true); setProactiveBubble(null); }}
             style={{
               background: '#0F1219', border: `1px solid ${color}66`,
               borderRadius: 20, padding: '6px 12px',
@@ -212,79 +233,6 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
             {proactiveBubble}
           </div>
         )}
-
-        {/* SMALL PANEL — desktop only, non-expanded */}
-        <div
-          className="robot-panel"
-          style={{
-            ...smallPanelStyle,
-            background: '#0A0D14',
-            border: `1px solid ${color}4D`,
-            boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 20px ${color}11`,
-            display: showSmall ? 'flex' : 'none',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-          onClick={e => e.stopPropagation()}
-        >
-          {activeTab === 'chat' ? (
-            <AriaChatCore
-              color={color} name={name} mood={mood} business={business} form={null}
-              unreadCount={newMessageCount} activeLeads={activeLeads}
-              scheduledPosts={scheduledPosts} lastLead={lastLead}
-              onThinking={setThinking}
-              onClose={() => { setPanelOpen(false); setExpanded(false); }}
-              expanded={false}
-              onToggleExpand={() => setExpanded(true)}
-              isMobile={isMobile}
-            />
-          ) : (
-            /* Config tab */
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              {/* Config header */}
-              <div style={{
-                padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)',
-                display: 'flex', alignItems: 'center', gap: 8, background: '#0A0D14', flexShrink: 0,
-              }}>
-                <button onClick={() => setActiveTab('chat')} style={{ width:32,height:32,borderRadius:8,background:'rgba(255,255,255,0.05)',border:'none',color:'#F0F4FF',cursor:'pointer',fontSize:16,fontFamily:'Inter,sans-serif',flexShrink:0 }}>←</button>
-                <span style={{ fontSize:13,fontWeight:700,color:'#F0F4FF',flex:1 }}>Personalizza {name}</span>
-                <button onClick={() => setPanelOpen(false)} style={{ color:'#6B7280',fontSize:18,background:'none',border:'none',cursor:'pointer',lineHeight:1 }}>×</button>
-              </div>
-
-              <div style={{ padding:16,overflowY:'auto',flex:1 }}>
-                {saved && <div style={{ fontSize:11,color:'#10B981',marginBottom:10,textAlign:'right' }}>✓ Salvato</div>}
-
-                <div style={{ marginBottom:14 }}>
-                  <label style={{ fontSize:10,fontWeight:700,letterSpacing:'0.1em',color:'#6B7280',textTransform:'uppercase',display:'block',marginBottom:5 }}>Nome</label>
-                  <input value={name} onChange={e => savePrefs({ name: e.target.value })} maxLength={12}
-                    style={{ width:'100%',boxSizing:'border-box',background:'#1A1F2E',border:'1px solid #2A2F3E',borderRadius:6,padding:'6px 10px',color:'#F0F4FF',fontSize:13,outline:'none',fontFamily:'Inter,sans-serif' }} />
-                </div>
-
-                <div style={{ marginBottom:14 }}>
-                  <label style={{ fontSize:10,fontWeight:700,letterSpacing:'0.1em',color:'#6B7280',textTransform:'uppercase',display:'block',marginBottom:8 }}>Colore</label>
-                  <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
-                    {COLORS.map(c => (
-                      <button key={c.id} onClick={() => savePrefs({ color: c.id })} title={c.label}
-                        style={{ width:26,height:26,borderRadius:'50%',background:c.id,border:color===c.id?'2px solid white':'2px solid transparent',cursor:'pointer',padding:0,transition:'transform 0.15s' }} />
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label style={{ fontSize:10,fontWeight:700,letterSpacing:'0.1em',color:'#6B7280',textTransform:'uppercase',display:'block',marginBottom:8 }}>Umore</label>
-                  <div style={{ display:'flex',flexDirection:'column',gap:5 }}>
-                    {MOODS.map(m => (
-                      <button key={m.id} onClick={() => savePrefs({ mood: m.id })}
-                        style={{ background:mood===m.id?`${color}22`:'transparent',border:`1px solid ${mood===m.id?color:'#2A2F3E'}`,borderRadius:7,padding:'5px 10px',color:mood===m.id?'#F0F4FF':'#6B7280',fontSize:12,cursor:'pointer',textAlign:'left',transition:'all 0.2s',fontFamily:'Inter,sans-serif' }}>
-                        {m.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Robot button */}
         <div ref={robotRef} className={`robot-wrapper ${clicked ? 'robot-click' : ''}`} onClick={handleClick} style={{ position: 'relative', zIndex: 51 }}>
