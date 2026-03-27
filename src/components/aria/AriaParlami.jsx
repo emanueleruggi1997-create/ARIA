@@ -12,7 +12,13 @@ export default function AriaParlami({ form, ariaName, ariaColor, business }) {
   }, []);
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-border" style={{ height: isMobile ? 'calc(100vh - 220px)' : 'calc(100vh - 260px)', minHeight: 300, maxHeight: isMobile ? 480 : 560 }}>
+    <div
+      className="rounded-2xl overflow-hidden border border-border"
+      style={{
+        height: isMobile ? 'calc(100dvh - 180px)' : 'calc(100vh - 220px)',
+        minHeight: isMobile ? 400 : 420,
+      }}
+    >
       <AriaChatCore
         color={ariaColor}
         name={ariaName}
@@ -20,7 +26,7 @@ export default function AriaParlami({ form, ariaName, ariaColor, business }) {
         business={business}
         form={form}
         onClose={null}
-        expanded={false}
+        expanded={true}
         onToggleExpand={null}
         isMobile={isMobile}
       />

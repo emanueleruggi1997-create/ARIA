@@ -254,6 +254,7 @@ export default function AriaChatCore({
 }) {
   const [messages, setMessages] = useState([]);
   const [convId, setConvId] = useState(null);
+  const convIdRef = useRef(null); // keep ref in sync for closures
   const [conversations, setConversations] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -264,9 +265,12 @@ export default function AriaChatCore({
   const inputRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Scroll to bottom
+  // Keep convIdRef in sync
+  useEffect(() => { convIdRef.current = convId; }, [convId]);
+
+  // Scroll to bottom — instant on mobile to avoid fighting keyboard animation
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    endRef.current?.scrollIntoView({ behavior: isMobile ? 'instant' : 'smooth' });
   }, [messages, loading]);
 
   // Load conversations list
@@ -299,14 +303,15 @@ export default function AriaChatCore({
 
   const startNewConv = useCallback(async (save = true) => {
     if (save && business?.id && messages.length > 1) {
-      saveConversation(convId, messages).catch(() => {}); // fire-and-forget
+      saveConversation(convIdRef.current, messages).catch(() => {});
     }
     setMessages([]);
     setConvId(null);
+    convIdRef.current = null;
     setQuickUsed(false);
     setShowHistory(false);
     setShowMenu(false);
-  }, [business?.id, messages, convId]);
+  }, [business?.id, messages]);
 
   const saveConversation = async (id, msgs) => {
     if (!business?.id || msgs.length < 2) return null;
@@ -380,18 +385,22 @@ export default function AriaChatCore({
       setMessages(prev => {
         const final = [...prev, { id: Date.now() + 1, role: 'robot', text: replyText, ts: new Date().toISOString() }];
 
-        // Auto-save every 5 messages (fire-and-forget, no await needed here)
+        // Auto-save every 2 or 5 messages — use ref for convId to avoid stale closure
         if (final.length % 5 === 0 || final.length === 2) {
-          saveConversation(convId, final).then(savedId => {
-            if (!convId && savedId) setConvId(savedId);
+          saveConversation(convIdRef.current, final).then(savedId => {
+            if (!convIdRef.current && savedId) {
+              setConvId(savedId);
+              convIdRef.current = savedId;
+            }
           }).catch(() => {});
         }
 
         // Reset conversation at 50 msgs
         if (final.length >= 50) {
-          saveConversation(convId, final).catch(() => {}).finally(() => {
+          saveConversation(convIdRef.current, final).catch(() => {}).finally(() => {
             setMessages([]);
             setConvId(null);
+            convIdRef.current = null;
           });
           return final;
         }
@@ -436,7 +445,12 @@ export default function AriaChatCore({
   const isEmpty = messages.length === 0;
 
   return (
-    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', overflow: 'hidden' }}>
+    <div ref={containerRef} style={{
+      display: 'flex', flexDirection: 'column',
+      height: '100%', position: 'relative', overflow: 'hidden',
+      // On mobile use dvh to handle keyboard resize
+      ...(isMobile && { maxHeight: '100dvh' }),
+    }}>
 
       {/* ── History panel (absolute overlay) ── */}
       {showHistory && (
@@ -465,8 +479,16 @@ export default function AriaChatCore({
         display: 'flex', alignItems: 'center', gap: 8,
         flexShrink: 0, background: '#0A0D14',
       }}>
-        {/* ← close */}
-        <button style={iconBtnStyle} onClick={onClose} title="Chiudi">←</button>
+        {/* ← close/back — always show on mobile */}
+        {(onClose || isMobile) && (
+          <button
+            style={{ ...iconBtnStyle, width: isMobile ? 40 : 32, height: isMobile ? 40 : 32 }}
+            onClick={onClose || (() => window.history.back())}
+            title="Chiudi"
+          >
+            ←
+          </button>
+        )}
 
         {/* Avatar + name */}
         <div style={{
@@ -516,9 +538,13 @@ export default function AriaChatCore({
 
       {/* ── MESSAGES ── */}
       <div style={{
-        flex: 1, overflowY: 'auto', padding: '14px 16px',
+        flex: 1, overflowY: 'auto',
+        padding: isMobile ? '12px 12px' : '14px 16px',
         display: 'flex', flexDirection: 'column', gap: 4,
         background: '#0D1017',
+        // Fix iOS momentum scroll
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain',
       }}>
 
         {/* Empty state — quick cards */}
@@ -545,7 +571,7 @@ export default function AriaChatCore({
                 </div>
               )}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
               {QUICK_CARDS.map(q => (
                 <button key={q.title} onClick={() => sendMessage(q.title)}
                   style={{
@@ -582,25 +608,13 @@ export default function AriaChatCore({
 
       {/* ── INPUT ── */}
       <div style={{
-        padding: '10px 14px 14px',
+        padding: isMobile ? '10px 12px 16px' : '10px 14px 14px',
         borderTop: '1px solid rgba(255,255,255,0.06)',
         display: 'flex', gap: 8, alignItems: 'flex-end',
         flexShrink: 0, background: '#0A0D14',
+        // Safe area for iPhone home indicator
+        paddingBottom: isMobile ? 'max(16px, env(safe-area-inset-bottom, 16px))' : 14,
       }}>
-        {/* Attachment (disabled) */}
-        <button
-          disabled
-          title="Prossimamente"
-          style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
-            cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#4B5563', flexShrink: 0, fontSize: 16,
-          }}
-        >
-          📎
-        </button>
-
         <textarea
           ref={inputRef}
           value={input}
@@ -608,7 +622,7 @@ export default function AriaChatCore({
           onChange={e => {
             setInput(e.target.value);
             e.target.style.height = 'auto';
-            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+            e.target.style.height = Math.min(e.target.scrollHeight, isMobile ? 100 : 120) + 'px';
           }}
           onKeyDown={handleKeyDown}
           placeholder={`Scrivi ad ${name}...`}
@@ -616,10 +630,15 @@ export default function AriaChatCore({
           style={{
             flex: 1, background: '#161B26', borderRadius: 20,
             border: `1px solid rgba(255,255,255,0.08)`,
-            padding: '10px 16px', color: '#F0F4FF', fontSize: 13.5,
+            padding: isMobile ? '12px 16px' : '10px 16px',
+            color: '#F0F4FF',
+            // CRITICAL: font-size ≥ 16px on mobile prevents iOS auto-zoom
+            fontSize: isMobile ? 16 : 13.5,
             outline: 'none', fontFamily: 'Inter, sans-serif', lineHeight: 1.5,
-            resize: 'none', overflow: 'hidden', minHeight: 40,
+            resize: 'none', overflow: 'hidden',
+            minHeight: isMobile ? 48 : 40,
             transition: 'border-color 0.2s',
+            WebkitAppearance: 'none',
           }}
           onFocus={e => e.target.style.borderColor = color}
           onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
@@ -629,16 +648,16 @@ export default function AriaChatCore({
           onClick={() => sendMessage(input)}
           disabled={!input.trim() || loading}
           style={{
-            width: 40, height: 40, borderRadius: '50%',
+            width: isMobile ? 48 : 40,
+            height: isMobile ? 48 : 40,
+            borderRadius: '50%',
             background: input.trim() && !loading ? color : '#1E2330',
             border: 'none', cursor: input.trim() && !loading ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'background 0.2s, transform 0.15s', flexShrink: 0,
           }}
-          onMouseEnter={e => { if (input.trim() && !loading) e.currentTarget.style.transform = 'scale(1.05)'; }}
-          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
         >
-          <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+          <svg width="16" height="16" viewBox="0 0 12 12" fill="none">
             <path d="M1 6h10M6 1l5 5-5 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
