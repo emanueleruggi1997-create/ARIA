@@ -134,8 +134,8 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   const expandedPanelStyle = isMobile ? {
     position: 'fixed',
     top: 0, left: 0, right: 0, bottom: 0,
-    width: '100%',
-    height: '100%',
+    width: '100dvw',
+    height: '100dvh',
     borderRadius: 0, zIndex: 200,
   } : {
     position: 'fixed',

@@ -447,9 +447,9 @@ export default function AriaChatCore({
   return (
     <div ref={containerRef} style={{
       display: 'flex', flexDirection: 'column',
-      height: '100%', position: 'relative', overflow: 'hidden',
-      // On mobile use dvh to handle keyboard resize
-      ...(isMobile && { maxHeight: '100dvh' }),
+      width: '100%',
+      height: isMobile ? '100dvh' : '100%',
+      position: 'relative', overflow: 'hidden',
     }}>
 
       {/* ── History panel (absolute overlay) ── */}
