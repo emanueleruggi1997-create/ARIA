@@ -80,19 +80,29 @@ export default function Settings() {
   };
 
   const handleSave = async (extraFields = {}) => {
+    if (!business?.id) return;
     setSaving(true);
-    const data = { ...form, ...extraFields };
-    await base44.entities.Business.update(business.id, data);
-    await refreshBusiness();
-    setSaving(false);
-    showSaved();
+    try {
+      const data = { ...form, ...extraFields };
+      await base44.entities.Business.update(business.id, data);
+      await refreshBusiness();
+      showSaved();
+    } catch (err) {
+      console.error('[Settings] handleSave error:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePartialSave = async (fields) => {
     if (!business?.id) return;
-    await base44.entities.Business.update(business.id, fields);
-    await refreshBusiness();
-    showSaved();
+    try {
+      await base44.entities.Business.update(business.id, fields);
+      await refreshBusiness();
+      showSaved();
+    } catch (err) {
+      console.error('[Settings] handlePartialSave error:', err);
+    }
   };
 
   return (

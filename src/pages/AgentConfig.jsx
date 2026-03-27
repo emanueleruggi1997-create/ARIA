@@ -64,22 +64,25 @@ export default function AgentConfig() {
   const handleSave = async () => {
     if (!business?.id) return;
     setSaving(true);
-    const payload = {
-      ...form,
-      // Canonical fields
-      aria_name: form.nome_agente,
-      aria_color: form.avatar_agente,
-      aria_mood: form.robot_mood,
-      // Legacy sync
-      robot_name: form.nome_agente,
-      robot_color: form.avatar_agente,
-      robot_mood: form.robot_mood,
-    };
-    await base44.entities.Business.update(business.id, payload);
-    await refreshBusiness();
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      const payload = {
+        ...form,
+        aria_name: form.nome_agente,
+        aria_color: form.avatar_agente,
+        aria_mood: form.robot_mood,
+        robot_name: form.nome_agente,
+        robot_color: form.avatar_agente,
+        robot_mood: form.robot_mood,
+      };
+      await base44.entities.Business.update(business.id, payload);
+      await refreshBusiness();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      console.error('[AgentConfig] handleSave error:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const ariaName = form.nome_agente || 'ARIA';

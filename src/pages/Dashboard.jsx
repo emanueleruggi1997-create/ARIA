@@ -20,18 +20,21 @@ export default function Dashboard() {
     queryKey: ['messages', business?.id],
     queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 50),
     enabled: !!business?.id,
+    staleTime: 30_000,
   });
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads', business?.id],
     queryFn: () => base44.entities.Lead.filter({ business_id: business?.id }, '-created_date', 10),
     enabled: !!business?.id,
+    staleTime: 60_000,
   });
 
   const { data: posts = [] } = useQuery({
-    queryKey: ['posts-dash', business?.id],
+    queryKey: ['posts', business?.id, 'schedulato'],
     queryFn: () => base44.entities.Post.filter({ business_id: business?.id, stato: 'schedulato' }),
     enabled: !!business?.id,
+    staleTime: 60_000,
   });
 
   const unreadMessages = messages.filter(m => !m.letto && m.ruolo === 'user');

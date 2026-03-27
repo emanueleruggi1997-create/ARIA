@@ -50,13 +50,20 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     if (updates.name !== undefined) setName(updates.name);
     if (updates.color !== undefined) setColor(updates.color);
     if (updates.mood !== undefined) setMood(updates.mood);
-    await base44.entities.Business.update(business.id, {
-      robot_name: updates.name !== undefined ? updates.name : name,
-      robot_color: updates.color !== undefined ? updates.color : color,
-      robot_mood: updates.mood !== undefined ? updates.mood : mood,
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+    try {
+      await base44.entities.Business.update(business.id, {
+        robot_name: updates.name !== undefined ? updates.name : name,
+        robot_color: updates.color !== undefined ? updates.color : color,
+        robot_mood: updates.mood !== undefined ? updates.mood : mood,
+        aria_name: updates.name !== undefined ? updates.name : name,
+        aria_color: updates.color !== undefined ? updates.color : color,
+        aria_mood: updates.mood !== undefined ? updates.mood : mood,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } catch (err) {
+      console.error('[RobotMascot] savePrefs error:', err);
+    }
   };
 
   useEffect(() => {

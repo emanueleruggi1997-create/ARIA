@@ -40,31 +40,33 @@ function LeadsKanban({ businessId }) {
     enabled: !!businessId,
   });
 
+  const invalidateLeads = () => queryClient.invalidateQueries({ queryKey: ['leads', businessId] });
+
   const handleUpdateLead = async (id, data) => {
     await base44.entities.Lead.update(id, data);
-    // If won, suggest adding to mailing list
     if (data.stato === 'chiuso_vinto') {
       const lead = leads.find(l => l.id === id);
       if (lead) setShowAddToMailingList(lead);
     }
-    queryClient.invalidateQueries({ queryKey: ['leads'] });
+    invalidateLeads();
     setSelectedLead(null);
   };
 
   const handleDeleteLead = async (id) => {
     await base44.entities.Lead.delete(id);
-    queryClient.invalidateQueries({ queryKey: ['leads'] });
+    invalidateLeads();
   };
 
   const handleMoveLead = async (lead, newStato) => {
     await base44.entities.Lead.update(lead.id, { stato: newStato });
     if (newStato === 'chiuso_vinto') setShowAddToMailingList(lead);
-    queryClient.invalidateQueries({ queryKey: ['leads'] });
+    invalidateLeads();
   };
 
   const handleCreateLead = async () => {
+    if (!newLead.contact_nome.trim()) return;
     await base44.entities.Lead.create({ ...newLead, business_id: businessId, stato: 'nuovo' });
-    queryClient.invalidateQueries({ queryKey: ['leads'] });
+    invalidateLeads();
     setShowCreate(false);
     setNewLead({ contact_nome: '', tipo_progetto: '', canale: 'whatsapp' });
   };

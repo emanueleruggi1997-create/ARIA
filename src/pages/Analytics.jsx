@@ -30,18 +30,21 @@ export default function Analytics() {
     queryKey: ['analytics-messages', business?.id],
     queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 500),
     enabled: !!business?.id,
+    staleTime: 120_000,
   });
 
   const { data: leads = [] } = useQuery({
     queryKey: ['analytics-leads', business?.id],
     queryFn: () => base44.entities.Lead.filter({ business_id: business?.id }),
     enabled: !!business?.id,
+    staleTime: 120_000,
   });
 
   const { data: posts = [] } = useQuery({
     queryKey: ['analytics-posts', business?.id],
     queryFn: () => base44.entities.Post.filter({ business_id: business?.id }),
     enabled: !!business?.id,
+    staleTime: 120_000,
   });
 
   // Messages by channel — real weekly buckets (last 4 weeks)

@@ -21,9 +21,10 @@ export default function SocialManager() {
     queryKey: ['posts', business?.id],
     queryFn: () => base44.entities.Post.filter({ business_id: business?.id }, '-created_date'),
     enabled: !!business?.id,
+    staleTime: 30_000,
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['posts'] });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['posts', business?.id] });
 
   const handleDelete = async (id) => {
     await base44.entities.Post.delete(id);

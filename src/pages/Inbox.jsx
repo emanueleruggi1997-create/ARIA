@@ -19,12 +19,14 @@ export default function Inbox() {
     queryKey: ['contacts', business?.id],
     queryFn: () => base44.entities.Contact.filter({ business_id: business?.id }),
     enabled: !!business?.id,
+    staleTime: 30_000,
   });
 
   const { data: allMessages = [] } = useQuery({
     queryKey: ['all-messages', business?.id],
     queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 200),
     enabled: !!business?.id,
+    staleTime: 15_000,
   });
 
   const conversations = useMemo(() => {
@@ -65,14 +67,16 @@ export default function Inbox() {
   const handleMarkRead = (conv) => setReadIds(prev => new Set([...prev, conv.contact_id]));
 
   const handleArchive = async (conv) => {
+    if (!conv?.contact_id) return;
     await base44.entities.Contact.update(conv.contact_id, { archiviata: true });
     queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
     if (activeConv?.contact_id === conv.contact_id) setActiveConv(null);
   };
 
   const handleDelete = async (conv) => {
+    if (!conv?.contact_id) return;
     const msgs = allMessages.filter(m => m.contact_id === conv.contact_id);
-    await Promise.all(msgs.map(m => base44.entities.Message.delete(m.id)));
+    await Promise.allSettled(msgs.map(m => base44.entities.Message.delete(m.id)));
     await base44.entities.Contact.delete(conv.contact_id);
     queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
     queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
@@ -80,15 +84,16 @@ export default function Inbox() {
   };
 
   const handleSendMessage = async (text, ruolo) => {
+    if (!text?.trim() || !activeConv?.contact_id || !business?.id) return;
     await base44.entities.Message.create({
       contact_id: activeConv.contact_id,
       business_id: business.id,
       canale: activeConv.canale,
       ruolo,
-      testo: text,
+      testo: text.trim(),
       letto: true,
     });
-    queryClient.invalidateQueries({ queryKey: ['all-messages'] });
+    queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
   };
 
   const FilterTabs = () => (
@@ -130,13 +135,13 @@ export default function Inbox() {
             conversation={activeConv}
             messages={activeMessages}
             onSendMessage={handleSendMessage}
-            onRefresh={() => queryClient.invalidateQueries({ queryKey: ['all-messages'] })}
-          />
-          <ContactSidebar
-            contact={activeContact}
-            businessId={business?.id}
-            onRefresh={() => queryClient.invalidateQueries({ queryKey: ['contacts'] })}
-          />
+            onRefresh={() => queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] })}
+              />
+              <ContactSidebar
+                contact={activeContact}
+                businessId={business?.id}
+                onRefresh={() => queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] })}
+              />
         </div>
       </div>
 
@@ -166,7 +171,7 @@ export default function Inbox() {
                 conversation={activeConv}
                 messages={activeMessages}
                 onSendMessage={handleSendMessage}
-                onRefresh={() => queryClient.invalidateQueries({ queryKey: ['all-messages'] })}
+                onRefresh={() => queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] })}
                 mobile
               />
             </div>
