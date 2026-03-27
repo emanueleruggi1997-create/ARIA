@@ -33,55 +33,91 @@ function LeadsKanban({ businessId }) {
   const [showAddToMailingList, setShowAddToMailingList] = useState(null);
   const [newLead, setNewLead] = useState({ contact_nome: '', tipo_progetto: '', canale: 'whatsapp' });
   const [mobileFilter, setMobileFilter] = useState('tutti');
+  const [creatingLead, setCreatingLead] = useState(false);
+  const [movingLeadId, setMovingLeadId] = useState(null);
+  const [deletingLeadId, setDeletingLeadId] = useState(null);
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads', businessId],
     queryFn: () => base44.entities.Lead.filter({ business_id: businessId }),
     enabled: !!businessId,
+    staleTime: 30_000,
   });
 
   const invalidateLeads = () => queryClient.invalidateQueries({ queryKey: ['leads', businessId] });
 
   const handleUpdateLead = async (id, data) => {
-    await base44.entities.Lead.update(id, data);
-    if (data.stato === 'chiuso_vinto') {
-      const lead = leads.find(l => l.id === id);
-      if (lead) setShowAddToMailingList(lead);
+    try {
+      await base44.entities.Lead.update(id, data);
+      if (data.stato === 'chiuso_vinto') {
+        const lead = leads.find(l => l.id === id);
+        if (lead) setShowAddToMailingList(lead);
+      }
+      invalidateLeads();
+      setSelectedLead(null);
+    } catch (err) {
+      console.error('[CRM] handleUpdateLead error:', err);
     }
-    invalidateLeads();
-    setSelectedLead(null);
   };
 
   const handleDeleteLead = async (id) => {
-    await base44.entities.Lead.delete(id);
-    invalidateLeads();
+    if (deletingLeadId === id) return;
+    setDeletingLeadId(id);
+    try {
+      await base44.entities.Lead.delete(id);
+      invalidateLeads();
+    } catch (err) {
+      console.error('[CRM] handleDeleteLead error:', err);
+    } finally {
+      setDeletingLeadId(null);
+    }
   };
 
   const handleMoveLead = async (lead, newStato) => {
-    await base44.entities.Lead.update(lead.id, { stato: newStato });
-    if (newStato === 'chiuso_vinto') setShowAddToMailingList(lead);
-    invalidateLeads();
+    if (movingLeadId === lead.id) return;
+    setMovingLeadId(lead.id);
+    try {
+      await base44.entities.Lead.update(lead.id, { stato: newStato });
+      if (newStato === 'chiuso_vinto') setShowAddToMailingList(lead);
+      invalidateLeads();
+    } catch (err) {
+      console.error('[CRM] handleMoveLead error:', err);
+    } finally {
+      setMovingLeadId(null);
+    }
   };
 
   const handleCreateLead = async () => {
-    if (!newLead.contact_nome.trim()) return;
-    await base44.entities.Lead.create({ ...newLead, business_id: businessId, stato: 'nuovo' });
-    invalidateLeads();
-    setShowCreate(false);
-    setNewLead({ contact_nome: '', tipo_progetto: '', canale: 'whatsapp' });
+    if (!newLead.contact_nome.trim() || creatingLead) return;
+    setCreatingLead(true);
+    try {
+      await base44.entities.Lead.create({ ...newLead, business_id: businessId, stato: 'nuovo' });
+      invalidateLeads();
+      setShowCreate(false);
+      setNewLead({ contact_nome: '', tipo_progetto: '', canale: 'whatsapp' });
+    } catch (err) {
+      console.error('[CRM] handleCreateLead error:', err);
+    } finally {
+      setCreatingLead(false);
+    }
   };
 
   const handleAddToMailingList = async (lead) => {
-    await base44.entities.ContactEmail.create({
-      business_id: businessId,
-      nome: lead.contact_nome,
-      email: '',
-      tags: ['cliente'],
-      fonte: lead.canale,
-      stato: 'attivo',
-    });
-    queryClient.invalidateQueries({ queryKey: ['contacts-email'] });
-    setShowAddToMailingList(null);
+    try {
+      await base44.entities.ContactEmail.create({
+        business_id: businessId,
+        nome: lead.contact_nome,
+        email: '',
+        tags: ['cliente'],
+        fonte: lead.canale || 'whatsapp',
+        stato: 'attivo',
+      });
+      queryClient.invalidateQueries({ queryKey: ['contacts-email', businessId] });
+    } catch (err) {
+      console.error('[CRM] handleAddToMailingList error:', err);
+    } finally {
+      setShowAddToMailingList(null);
+    }
   };
 
   const totalValue = leads.reduce((s, l) => s + (l.budget_max || 0), 0);
@@ -186,7 +222,9 @@ function LeadsKanban({ businessId }) {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleCreateLead} className="w-full" disabled={!newLead.contact_nome}>Crea Lead</Button>
+            <Button onClick={handleCreateLead} className="w-full" disabled={!newLead.contact_nome.trim() || creatingLead}>
+              {creatingLead ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 inline-block" />Creazione...</> : 'Crea Lead'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

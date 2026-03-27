@@ -16,6 +16,7 @@ export default function SocialManager() {
   const [showCreate, setShowCreate] = useState(false);
   const [tab, setTab] = useState('calendario');
   const [preselectedDate, setPreselectedDate] = useState(null);
+  const [actingOnId, setActingOnId] = useState(null); // prevent double actions
 
   const { data: posts = [] } = useQuery({
     queryKey: ['posts', business?.id],
@@ -27,24 +28,48 @@ export default function SocialManager() {
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['posts', business?.id] });
 
   const handleDelete = async (id) => {
-    await base44.entities.Post.delete(id);
-    refresh();
+    if (actingOnId === id) return;
+    setActingOnId(id);
+    try {
+      await base44.entities.Post.delete(id);
+      refresh();
+    } catch (err) {
+      console.error('[SocialManager] handleDelete error:', err);
+    } finally {
+      setActingOnId(null);
+    }
   };
 
   const handleDuplicate = async (post) => {
-    await base44.entities.Post.create({
-      business_id: post.business_id,
-      canale: post.canale,
-      caption: post.caption + ' (copia)',
-      hashtags: post.hashtags,
-      stato: 'bozza',
-    });
-    refresh();
+    if (actingOnId === post.id) return;
+    setActingOnId(post.id);
+    try {
+      await base44.entities.Post.create({
+        business_id: post.business_id,
+        canale: post.canale,
+        caption: (post.caption || '') + ' (copia)',
+        hashtags: post.hashtags,
+        stato: 'bozza',
+      });
+      refresh();
+    } catch (err) {
+      console.error('[SocialManager] handleDuplicate error:', err);
+    } finally {
+      setActingOnId(null);
+    }
   };
 
   const handleChangeStato = async (post, newStato) => {
-    await base44.entities.Post.update(post.id, { stato: newStato });
-    refresh();
+    if (actingOnId === post.id) return;
+    setActingOnId(post.id);
+    try {
+      await base44.entities.Post.update(post.id, { stato: newStato });
+      refresh();
+    } catch (err) {
+      console.error('[SocialManager] handleChangeStato error:', err);
+    } finally {
+      setActingOnId(null);
+    }
   };
 
   const handleDayClick = (day) => {

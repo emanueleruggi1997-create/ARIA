@@ -17,6 +17,7 @@ const QUICK_MESSAGES = [
 
 export default function ChatView({ conversation, messages, onSendMessage, onRefresh }) {
   const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiPreview, setAiPreview] = useState('');
   const [manualMode, setManualMode] = useState(false);
@@ -29,28 +30,39 @@ export default function ChatView({ conversation, messages, onSendMessage, onRefr
   }, [messages]);
 
   const handleSend = async (messageText, ruolo = 'human') => {
-    if (!messageText.trim()) return;
-    await onSendMessage(messageText, ruolo);
-    setText('');
-    setAiPreview('');
+    if (!messageText.trim() || sending) return;
+    setSending(true);
+    try {
+      await onSendMessage(messageText, ruolo);
+      setText('');
+      setAiPreview('');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleGenerateAI = async () => {
+    if (generating) return;
     setGenerating(true);
     const t0 = Date.now();
-    const conversationText = messages.map(m => `${m.ruolo}: ${m.testo}`).join('\n');
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Sei un assistente AI per il business "${business?.nome}". Servizi: ${business?.servizi || 'non specificati'}. Tono: ${business?.tono || 'professionale'}.
+    try {
+      const conversationText = messages.map(m => `${m.ruolo}: ${m.testo}`).join('\n');
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `Sei un assistente AI per il business "${business?.nome}". Servizi: ${business?.servizi || 'non specificati'}. Tono: ${business?.tono || 'professionale'}.
 Agente: ${business?.nome_agente || 'Assistente'}.
 
 Conversazione:
 ${conversationText}
 
 Genera una risposta professionale al cliente. Rispondi SOLO con il testo della risposta, niente altro.`,
-    });
-    setAiPreview(result);
-    setGenMs(Date.now() - t0);
-    setGenerating(false);
+      });
+      setAiPreview(typeof result === 'string' ? result : result?.text || '');
+      setGenMs(Date.now() - t0);
+    } catch (err) {
+      console.error('[ChatView] handleGenerateAI error:', err);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   if (!conversation) {
@@ -184,8 +196,8 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
             className="bg-secondary border-border resize-none min-h-[36px] max-h-24 text-sm"
             rows={1}
           />
-          <Button size="sm" onClick={() => handleSend(text, 'human')} disabled={!text.trim()} className="shrink-0 h-9">
-            <Send className="w-4 h-4" />
+          <Button size="sm" onClick={() => handleSend(text, 'human')} disabled={!text.trim() || sending} className="shrink-0 h-9">
+            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { applyTheme, loadFont } from '@/lib/useTheme';
+import { queryClientInstance } from '@/lib/query-client';
 
 const BusinessContext = createContext(null);
 
@@ -28,6 +29,11 @@ export function BusinessProvider({ children }) {
       const businesses = await base44.entities.Business.filter({ created_by: user.email });
       if (businesses.length > 0) {
         const biz = businesses[0];
+        // Clear all cached queries when business changes to prevent cross-business data leaks
+        const prev = business;
+        if (prev && prev.id !== biz.id) {
+          queryClientInstance.clear();
+        }
         setBusiness(biz);
         applyBusinessTheme(biz);
       } else {

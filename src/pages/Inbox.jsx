@@ -14,6 +14,7 @@ export default function Inbox() {
   const [activeConv, setActiveConv] = useState(null);
   const [filter, setFilter] = useState('tutti');
   const [readIds, setReadIds] = useState(new Set());
+  const [actingOnConv, setActingOnConv] = useState(null); // prevent double archive/delete
 
   const { data: contacts = [] } = useQuery({
     queryKey: ['contacts', business?.id],
@@ -67,33 +68,51 @@ export default function Inbox() {
   const handleMarkRead = (conv) => setReadIds(prev => new Set([...prev, conv.contact_id]));
 
   const handleArchive = async (conv) => {
-    if (!conv?.contact_id) return;
-    await base44.entities.Contact.update(conv.contact_id, { archiviata: true });
-    queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
-    if (activeConv?.contact_id === conv.contact_id) setActiveConv(null);
+    if (!conv?.contact_id || actingOnConv === conv.contact_id) return;
+    setActingOnConv(conv.contact_id);
+    try {
+      await base44.entities.Contact.update(conv.contact_id, { archiviata: true });
+      queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
+      if (activeConv?.contact_id === conv.contact_id) setActiveConv(null);
+    } catch (err) {
+      console.error('[Inbox] handleArchive error:', err);
+    } finally {
+      setActingOnConv(null);
+    }
   };
 
   const handleDelete = async (conv) => {
-    if (!conv?.contact_id) return;
-    const msgs = allMessages.filter(m => m.contact_id === conv.contact_id);
-    await Promise.allSettled(msgs.map(m => base44.entities.Message.delete(m.id)));
-    await base44.entities.Contact.delete(conv.contact_id);
-    queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
-    queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
-    if (activeConv?.contact_id === conv.contact_id) setActiveConv(null);
+    if (!conv?.contact_id || actingOnConv === conv.contact_id) return;
+    setActingOnConv(conv.contact_id);
+    try {
+      const msgs = allMessages.filter(m => m.contact_id === conv.contact_id);
+      await Promise.allSettled(msgs.map(m => base44.entities.Message.delete(m.id)));
+      await base44.entities.Contact.delete(conv.contact_id);
+      queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
+      queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
+      if (activeConv?.contact_id === conv.contact_id) setActiveConv(null);
+    } catch (err) {
+      console.error('[Inbox] handleDelete error:', err);
+    } finally {
+      setActingOnConv(null);
+    }
   };
 
   const handleSendMessage = async (text, ruolo) => {
     if (!text?.trim() || !activeConv?.contact_id || !business?.id) return;
-    await base44.entities.Message.create({
-      contact_id: activeConv.contact_id,
-      business_id: business.id,
-      canale: activeConv.canale,
-      ruolo,
-      testo: text.trim(),
-      letto: true,
-    });
-    queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
+    try {
+      await base44.entities.Message.create({
+        contact_id: activeConv.contact_id,
+        business_id: business.id,
+        canale: activeConv.canale || 'whatsapp',
+        ruolo,
+        testo: text.trim(),
+        letto: true,
+      });
+      queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
+    } catch (err) {
+      console.error('[Inbox] handleSendMessage error:', err);
+    }
   };
 
   const FilterTabs = () => (

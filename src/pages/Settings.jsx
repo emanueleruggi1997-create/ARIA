@@ -80,7 +80,7 @@ export default function Settings() {
   };
 
   const handleSave = async (extraFields = {}) => {
-    if (!business?.id) return;
+    if (!business?.id || saving) return;
     setSaving(true);
     try {
       const data = { ...form, ...extraFields };

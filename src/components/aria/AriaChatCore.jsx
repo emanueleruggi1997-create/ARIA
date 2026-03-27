@@ -278,12 +278,14 @@ export default function AriaChatCore({
     } catch {}
   }, [business?.id]);
 
-  // Start or resume conversation
+  // Start or resume conversation — run only when business changes
   useEffect(() => {
     if (!business?.id) return;
     loadConversations();
-    startNewConv(false);
-  }, [business?.id]);
+    setMessages([]);
+    setConvId(null);
+    setQuickUsed(false);
+  }, [business?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close menu on outside click
   useEffect(() => {
@@ -295,15 +297,16 @@ export default function AriaChatCore({
     return () => document.removeEventListener('click', h);
   }, [showMenu]);
 
-  const startNewConv = async (save = true) => {
-    if (save && business?.id && messages.length > 0) {
-      await saveConversation(null, messages);
+  const startNewConv = useCallback(async (save = true) => {
+    if (save && business?.id && messages.length > 1) {
+      saveConversation(convId, messages).catch(() => {}); // fire-and-forget
     }
     setMessages([]);
     setConvId(null);
     setQuickUsed(false);
     setShowHistory(false);
-  };
+    setShowMenu(false);
+  }, [business?.id, messages, convId]);
 
   const saveConversation = async (id, msgs) => {
     if (!business?.id || msgs.length < 2) return null;
@@ -356,8 +359,9 @@ export default function AriaChatCore({
   };
 
   const sendMessage = async (text) => {
-    if (!text.trim() || loading) return;
+    if (!text?.trim() || loading) return;
     const userMsg = { id: Date.now(), role: 'user', text: text.trim(), ts: new Date().toISOString() };
+    // Capture current messages in a local var to avoid stale closure issues
     const updated = [...messages, userMsg];
     setMessages(updated);
     setInput('');
@@ -371,26 +375,41 @@ export default function AriaChatCore({
 
     try {
       const reply = await base44.integrations.Core.InvokeLLM({ prompt: fullPrompt });
-      const replyText = typeof reply === 'string' ? reply : reply?.text || '...';
-      const ariaMsg = { id: Date.now() + 1, role: 'robot', text: replyText, ts: new Date().toISOString() };
-      const final = [...updated, ariaMsg];
-      setMessages(final);
+      const replyText = typeof reply === 'string' ? reply : (reply?.text || '...');
+      // Use functional updater to avoid stale closure on messages
+      setMessages(prev => {
+        const final = [...prev, { id: Date.now() + 1, role: 'robot', text: replyText, ts: new Date().toISOString() }];
 
-      // Auto-save every 5 messages
-      if (final.length % 5 === 0 || final.length === 2) {
-        const savedId = await saveConversation(convId, final);
-        if (!convId && savedId) setConvId(savedId);
-      }
+        // Auto-save every 5 messages (fire-and-forget, no await needed here)
+        if (final.length % 5 === 0 || final.length === 2) {
+          saveConversation(convId, final).then(savedId => {
+            if (!convId && savedId) setConvId(savedId);
+          }).catch(() => {});
+        }
 
-      // Max 50 → new conv
-      if (final.length >= 50) {
-        await saveConversation(convId, final);
-        setMessages([]);
-        setConvId(null);
-      }
-    } catch {}
-    setLoading(false);
-    onThinking?.(false);
+        // Reset conversation at 50 msgs
+        if (final.length >= 50) {
+          saveConversation(convId, final).catch(() => {}).finally(() => {
+            setMessages([]);
+            setConvId(null);
+          });
+          return final;
+        }
+
+        return final;
+      });
+    } catch (err) {
+      console.error('[AriaChatCore] sendMessage error:', err);
+      // Show error message in chat so user knows something went wrong
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1, role: 'robot',
+        text: 'Ops, qualcosa è andato storto. Riprova.',
+        ts: new Date().toISOString(),
+      }]);
+    } finally {
+      setLoading(false);
+      onThinking?.(false);
+    }
   };
 
   const handleKeyDown = (e) => {

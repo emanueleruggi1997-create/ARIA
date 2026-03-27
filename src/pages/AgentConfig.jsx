@@ -62,7 +62,7 @@ export default function AgentConfig() {
 
   // Explicit save — writes canonical aria_* fields + legacy robot_* fields for dashboard sync
   const handleSave = async () => {
-    if (!business?.id) return;
+    if (!business?.id || saving) return;
     setSaving(true);
     try {
       const payload = {

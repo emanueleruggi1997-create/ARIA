@@ -129,7 +129,7 @@ export default function Dashboard() {
                 <p className="text-xs text-muted-foreground">{msg.canale === 'whatsapp' ? 'WhatsApp' : 'Instagram'}</p>
               </div>
               <span className="text-[10px] text-muted-foreground shrink-0">
-                {format(new Date(msg.created_date), 'HH:mm')}
+                {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
               </span>
             </div>
           )) : (

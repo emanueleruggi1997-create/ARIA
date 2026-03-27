@@ -53,25 +53,31 @@ export default function Onboarding() {
   };
 
   const handleSubmit = async () => {
+    if (saving) return; // prevent double-submit on fast clicks
+    if (!form.nome?.trim()) return;
     setSaving(true);
-    const data = {
-      nome: form.nome, settore: form.settore, servizi: form.servizi,
-      wa_number: form.wa_number, ig_username: form.ig_username,
-      nome_agente: form.nome_agente, tono: form.tono,
-      cose_da_non_fare: form.cose_da_non_fare,
-      orario_inizio: form.orario_inizio, orario_fine: form.orario_fine,
-      piano: form.piano, attivo: true, stato_agente: 'attivo',
-      auto_risposta: true, giorni_attivi: form.giorni_attivi,
-      fuori_orario_attivo: form.fuori_orario_attivo,
-      messaggio_fuori_orario: form.messaggio_fuori_orario,
-    };
-    const created = await base44.entities.Business.create(data);
-    setBusiness(created);
-    setDone(true);
-    setSaving(false);
-    confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 } });
-    setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0 } }), 300);
-    setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1 } }), 500);
+    try {
+      const data = {
+        nome: form.nome.trim(), settore: form.settore, servizi: form.servizi,
+        wa_number: form.wa_number, ig_username: form.ig_username,
+        nome_agente: form.nome_agente || 'ARIA', tono: form.tono,
+        cose_da_non_fare: form.cose_da_non_fare,
+        orario_inizio: form.orario_inizio, orario_fine: form.orario_fine,
+        piano: form.piano, attivo: true, stato_agente: 'attivo',
+        auto_risposta: true, giorni_attivi: form.giorni_attivi,
+        fuori_orario_attivo: form.fuori_orario_attivo,
+        messaggio_fuori_orario: form.messaggio_fuori_orario,
+      };
+      const created = await base44.entities.Business.create(data);
+      setBusiness(created);
+      setDone(true);
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 } });
+      setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 55, origin: { x: 0 } }), 300);
+      setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 55, origin: { x: 1 } }), 500);
+    } catch (err) {
+      console.error('[Onboarding] handleSubmit error:', err);
+      setSaving(false); // re-enable button on error
+    }
   };
 
   if (done) {
