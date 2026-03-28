@@ -16,31 +16,10 @@ const TYPE_STYLE = {
   WEBHOOK: { bg: 'bg-purple-500/15', text: 'text-purple-400', dot: '🟣' },
 };
 
-function genLog(i = 0) {
-  const types = ['ERROR','WARN','INFO','AI','AUTH','WEBHOOK'];
-  const t = types[Math.floor(Math.random() * types.length)];
-  const msgs = {
-    ERROR:   ['Claude API timeout dopo 30s — Business: Emaral Group', 'Webhook delivery failed — retry 3/3', 'Database connection error: timeout after 10s'],
-    WARN:    ['WhatsApp webhook ritardo 2.3s — Business: Studio Legale Roma', 'Rate limit 90% raggiunto — Business: Bar Roma', 'Token scaduto, rinnovo in corso'],
-    INFO:    ['Nuovo business registrato: Mario Rossi Parrucchiere', 'Backup completato: 128MB', 'Sistema avviato correttamente'],
-    AI:      ['Claude response: 1.2s | 340 token — Business: Emaral Group', 'Prompt ottimizzato: risparmio 120 token', 'Modello fallback attivato'],
-    AUTH:    ['Login riuscito: admin@emaral.com', 'Sessione scaduta: user@example.com', 'Nuovo utente invitato: test@test.com'],
-    WEBHOOK: ['Instagram DM ricevuto: @cliente123 → Bar Roma', 'WhatsApp msg in → +39 333 123456', 'Webhook registrato: business #12'],
-  };
-  return {
-    id: `log-${Date.now()}-${i}-${Math.random()}`,
-    tipo: t,
-    timestamp: new Date(Date.now() - Math.floor(Math.random() * 3600000)),
-    messaggio: msgs[t][Math.floor(Math.random() * msgs[t].length)],
-    business_id: 'biz-' + Math.floor(Math.random() * 100),
-    request_id: 'req-' + Math.random().toString(36).slice(2, 10),
-    stack: t === 'ERROR' ? 'Error: connection timeout\n  at Socket.connect (net.js:1142)\n  at createConnection (net.js:307)' : null,
-    extra: { ip: '192.168.1.' + Math.floor(Math.random() * 255), env: 'production' },
-  };
-}
+// No fake log generation — logs start empty
 
 export default function AdminLogs({ initialFilter }) {
-  const [logs, setLogs] = useState(() => Array.from({ length: 25 }, (_, i) => genLog(i)).sort((a, b) => b.timestamp - a.timestamp));
+  const [logs, setLogs] = useState([]);
   const [tipoFilter, setTipoFilter] = useState(initialFilter || 'Tutti');
   const [periodo, setPeriodo] = useState('Oggi');
   const [search, setSearch] = useState('');
@@ -52,15 +31,7 @@ export default function AdminLogs({ initialFilter }) {
   const liveRef = useRef(live);
   liveRef.current = live;
 
-  // Add new log every 10s if live
-  useEffect(() => {
-    const t = setInterval(() => {
-      if (!liveRef.current) return;
-      const newLog = genLog(Date.now());
-      setLogs(prev => [newLog, ...prev].slice(0, 200));
-    }, 10000);
-    return () => clearInterval(t);
-  }, []);
+  // Live mode: no auto-generation of fake logs
 
   useEffect(() => { if (initialFilter && initialFilter !== 'Tutti') setTipoFilter(initialFilter); }, [initialFilter]);
 
@@ -127,7 +98,7 @@ export default function AdminLogs({ initialFilter }) {
         </button>
 
         {!live && (
-          <Button size="sm" variant="outline" onClick={() => setLogs(prev => [genLog(Date.now()), ...prev])} className="h-8 gap-1.5 text-xs">
+          <Button size="sm" variant="outline" onClick={() => {}} className="h-8 gap-1.5 text-xs">
             <RefreshCw className="w-3 h-3" /> Aggiorna
           </Button>
         )}
@@ -144,7 +115,9 @@ export default function AdminLogs({ initialFilter }) {
       {/* Log list */}
       <div className="bg-card border border-border rounded-xl overflow-hidden divide-y divide-border/50">
         {filtered.length === 0 && (
-          <div className="p-8 text-center text-sm text-muted-foreground">Nessun log trovato</div>
+          <div className="p-8 text-center text-sm text-muted-foreground">
+            {logs.length === 0 ? 'Nessun log registrato' : 'Nessun log trovato per i filtri selezionati'}
+          </div>
         )}
         {filtered.map(log => {
           const st = TYPE_STYLE[log.tipo] || TYPE_STYLE.INFO;
