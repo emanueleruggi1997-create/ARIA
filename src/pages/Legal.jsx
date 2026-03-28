@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const TABS = [
   { id: 'termini', label: 'Termini e Condizioni' },
   { id: 'privacy', label: 'Privacy Policy' },
+  { id: 'eliminazione', label: 'Eliminazione Dati' },
 ];
 
 const Section = ({ title, children }) => (
@@ -127,6 +128,65 @@ function Privacy() {
   );
 }
 
+function Eliminazione() {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground mb-6">Ultimo aggiornamento: 2026</p>
+
+      <p className="text-sm text-muted-foreground mb-6">
+        Emaral Agent AI, sviluppata da Emaral Group, consente agli utenti di richiedere in qualsiasi momento la cancellazione dei propri dati personali.
+      </p>
+
+      <Section title="Come richiedere l'eliminazione dei dati">
+        <p>Per richiedere la cancellazione dei tuoi dati, invia un'email a:</p>
+        <a href="mailto:info.emaralgroup@gmail.com" className="text-primary hover:underline font-semibold block my-2">
+          info.emaralgroup@gmail.com
+        </a>
+        <p>Inserendo le seguenti informazioni:</p>
+        <ul className="mt-1 space-y-0.5">
+          <Li>Nome e cognome</Li>
+          <Li>Email utilizzata per l'accesso</Li>
+          <Li>Richiesta esplicita di eliminazione dei dati</Li>
+        </ul>
+      </Section>
+
+      <Section title="Cosa succede dopo la richiesta">
+        <p>Una volta ricevuta la richiesta:</p>
+        <ul className="mt-1 space-y-0.5">
+          <Li>Verificheremo la tua identità</Li>
+          <Li>Procederemo con la cancellazione dei dati associati al tuo account</Li>
+          <Li>Riceverai una conferma via email</Li>
+        </ul>
+      </Section>
+
+      <Section title="Tempi di elaborazione">
+        <p>La richiesta verrà completata entro un massimo di <strong className="text-foreground">7 giorni lavorativi</strong>.</p>
+      </Section>
+
+      <Section title="Tipologia di dati eliminati">
+        <p>Saranno eliminati:</p>
+        <ul className="mt-1 space-y-0.5">
+          <Li>Dati dell'account</Li>
+          <Li>Informazioni inserite nella piattaforma</Li>
+          <Li>Dati collegati alle integrazioni (es. Meta, Facebook, Instagram)</Li>
+          <Li>Dati di utilizzo</Li>
+        </ul>
+      </Section>
+
+      <Section title="Note importanti">
+        <p>Alcuni dati potrebbero essere conservati temporaneamente solo per obblighi legali o di sicurezza.</p>
+      </Section>
+
+      <Section title="Contatti">
+        <p>Per qualsiasi domanda o richiesta:</p>
+        <a href="mailto:info.emaralgroup@gmail.com" className="text-primary hover:underline">
+          info.emaralgroup@gmail.com
+        </a>
+      </Section>
+    </div>
+  );
+}
+
 export default function Legal() {
   const [active, setActive] = useState('termini');
   const navigate = useNavigate();
@@ -168,7 +228,7 @@ export default function Legal() {
 
       {/* Content */}
       <div className="max-w-2xl mx-auto px-4 py-6">
-        {active === 'termini' ? <Termini /> : <Privacy />}
+        {active === 'termini' ? <Termini /> : active === 'privacy' ? <Privacy /> : <Eliminazione />}
       </div>
     </div>
   );
