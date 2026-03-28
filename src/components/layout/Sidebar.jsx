@@ -96,6 +96,15 @@ export default function Sidebar({ collapsed, setCollapsed }) {
         </Link>
       </nav>
 
+      {/* Legal link */}
+      {!collapsed && (
+        <div className="px-4 pt-2 pb-1">
+          <Link to="/legal" className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+            Termini & Privacy
+          </Link>
+        </div>
+      )}
+
       {/* Agent status */}
       {business && !collapsed && (
         <div className="px-4 py-3 border-t border-sidebar-border">

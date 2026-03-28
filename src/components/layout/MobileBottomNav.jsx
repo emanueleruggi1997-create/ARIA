@@ -82,6 +82,13 @@ export default function MobileBottomNav() {
                 </button>
               ))}
               <button
+                onClick={() => handleMenuNav('/legal')}
+                className="w-full flex items-center gap-4 px-5 py-4 text-left text-muted-foreground hover:bg-secondary/50 transition-colors"
+              >
+                <span className="text-[15px]">📄</span>
+                <span className="text-[15px] font-medium">Termini & Privacy</span>
+              </button>
+              <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-4 px-5 py-4 text-left text-red-400 hover:bg-red-500/10 transition-colors border-t border-border mt-2"
               >
