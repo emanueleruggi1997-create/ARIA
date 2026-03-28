@@ -213,10 +213,11 @@ export default function Legal() {
               className="flex-1 py-3 text-sm font-medium transition-colors"
               style={{
                 color: active === tab.id ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+                borderTop: 'none',
+                borderLeft: 'none',
+                borderRight: 'none',
                 borderBottom: active === tab.id ? '2px solid hsl(var(--primary))' : '2px solid transparent',
                 background: 'transparent',
-                border: 'none',
-                borderBottom: active === tab.id ? '2px solid hsl(var(--primary))' : '2px solid transparent',
                 cursor: 'pointer',
               }}
             >
