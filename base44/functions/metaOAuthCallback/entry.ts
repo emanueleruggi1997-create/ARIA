@@ -1,7 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-const APP_SUCCESS_URL = 'https://emaral.it/settings?tab=connections&meta=success';
-const APP_ERROR_URL   = 'https://emaral.it/settings?tab=connections&meta=error';
+const APP_SUCCESS_URL = 'https://emaral.it/settings?meta=success&tab=connections';
+const APP_ERROR_URL   = 'https://emaral.it/settings?meta=error&tab=connections';
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
