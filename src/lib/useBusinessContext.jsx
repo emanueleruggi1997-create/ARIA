@@ -7,7 +7,7 @@ import { queryClientInstance } from '@/lib/query-client';
 const BusinessContext = createContext(null);
 
 export function BusinessProvider({ children }) {
-  const { isLoadingAuth } = useAuth();
+  const { isLoadingAuth, isAuthenticated } = useAuth();
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false);
@@ -46,10 +46,12 @@ export function BusinessProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!isLoadingAuth) {
+    if (!isLoadingAuth && isAuthenticated) {
       loadBusiness();
+    } else if (!isLoadingAuth && !isAuthenticated) {
+      setLoading(false);
     }
-  }, [isLoadingAuth, loadBusiness]);
+  }, [isLoadingAuth, isAuthenticated, loadBusiness]);
 
   const refreshBusiness = useCallback(async () => {
     try {
