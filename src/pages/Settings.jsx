@@ -23,12 +23,14 @@ const TABS = [
 export default function Settings() {
   const { business, refreshBusiness } = useBusiness();
   const [metaNotice, setMetaNotice] = useState(null); // 'success' | 'error' | null
+  const [mounted, setMounted] = useState(false);
 
   const [activeTab, setActiveTab] = useState('generale');
   const [saving, setSaving] = useState(false);
 
   // Read ?tab=connections&meta=success/error from URL on mount
   useEffect(() => {
+    setMounted(true);
     const params = new URLSearchParams(window.location.search);
     const tab  = params.get('tab');
     const meta = params.get('meta');
@@ -123,12 +125,12 @@ export default function Settings() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 max-w-2xl">
-      {metaNotice === 'success' && (
+      {mounted && metaNotice === 'success' && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium">
           ✓ Account Meta collegato con successo!
         </div>
       )}
-      {metaNotice === 'error' && (
+      {mounted && metaNotice === 'error' && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium">
           ✗ Collegamento Meta non riuscito. Riprova.
         </div>
