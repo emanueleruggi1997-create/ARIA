@@ -82,48 +82,54 @@ Deno.serve(async (req) => {
   };
 
   if (intentType === 'facebook') {
-    // Fetch Facebook Pages
+    // Fetch Facebook Pages with explicit fields
     try {
-      const pagesRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${longToken}`);
+      const pagesRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token&access_token=${longToken}`);
       const pagesData = await pagesRes.json();
+      console.log('[metaOAuthCallback] /me/accounts response:', JSON.stringify(pagesData));
       const page = pagesData.data?.[0];
-      if (page) {
+      if (page && page.id && page.access_token) {
         payload.fb_connected = true;
         payload.fb_page_id = page.id;
-        payload.fb_page_name = page.name;
+        payload.fb_page_name = page.name || 'Unnamed Page';
         payload.fb_page_token = page.access_token;
-        console.log('[metaOAuthCallback] FB page found:', page.name);
+        console.log('[metaOAuthCallback] FB page found:', page.name, 'id:', page.id);
       } else {
         payload.fb_connected = false;
-        console.log('[metaOAuthCallback] No FB pages found');
+        console.log('[metaOAuthCallback] No FB pages found or missing required fields');
       }
     } catch (e) {
       console.error('[metaOAuthCallback] FB pages fetch error:', e.message);
       payload.fb_connected = false;
     }
   } else if (intentType === 'instagram') {
-    // Fetch Instagram Business accounts (requires a linked Facebook page)
+    // Fetch Instagram Business accounts via Facebook Pages
     try {
-      const pagesRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${longToken}`);
+      const pagesRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token&access_token=${longToken}`);
       const pagesData = await pagesRes.json();
+      console.log('[metaOAuthCallback] /me/accounts response (IG intent):', JSON.stringify(pagesData));
       const page = pagesData.data?.[0];
-      if (page) {
-        const igRes = await fetch(`https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+      if (page && page.id) {
+        // Use user token (longToken) to read instagram_business_account from page
+        const igRes = await fetch(`https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account&access_token=${longToken}`);
         const igData = await igRes.json();
+        console.log('[metaOAuthCallback] page instagram_business_account response:', JSON.stringify(igData));
         const igId = igData.instagram_business_account?.id;
         if (igId) {
-          const igInfoRes = await fetch(`https://graph.facebook.com/v19.0/${igId}?fields=id,name,username&access_token=${page.access_token}`);
+          const igInfoRes = await fetch(`https://graph.facebook.com/v19.0/${igId}?fields=id,name,username&access_token=${longToken}`);
           const igInfo = await igInfoRes.json();
+          console.log('[metaOAuthCallback] IG account info response:', JSON.stringify(igInfo));
           payload.ig_connected = true;
           payload.ig_account_id = igId;
           payload.ig_account_name = igInfo.username || igInfo.name || igId;
-          // Also store the page token for future posting
+          // Store page info for future publishing
           payload.fb_page_token = page.access_token;
           payload.fb_page_id = page.id;
-          console.log('[metaOAuthCallback] IG account found:', payload.ig_account_name);
+          payload.fb_page_name = page.name || 'Unnamed Page';
+          console.log('[metaOAuthCallback] IG account found:', payload.ig_account_name, 'id:', igId);
         } else {
           payload.ig_connected = false;
-          console.log('[metaOAuthCallback] No IG Business account linked to FB page');
+          console.log('[metaOAuthCallback] No IG Business account linked to FB page:', page.id);
         }
       } else {
         payload.ig_connected = false;
