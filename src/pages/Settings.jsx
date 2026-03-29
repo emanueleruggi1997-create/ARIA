@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { useAuth } from '@/lib/AuthContext';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import MobileTabSelect from '@/components/ui/MobileTabSelect';
 import TabGenerale from '@/components/settings/TabGenerale';
@@ -21,26 +23,13 @@ const TABS = [
 ];
 
 export default function Settings() {
-  const { business, refreshBusiness } = useBusiness();
-  const [metaNotice, setMetaNotice] = useState(null); // 'success' | 'error' | null
+  const navigate = useNavigate();
+  const { isLoadingAuth, isAuthenticated } = useAuth();
+  const { business, loading: businessLoading, refreshBusiness } = useBusiness();
+  const [metaNotice, setMetaNotice] = useState(null);
   const [mounted, setMounted] = useState(false);
-
   const [activeTab, setActiveTab] = useState('generale');
   const [saving, setSaving] = useState(false);
-
-  // Read ?tab=connections&meta=success/error from URL on mount
-  useEffect(() => {
-    setMounted(true);
-    const params = new URLSearchParams(window.location.search);
-    const tab  = params.get('tab');
-    const meta = params.get('meta');
-    if (tab === 'connections') setActiveTab('connessioni');
-    if (meta === 'success' || meta === 'error') {
-      setMetaNotice(meta);
-      window.history.replaceState({}, '', '/settings');
-      setTimeout(() => setMetaNotice(null), 6000);
-    }
-  }, []);
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({
     nome: '', settore: '', citta: '', telefono: '', sito_web: '', piva: '',
@@ -53,6 +42,19 @@ export default function Settings() {
     email_notifica: '',
     notif_escalation: true, notif_report_settimanale: false, notif_limite_piano: true,
   });
+
+  useEffect(() => {
+    setMounted(true);
+    const params = new URLSearchParams(window.location.search);
+    const tab  = params.get('tab');
+    const meta = params.get('meta');
+    if (tab === 'connections') setActiveTab('connessioni');
+    if (meta === 'success' || meta === 'error') {
+      setMetaNotice(meta);
+      window.history.replaceState({}, '', '/settings');
+      setTimeout(() => setMetaNotice(null), 6000);
+    }
+  }, []);
 
   useEffect(() => {
     if (business) {
@@ -85,7 +87,6 @@ export default function Settings() {
     }
   }, [business?.id]);
 
-  // Listen for "go to piano tab" event from child
   useEffect(() => {
     const handler = (e) => setActiveTab(e.detail);
     document.addEventListener('settings-goto-tab', handler);
@@ -122,6 +123,21 @@ export default function Settings() {
       console.error('[Settings] handlePartialSave error:', err);
     }
   };
+
+  if (!isLoadingAuth && !isAuthenticated) {
+    return null;
+  }
+
+  if (isLoadingAuth || businessLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
+          <p className="text-sm text-muted-foreground mt-3">Caricamento impostazioni...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 max-w-2xl">
