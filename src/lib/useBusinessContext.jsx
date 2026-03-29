@@ -1,18 +1,23 @@
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { applyTheme, loadFont } from '@/lib/useTheme';
 import { queryClientInstance } from '@/lib/query-client';
 
 const BusinessContext = createContext(null);
 
 export function BusinessProvider({ children }) {
+  const { isLoadingAuth } = useAuth();
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false); // prevent race conditions
 
   useEffect(() => {
-    loadBusiness();
-  }, []);
+    // Only load business after auth is ready
+    if (!isLoadingAuth) {
+      loadBusiness();
+    }
+  }, [isLoadingAuth]);
 
   const applyBusinessTheme = (biz) => {
     if (biz.theme_accent || biz.theme_bg) {
