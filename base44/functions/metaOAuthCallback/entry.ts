@@ -22,11 +22,13 @@ Deno.serve(async (req) => {
   // Decode state
   let userId = '';
   let businessId = '';
+  let intentType = 'facebook'; // 'facebook' | 'instagram'
   try {
     const decoded = JSON.parse(atob(state));
     userId = decoded.userId;
     businessId = decoded.businessId || '';
-    console.log('[metaOAuthCallback] state decoded — userId:', userId, 'businessId:', businessId);
+    intentType = decoded.type || 'facebook';
+    console.log('[metaOAuthCallback] state decoded — userId:', userId, 'businessId:', businessId, 'type:', intentType);
   } catch (e) {
     console.error('[metaOAuthCallback] Invalid state:', e.message);
     return Response.redirect(APP_ERROR_URL, 302);
@@ -68,8 +70,7 @@ Deno.serve(async (req) => {
   const meData = await meRes.json();
   console.log('[metaOAuthCallback] meData:', JSON.stringify({ id: meData.id, name: meData.name, email: meData.email }));
 
-  // 4. Save MetaConnection to database
-  const base44 = createClientFromRequest(req);
+  // 4. Fetch channel-specific data based on intent
   const payload = {
     user_id: userId,
     business_id: businessId,
@@ -78,10 +79,64 @@ Deno.serve(async (req) => {
     meta_user_name: meData.name || '',
     status: 'connected',
     connected_at: new Date().toISOString(),
-    fb_connected: false,
-    ig_connected: false,
   };
 
+  if (intentType === 'facebook') {
+    // Fetch Facebook Pages
+    try {
+      const pagesRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${longToken}`);
+      const pagesData = await pagesRes.json();
+      const page = pagesData.data?.[0];
+      if (page) {
+        payload.fb_connected = true;
+        payload.fb_page_id = page.id;
+        payload.fb_page_name = page.name;
+        payload.fb_page_token = page.access_token;
+        console.log('[metaOAuthCallback] FB page found:', page.name);
+      } else {
+        payload.fb_connected = false;
+        console.log('[metaOAuthCallback] No FB pages found');
+      }
+    } catch (e) {
+      console.error('[metaOAuthCallback] FB pages fetch error:', e.message);
+      payload.fb_connected = false;
+    }
+  } else if (intentType === 'instagram') {
+    // Fetch Instagram Business accounts (requires a linked Facebook page)
+    try {
+      const pagesRes = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${longToken}`);
+      const pagesData = await pagesRes.json();
+      const page = pagesData.data?.[0];
+      if (page) {
+        const igRes = await fetch(`https://graph.facebook.com/v19.0/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`);
+        const igData = await igRes.json();
+        const igId = igData.instagram_business_account?.id;
+        if (igId) {
+          const igInfoRes = await fetch(`https://graph.facebook.com/v19.0/${igId}?fields=id,name,username&access_token=${page.access_token}`);
+          const igInfo = await igInfoRes.json();
+          payload.ig_connected = true;
+          payload.ig_account_id = igId;
+          payload.ig_account_name = igInfo.username || igInfo.name || igId;
+          // Also store the page token for future posting
+          payload.fb_page_token = page.access_token;
+          payload.fb_page_id = page.id;
+          console.log('[metaOAuthCallback] IG account found:', payload.ig_account_name);
+        } else {
+          payload.ig_connected = false;
+          console.log('[metaOAuthCallback] No IG Business account linked to FB page');
+        }
+      } else {
+        payload.ig_connected = false;
+        console.log('[metaOAuthCallback] No FB pages found for IG lookup');
+      }
+    } catch (e) {
+      console.error('[metaOAuthCallback] IG fetch error:', e.message);
+      payload.ig_connected = false;
+    }
+  }
+
+  // 5. Save MetaConnection to database
+  const base44 = createClientFromRequest(req);
   try {
     const existing = await base44.asServiceRole.entities.MetaConnection.filter({ user_id: userId });
     if (existing.length > 0) {

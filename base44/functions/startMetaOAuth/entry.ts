@@ -36,7 +36,10 @@ Deno.serve(async (req) => {
 
   const scopes = 'email,public_profile';
 
-  const state = btoa(JSON.stringify({ userId: user.id, businessId: req.headers.get('x-business-id') || '' }));
+  const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+  const intentType = body.type || 'facebook'; // 'facebook' | 'instagram'
+
+  const state = btoa(JSON.stringify({ userId: user.id, businessId: req.headers.get('x-business-id') || '', type: intentType }));
 
   const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(cleanRedirectUri)}&scope=${scopes}&state=${encodeURIComponent(state)}&response_type=code`;
 
