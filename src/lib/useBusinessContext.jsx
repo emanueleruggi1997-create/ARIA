@@ -10,14 +10,7 @@ export function BusinessProvider({ children }) {
   const { isLoadingAuth } = useAuth();
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
-  const loadingRef = useRef(false); // prevent race conditions
-
-  useEffect(() => {
-    // Only load business after auth is ready
-    if (!isLoadingAuth) {
-      loadBusiness();
-    }
-  }, [isLoadingAuth, loadBusiness]);
+  const loadingRef = useRef(false);
 
   const applyBusinessTheme = (biz) => {
     if (biz.theme_accent || biz.theme_bg) {
@@ -34,7 +27,6 @@ export function BusinessProvider({ children }) {
       const businesses = await base44.entities.Business.filter({ created_by: user.email });
       if (businesses.length > 0) {
         const biz = businesses[0];
-        // Clear all cached queries when business changes to prevent cross-business data leaks
         const prev = business;
         if (prev && prev.id !== biz.id) {
           queryClientInstance.clear();
@@ -52,6 +44,12 @@ export function BusinessProvider({ children }) {
       loadingRef.current = false;
     }
   }, []);
+
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      loadBusiness();
+    }
+  }, [isLoadingAuth, loadBusiness]);
 
   const refreshBusiness = useCallback(async () => {
     try {
