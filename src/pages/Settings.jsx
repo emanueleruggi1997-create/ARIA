@@ -8,6 +8,7 @@ import TabConnessioni from '@/components/settings/TabConnessioni';
 import TabPiano from '@/components/settings/TabPiano';
 import TabNotifiche from '@/components/settings/TabNotifiche';
 import TabAspetto from '@/components/settings/TabAspetto';
+import ConnectionsErrorBoundary from '@/components/settings/ConnectionsErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 
@@ -151,7 +152,9 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="connessioni" className="mt-4">
-          <TabConnessioni form={form} setForm={setForm} onSave={handlePartialSave} business={business} metaNotice={metaNotice} />
+          <ConnectionsErrorBoundary>
+            <TabConnessioni form={form} setForm={setForm} onSave={handlePartialSave} business={business} metaNotice={metaNotice} />
+          </ConnectionsErrorBoundary>
         </TabsContent>
 
         <TabsContent value="piano" className="mt-4">

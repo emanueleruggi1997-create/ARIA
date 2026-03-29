@@ -265,7 +265,7 @@ export default function AriaChatCore({
   const inputRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Keep convIdRef in sync
+   // Keep convIdRef in sync
   useEffect(() => { convIdRef.current = convId; }, [convId]);
 
   // Scroll to bottom — instant on mobile to avoid fighting keyboard animation
@@ -428,8 +428,14 @@ export default function AriaChatCore({
     }
   };
 
+  // Memoize proactive message to avoid non-deterministic rendering on SSR
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const proactiveMessage = () => {
-    if (!business) return null;
+    if (!mounted || !business) return null;
     const hour = new Date().getHours();
     const day = new Date().getDay();
     if (day === 1 && hour >= 8 && hour <= 10 && activeLeads > 0) {

@@ -114,9 +114,10 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
     if (panelOpen) setExpanded(false);
   };
 
-  // Check mobile (reactive)
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  // Check mobile (reactive) — default to false on SSR, calculate after hydration
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
     const handler = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);
