@@ -17,7 +17,7 @@ export function BusinessProvider({ children }) {
     if (!isLoadingAuth) {
       loadBusiness();
     }
-  }, [isLoadingAuth]);
+  }, [isLoadingAuth, loadBusiness]);
 
   const applyBusinessTheme = (biz) => {
     if (biz.theme_accent || biz.theme_bg) {
