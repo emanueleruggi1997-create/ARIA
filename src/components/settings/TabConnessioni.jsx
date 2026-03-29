@@ -267,7 +267,7 @@ function CardEmail({ form, setForm, onSave }) {
 }
 
 /* ── Main Export ── */
-export default function TabConnessioni({ form, setForm, onSave, business }) {
+export default function TabConnessioni({ form, setForm, onSave, business, metaNotice }) {
   const [metaConnection, setMetaConnection] = useState(null);
   const [metaLoading, setMetaLoading] = useState(true);
 
@@ -288,9 +288,10 @@ export default function TabConnessioni({ form, setForm, onSave, business }) {
     }
   };
 
+  // Re-fetch Meta connection whenever page lands with meta=success
   useEffect(() => {
     loadMetaConnection();
-  }, [business?.id]);
+  }, [business?.id, metaNotice]);
 
   return (
     <div className="space-y-3">

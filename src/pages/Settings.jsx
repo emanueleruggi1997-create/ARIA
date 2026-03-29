@@ -151,7 +151,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="connessioni" className="mt-4">
-          <TabConnessioni form={form} setForm={setForm} onSave={handlePartialSave} business={business} />
+          <TabConnessioni form={form} setForm={setForm} onSave={handlePartialSave} business={business} metaNotice={metaNotice} />
         </TabsContent>
 
         <TabsContent value="piano" className="mt-4">
