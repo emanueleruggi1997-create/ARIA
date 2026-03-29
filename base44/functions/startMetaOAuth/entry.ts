@@ -34,10 +34,13 @@ Deno.serve(async (req) => {
     }, { status: 500 });
   }
 
-  const scopes = 'email,public_profile';
-
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
   const intentType = body.type || 'facebook'; // 'facebook' | 'instagram'
+
+  // Instagram needs pages_show_list to find linked IG Business accounts
+  const scopes = intentType === 'instagram'
+    ? 'email,public_profile,pages_show_list,instagram_basic'
+    : 'email,public_profile,pages_show_list';
 
   const state = btoa(JSON.stringify({ userId: user.id, businessId: req.headers.get('x-business-id') || '', type: intentType }));
 
