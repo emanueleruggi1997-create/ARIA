@@ -34,15 +34,7 @@ Deno.serve(async (req) => {
     }, { status: 500 });
   }
 
-  const scopes = [
-    'pages_show_list',
-    'pages_read_engagement',
-    'pages_manage_posts',
-    'instagram_basic',
-    'instagram_content_publish',
-    'business_management',
-    'public_profile',
-  ].join(',');
+  const scopes = 'email,public_profile';
 
   const state = btoa(JSON.stringify({ userId: user.id, businessId: req.headers.get('x-business-id') || '' }));
 
