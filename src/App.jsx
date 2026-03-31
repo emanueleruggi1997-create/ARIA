@@ -22,25 +22,21 @@ import AppLayout from '@/components/layout/AppLayout';
 import AriaChat from '@/pages/AriaChat';
 import Legal from '@/pages/Legal';
 import Homepage from '@/pages/Homepage';
+import { base44 } from '@/api/base44Client';
 
-// Contenuto dell'app per utenti autenticati
+const Spinner = () => (
+  <div className="fixed inset-0 flex items-center justify-center bg-background">
+    <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+  </div>
+);
+
+// Contenuto app per utenti autenticati (con business già caricato)
 const AppContent = () => {
   const { business, loading } = useBusiness();
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm text-muted-foreground mt-3">Caricamento...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Spinner />;
 
-  if (!business) {
-    return <Onboarding />;
-  }
+  if (!business) return <Onboarding />;
 
   return (
     <Routes>
@@ -61,53 +57,27 @@ const AppContent = () => {
   );
 };
 
-// Router principale — gestisce le rotte pubbliche e quelle autenticate
-const AppRouter = () => {
+// Guard per le rotte private
+const PrivateZone = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated } = useAuth();
 
+  // Ancora in caricamento
+  if (isLoadingPublicSettings || isLoadingAuth) return <Spinner />;
+
+  // Errore utente non registrato
+  if (authError?.type === 'user_not_registered') return <UserNotRegisteredError />;
+
+  // Non autenticato → vai al login
+  if (!isAuthenticated) {
+    base44.auth.redirectToLogin(window.location.href);
+    return <Spinner />;
+  }
+
+  // Autenticato → carica BusinessProvider e mostra l'app
   return (
-    <Routes>
-      {/* Rotte PUBBLICHE — sempre accessibili senza login */}
-      <Route path="/" element={<Homepage />} />
-      <Route path="/legal" element={<Legal />} />
-
-      {/* Rotte PRIVATE — richiedono autenticazione */}
-      <Route path="/*" element={
-        (() => {
-          if (isLoadingPublicSettings || isLoadingAuth) {
-            return (
-              <div className="fixed inset-0 flex items-center justify-center bg-background">
-                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-              </div>
-            );
-          }
-
-          if (authError) {
-            if (authError.type === 'user_not_registered') {
-              return <UserNotRegisteredError />;
-            } else if (authError.type === 'auth_required') {
-              // Reindirizza al login e poi torna all'URL corrente
-              window.setTimeout(() => {
-                import('@/api/base44Client').then(({ base44 }) => {
-                  base44.auth.redirectToLogin(window.location.href);
-                });
-              }, 0);
-              return (
-                <div className="fixed inset-0 flex items-center justify-center bg-background">
-                  <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                </div>
-              );
-            }
-          }
-
-          return (
-            <BusinessProvider>
-              <AppContent />
-            </BusinessProvider>
-          );
-        })()
-      } />
-    </Routes>
+    <BusinessProvider>
+      <AppContent />
+    </BusinessProvider>
   );
 };
 
@@ -117,13 +87,20 @@ function App() {
       <AuthProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
-            <AppRouter />
+            <Routes>
+              {/* Rotte pubbliche — nessun auth check */}
+              <Route path="/" element={<Homepage />} />
+              <Route path="/legal" element={<Legal />} />
+
+              {/* Tutte le altre rotte richiedono autenticazione */}
+              <Route path="/*" element={<PrivateZone />} />
+            </Routes>
           </Router>
           <Toaster />
         </QueryClientProvider>
       </AuthProvider>
     </ErrorBoundary>
-  )
+  );
 }
 
 export default App
