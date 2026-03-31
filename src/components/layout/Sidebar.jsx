@@ -10,7 +10,7 @@ import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/inbox', icon: MessageSquare, label: 'Inbox' },
   { path: '/crm', icon: Users, label: 'CRM & Email' },
   { path: '/social', icon: Calendar, label: 'Social Manager' },

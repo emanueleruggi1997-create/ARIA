@@ -6,7 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 
 const mainNav = [
-  { path: '/', icon: LayoutDashboard, label: 'Home' },
+  { path: '/dashboard', icon: LayoutDashboard, label: 'Home' },
   { path: '/inbox', icon: MessageSquare, label: 'Inbox' },
   { path: '/crm', icon: Users, label: 'CRM' },
   { path: '/social', icon: Calendar, label: 'Social' },

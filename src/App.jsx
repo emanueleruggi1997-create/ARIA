@@ -23,6 +23,7 @@ import AriaChat from '@/pages/AriaChat';
 import Legal from '@/pages/Legal';
 import Homepage from '@/pages/Homepage';
 
+// Contenuto dell'app per utenti autenticati
 const AppContent = () => {
   const { business, loading } = useBusiness();
 
@@ -43,12 +44,9 @@ const AppContent = () => {
 
   return (
     <Routes>
-    {/* Rotta chat ARIA mobile — senza AppLayout (no header, no bottom nav) */}
-    <Route path="/aria-chat" element={<AriaChat />} />
-    <Route path="/legal" element={<Legal />} />
-    <Route path="/home" element={<Homepage />} />
-    <Route element={<AppLayout />}>
-        <Route path="/" element={<Dashboard />} />
+      <Route path="/aria-chat" element={<AriaChat />} />
+      <Route element={<AppLayout />}>
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/crm" element={<CRM />} />
         <Route path="/social" element={<SocialManager />} />
@@ -63,30 +61,53 @@ const AppContent = () => {
   );
 };
 
-const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
-    }
-  }
+// Router principale — gestisce le rotte pubbliche e quelle autenticate
+const AppRouter = () => {
+  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated } = useAuth();
 
   return (
-    <BusinessProvider>
-      <AppContent />
-    </BusinessProvider>
+    <Routes>
+      {/* Rotte PUBBLICHE — sempre accessibili senza login */}
+      <Route path="/" element={<Homepage />} />
+      <Route path="/legal" element={<Legal />} />
+
+      {/* Rotte PRIVATE — richiedono autenticazione */}
+      <Route path="/*" element={
+        (() => {
+          if (isLoadingPublicSettings || isLoadingAuth) {
+            return (
+              <div className="fixed inset-0 flex items-center justify-center bg-background">
+                <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+              </div>
+            );
+          }
+
+          if (authError) {
+            if (authError.type === 'user_not_registered') {
+              return <UserNotRegisteredError />;
+            } else if (authError.type === 'auth_required') {
+              // Reindirizza al login e poi torna all'URL corrente
+              window.setTimeout(() => {
+                import('@/api/base44Client').then(({ base44 }) => {
+                  base44.auth.redirectToLogin(window.location.href);
+                });
+              }, 0);
+              return (
+                <div className="fixed inset-0 flex items-center justify-center bg-background">
+                  <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                </div>
+              );
+            }
+          }
+
+          return (
+            <BusinessProvider>
+              <AppContent />
+            </BusinessProvider>
+          );
+        })()
+      } />
+    </Routes>
   );
 };
 
@@ -96,7 +117,7 @@ function App() {
       <AuthProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
-            <AuthenticatedApp />
+            <AppRouter />
           </Router>
           <Toaster />
         </QueryClientProvider>
