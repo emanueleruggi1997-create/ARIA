@@ -6,7 +6,7 @@ export default function Homepage() {
   return (
     <div style={{ background: '#06080E', color: '#F0F4FF', fontFamily: "'DM Sans', system-ui, sans-serif", overflowX: 'hidden', minHeight: '100vh' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
         @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
         @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
@@ -89,18 +89,18 @@ export default function Homepage() {
           Emaral Agent AI — Ora disponibile
         </div>
 
-        <h1 className="fade-up-2" style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(2.8rem,7vw,5.5rem)', fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.03em', marginBottom: 24 }}>
+        <h1 className="fade-up-2" style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(2.1rem,6vw,3.75rem)', fontWeight: 700, lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: 24 }}>
           Il tuo assistente AI<br/>
           <em style={{ fontStyle: 'normal', color: '#3B6EF8' }}>che lavora</em>
-          <span style={{ display: 'block', color: 'rgba(240,244,255,0.75)', fontWeight: 600 }}>mentre tu cresci.</span>
+          <span style={{ display: 'block', color: 'rgba(240,244,255,0.70)', fontWeight: 600 }}>mentre tu cresci.</span>
         </h1>
 
-        <p className="fade-up-3" style={{ fontSize: 'clamp(1rem,2.5vw,1.2rem)', color: '#8A9AB5', maxWidth: 560, lineHeight: 1.7, marginBottom: 44, fontWeight: 300 }}>
+        <p className="fade-up-3" style={{ fontSize: 'clamp(0.94rem,2vw,1.1rem)', color: 'rgba(255,255,255,0.70)', maxWidth: 560, lineHeight: 1.65, marginBottom: 44, fontWeight: 400 }}>
           ARIA risponde ai tuoi clienti su WhatsApp e Instagram H24, gestisce i lead, pubblica i post e fa email marketing. Tu chiudi. Lei fa il resto.
         </p>
 
         <div className="fade-up-4" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 72 }}>
-          <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer" className="btn-primary" style={{ background: '#3B6EF8', color: '#fff', padding: '15px 32px', borderRadius: 10, fontSize: '0.95rem', fontWeight: 500, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 24px rgba(59,110,248,0.2)' }}>
+          <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer" className="btn-primary" style={{ background: '#3B6EF8', color: '#fff', padding: '15px 32px', borderRadius: 10, fontSize: '0.94rem', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 24px rgba(59,110,248,0.2)' }}>
             Inizia gratis — 2 mesi al prezzo di 1
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -142,8 +142,8 @@ export default function Homepage() {
             <React.Fragment key={i}>
               {i > 0 && <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.06)' }} className="hidden sm:block"/>}
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '1.8rem', fontWeight: 800, color: '#3B6EF8', lineHeight: 1 }}>{num}</div>
-                <div style={{ fontSize: '0.72rem', color: '#8A9AB5', letterSpacing: '0.08em', marginTop: 4 }}>{label}</div>
+                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '1.75rem', fontWeight: 700, color: '#3B6EF8', lineHeight: 1 }}>{num}</div>
+                <div style={{ fontSize: '0.69rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.08em', marginTop: 4, fontWeight: 400 }}>{label}</div>
               </div>
             </React.Fragment>
           ))}
@@ -154,8 +154,8 @@ export default function Homepage() {
       <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 40, flexWrap: 'wrap', padding: '48px 24px', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         {[['WhatsApp','Risposte automatiche'],['Instagram','DM + Post AI'],['CRM','Lead qualificati'],['Email','Campagne automatiche'],['ARIA','Assistente personale']].map(([num, label]) => (
           <div key={num} style={{ textAlign: 'center' }}>
-            <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '1.3rem', fontWeight: 800, color: '#3B6EF8' }}>{num}</div>
-            <div style={{ fontSize: '0.72rem', color: '#8A9AB5', letterSpacing: '0.06em', marginTop: 4 }}>{label}</div>
+            <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '1.1rem', fontWeight: 600, color: '#3B6EF8' }}>{num}</div>
+            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.06em', marginTop: 4, fontWeight: 400 }}>{label}</div>
           </div>
         ))}
       </div>
@@ -163,9 +163,9 @@ export default function Homepage() {
       {/* FEATURES */}
       <section id="features" style={{ position: 'relative', zIndex: 1, padding: '100px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ fontSize: '0.68rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: '#3B6EF8', fontWeight: 500, marginBottom: 16 }}>Funzionalità</div>
-          <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(2rem,4vw,3rem)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 16 }}>Tutto quello che serve.<br/>In un'unica piattaforma.</h2>
-          <p style={{ fontSize: '1rem', color: '#8A9AB5', maxWidth: 500, lineHeight: 1.7 }}>Nessun altro tool. Nessun costo nascosto. Un solo abbonamento per gestire tutta la comunicazione della tua attività.</p>
+          <div style={{ fontSize: '0.68rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#3B6EF8', fontWeight: 500, marginBottom: 16 }}>Funzionalità</div>
+          <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(1.75rem,4vw,2.75rem)', fontWeight: 700, lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: 16 }}>Tutto quello che serve.<br/>In un'unica piattaforma.</h2>
+          <p style={{ fontSize: 'clamp(0.94rem,1.5vw,1.05rem)', color: 'rgba(255,255,255,0.70)', maxWidth: 500, lineHeight: 1.65, fontWeight: 400 }}>Nessun altro tool. Nessun costo nascosto. Un solo abbonamento per gestire tutta la comunicazione della tua attività.</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginTop: 56 }}>
             {[
@@ -178,9 +178,9 @@ export default function Homepage() {
             ].map((f, i) => (
               <div key={i} className="feature-card" style={{ background: f.special ? 'linear-gradient(135deg,rgba(124,58,237,0.06),#0C0F1A)' : '#0C0F1A', border: f.special ? '1px solid rgba(124,58,237,0.2)' : '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: 28, position: 'relative', overflow: 'hidden' }}>
                 <div style={{ width: 44, height: 44, borderRadius: 10, background: f.special ? 'rgba(124,58,237,0.1)' : 'rgba(59,110,248,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>{f.icon}</div>
-                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '1rem', fontWeight: 700, marginBottom: 8 }}>{f.title}</div>
-                <div style={{ fontSize: '0.82rem', color: '#8A9AB5', lineHeight: 1.6 }}>{f.desc}</div>
-                <span style={{ display: 'inline-block', fontSize: '0.6rem', padding: '3px 8px', borderRadius: 6, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 14, background: f.tagColor.bg, color: f.tagColor.color }}>{f.tag}</span>
+                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '1.05rem', fontWeight: 600, marginBottom: 8 }}>{f.title}</div>
+                <div style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.70)', lineHeight: 1.6, fontWeight: 400 }}>{f.desc}</div>
+                <span style={{ display: 'inline-block', fontSize: '0.65rem', padding: '3px 8px', borderRadius: 6, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 14, background: f.tagColor.bg, color: f.tagColor.color }}>{f.tag}</span>
               </div>
             ))}
           </div>
@@ -192,13 +192,13 @@ export default function Homepage() {
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 80, alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: '0.68rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: '#3B6EF8', fontWeight: 500, marginBottom: 16 }}>Il tuo assistente personale</div>
-              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(2rem,4vw,3rem)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 16 }}>Incontra ARIA.</h2>
-              <p style={{ fontSize: '1rem', color: '#8A9AB5', maxWidth: 500, lineHeight: 1.7 }}>Non è un chatbot. È una persona digitale con carattere, memoria e personalità. Puoi darle il nome che vuoi, scegliere il suo colore e persino il suo umore.</p>
+              <div style={{ fontSize: '0.68rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#3B6EF8', fontWeight: 500, marginBottom: 16 }}>Il tuo assistente personale</div>
+              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(1.75rem,4vw,2.75rem)', fontWeight: 700, lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: 16 }}>Incontra ARIA.</h2>
+              <p style={{ fontSize: 'clamp(0.94rem,1.5vw,1.05rem)', color: 'rgba(255,255,255,0.70)', maxWidth: 500, lineHeight: 1.65, fontWeight: 400 }}>Non è un chatbot. È una persona digitale con carattere, memoria e personalità. Puoi darle il nome che vuoi, scegliere il suo colore e persino il suo umore.</p>
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 20 }}>
                 {['😊 Felice','😂 Divertita','⚡ Energica','😴 Stanca','🥰 Innamorata','😠 Arrabbiata','🤩 Eccitata','😢 Triste'].map((m, i) => (
-                  <span key={m} className="mood-pill" style={{ padding: '6px 14px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 500, border: '1px solid', borderColor: i === 0 ? 'rgba(59,110,248,0.3)' : 'rgba(255,255,255,0.06)', color: i === 0 ? '#5B8BFF' : '#8A9AB5', background: i === 0 ? 'rgba(59,110,248,0.12)' : 'transparent' }}>{m}</span>
+                  <span key={m} className="mood-pill" style={{ padding: '5px 12px', borderRadius: 20, fontSize: '0.81rem', fontWeight: 500, border: '1px solid', borderColor: i === 0 ? 'rgba(59,110,248,0.3)' : 'rgba(255,255,255,0.06)', color: i === 0 ? '#5B8BFF' : 'rgba(255,255,255,0.55)', background: i === 0 ? 'rgba(59,110,248,0.12)' : 'transparent' }}>{m}</span>
                 ))}
               </div>
 
@@ -211,8 +211,8 @@ export default function Homepage() {
                   <div key={f.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 18, background: '#121626', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
                     <div style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(59,110,248,0.1)' }}>{f.icon}</div>
                     <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 600, marginBottom: 3 }}>{f.title}</div>
-                      <div style={{ fontSize: '0.77rem', color: '#8A9AB5', lineHeight: 1.5 }}>{f.desc}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 3 }}>{f.title}</div>
+                      <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.55, fontWeight: 400 }}>{f.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -244,7 +244,7 @@ export default function Homepage() {
                   <rect x="62" y="126" width="16" height="12" rx="5" fill="#7C3AED" fillOpacity="0.35"/>
                 </svg>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '1.4rem', fontWeight: 800, color: '#F0F4FF' }}>ARIA</div>
+                  <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '1.3rem', fontWeight: 700, color: '#F0F4FF' }}>ARIA</div>
                   <div style={{ fontSize: '0.75rem', color: '#8A9AB5', marginTop: 2 }}>Il tuo assistente personale</div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', padding: '4px 10px', borderRadius: 12 }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981', display: 'inline-block' }}/>
@@ -266,8 +266,8 @@ export default function Homepage() {
       <section style={{ position: 'relative', zIndex: 1, padding: '100px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <div style={{ fontSize: '0.68rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: '#3B6EF8', fontWeight: 500, marginBottom: 16 }}>Come funziona</div>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(2rem,4vw,3rem)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.02em' }}>4 step. Zero fatica.</h2>
+            <div style={{ fontSize: '0.68rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#3B6EF8', fontWeight: 500, marginBottom: 16 }}>Come funziona</div>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(1.75rem,4vw,2.75rem)', fontWeight: 700, lineHeight: 1.15, letterSpacing: '-0.02em' }}>4 step. Zero fatica.</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
             {[
@@ -277,9 +277,9 @@ export default function Homepage() {
               { n: '04', title: 'Tu chiudi il cliente', desc: 'Ricevi solo i contatti caldi, già qualificati. Nessun tempo perso.' },
             ].map(s => (
               <div key={s.n} style={{ background: '#0C0F1A', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 24 }}>
-                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '2rem', fontWeight: 800, color: 'rgba(59,110,248,0.15)', lineHeight: 1, marginBottom: 12 }}>{s.n}</div>
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 6 }}>{s.title}</div>
-                <div style={{ fontSize: '0.78rem', color: '#8A9AB5', lineHeight: 1.6 }}>{s.desc}</div>
+                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '1.8rem', fontWeight: 700, color: 'rgba(59,110,248,0.15)', lineHeight: 1, marginBottom: 12 }}>{s.n}</div>
+                <div style={{ fontSize: '0.92rem', fontWeight: 600, marginBottom: 6 }}>{s.title}</div>
+                <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, fontWeight: 400 }}>{s.desc}</div>
               </div>
             ))}
           </div>
@@ -290,9 +290,9 @@ export default function Homepage() {
       <section id="pricing" style={{ position: 'relative', zIndex: 1, padding: '100px 24px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <div style={{ fontSize: '0.68rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: '#3B6EF8', fontWeight: 500, marginBottom: 16 }}>Prezzi</div>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(2rem,4vw,3rem)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.02em', marginBottom: 12 }}>Semplice. Trasparente.</h2>
-            <p style={{ fontSize: '1rem', color: '#8A9AB5', maxWidth: 500, lineHeight: 1.7, margin: '0 auto' }}>Inizia subito con 2 mesi al prezzo di 1 — solo per le prime iscrizioni.</p>
+            <div style={{ fontSize: '0.68rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: '#3B6EF8', fontWeight: 500, marginBottom: 16 }}>Prezzi</div>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(1.75rem,4vw,2.75rem)', fontWeight: 700, lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: 12 }}>Semplice. Trasparente.</h2>
+            <p style={{ fontSize: 'clamp(0.94rem,1.5vw,1.05rem)', color: 'rgba(255,255,255,0.70)', maxWidth: 500, lineHeight: 1.65, margin: '0 auto', fontWeight: 400 }}>Inizia subito con 2 mesi al prezzo di 1 — solo per le prime iscrizioni.</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
             {[
@@ -302,14 +302,14 @@ export default function Homepage() {
             ].map(p => (
               <div key={p.name} className="price-card" style={{ background: p.featured ? 'linear-gradient(135deg,rgba(59,110,248,0.08),#0C0F1A)' : '#0C0F1A', border: p.featured ? '1px solid rgba(59,110,248,0.4)' : '1px solid rgba(255,255,255,0.06)', borderRadius: 20, padding: 32, position: 'relative' }}>
                 {p.badge && <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: '#3B6EF8', color: '#fff', fontSize: '0.65rem', fontWeight: 700, padding: '4px 14px', borderRadius: 12, letterSpacing: '0.1em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{p.badge}</div>}
-                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '0.85rem', fontWeight: 700, color: '#8A9AB5', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>{p.name}</div>
-                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '3rem', fontWeight: 800, color: p.featured ? '#3B6EF8' : '#F0F4FF', lineHeight: 1 }}>{p.price}<span style={{ fontSize: '1.2rem', color: '#8A9AB5', fontWeight: 400 }}>€</span></div>
-                <div style={{ fontSize: '0.78rem', color: '#8A9AB5', marginBottom: 4 }}>/mese</div>
-                <div style={{ fontSize: '0.78rem', color: '#3D4F68', textDecoration: 'line-through', marginBottom: 24 }}>invece di {parseInt(p.price) * 2}€</div>
+                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '0.75rem', fontWeight: 500, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>{p.name}</div>
+                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '3rem', fontWeight: 700, color: p.featured ? '#3B6EF8' : '#F0F4FF', lineHeight: 1 }}>{p.price}<span style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}>€</span></div>
+                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', marginBottom: 4, fontWeight: 400 }}>/mese</div>
+                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.30)', textDecoration: 'line-through', marginBottom: 24, fontWeight: 400 }}>invece di {parseInt(p.price) * 2}€</div>
                 <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', marginBottom: 20 }}/>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
-                  {p.features.map(f => <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: '#8A9AB5' }}><span style={{ width: 4, height: 4, borderRadius: '50%', background: '#3B6EF8', flexShrink: 0, display: 'inline-block' }}/>{f}</div>)}
-                  {p.noFeatures.map(f => <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: '#3D4F68' }}><span style={{ width: 4, height: 4, borderRadius: '50%', background: '#3D4F68', flexShrink: 0, display: 'inline-block' }}/>{f}</div>)}
+                  {p.features.map(f => <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'rgba(255,255,255,0.70)', fontWeight: 400 }}><span style={{ width: 4, height: 4, borderRadius: '50%', background: '#3B6EF8', flexShrink: 0, display: 'inline-block' }}/>{f}</div>)}
+                  {p.noFeatures.map(f => <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'rgba(255,255,255,0.25)', fontWeight: 400 }}><span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', flexShrink: 0, display: 'inline-block' }}/>{f}</div>)}
                 </div>
                 <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer" style={{ display: 'block', textAlign: 'center', padding: 13, borderRadius: 10, fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', transition: 'all 0.2s', background: p.btnStyle === 'main' ? '#3B6EF8' : 'transparent', color: p.btnStyle === 'main' ? '#fff' : '#F0F4FF', border: p.btnStyle === 'main' ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>{p.btn}</a>
               </div>
@@ -326,10 +326,10 @@ export default function Homepage() {
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ background: '#0C0F1A', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 24, padding: 'clamp(48px,8vw,72px) clamp(24px,6vw,48px)', maxWidth: 700, margin: '0 auto', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 0%,rgba(59,110,248,0.08) 0%,transparent 70%)', pointerEvents: 'none' }}/>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(1.8rem,4vw,2.8rem)', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 16, position: 'relative' }}>Pronto a far lavorare<br/><span style={{ color: '#3B6EF8' }}>l'AI per te?</span></h2>
-            <p style={{ color: '#8A9AB5', fontSize: '1rem', marginBottom: 36, position: 'relative', maxWidth: 480, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.7 }}>Inizia oggi con 2 mesi al prezzo di 1. Nessuna carta richiesta subito. Attiva e testa ARIA in meno di 5 minuti.</p>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(1.6rem,4vw,2.5rem)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16, position: 'relative', lineHeight: 1.15 }}>Pronto a far lavorare<br/><span style={{ color: '#3B6EF8' }}>l'AI per te?</span></h2>
+            <p style={{ color: 'rgba(255,255,255,0.70)', fontSize: 'clamp(0.94rem,1.5vw,1.05rem)', marginBottom: 36, position: 'relative', maxWidth: 480, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.65, fontWeight: 400 }}>Inizia oggi con 2 mesi al prezzo di 1. Nessuna carta richiesta subito. Attiva e testa ARIA in meno di 5 minuti.</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', flexWrap: 'wrap', position: 'relative' }}>
-              <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer" className="btn-primary" style={{ background: '#3B6EF8', color: '#fff', padding: '15px 32px', borderRadius: 10, fontSize: '0.95rem', fontWeight: 500, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 24px rgba(59,110,248,0.2)' }}>
+              <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer" className="btn-primary" style={{ background: '#3B6EF8', color: '#fff', padding: '15px 32px', borderRadius: 10, fontSize: '0.94rem', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 24px rgba(59,110,248,0.2)' }}>
                 Attiva Emaral Agent AI →
               </a>
               <a href="https://wa.me/393784056561?text=Ciao%20Emaral%2C%20vorrei%20info%20su%20Emaral%20Agent%20AI" target="_blank" rel="noreferrer" className="btn-secondary" style={{ background: 'transparent', color: '#F0F4FF', padding: '15px 32px', borderRadius: 10, fontSize: '0.95rem', fontWeight: 400, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid rgba(255,255,255,0.06)', transition: 'border-color 0.2s, transform 0.2s' }}>
