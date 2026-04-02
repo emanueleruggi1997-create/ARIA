@@ -157,7 +157,7 @@ export default function Settings() {
           <h1 className="text-2xl font-bold text-foreground">Impostazioni</h1>
           {saved && <p className="text-xs text-green-400 mt-0.5">✓ Salvato</p>}
         </div>
-        <Button variant="ghost" className="text-muted-foreground hover:text-destructive text-sm" onClick={() => base44.auth.logout()}>
+        <Button variant="ghost" className="text-muted-foreground hover:text-destructive text-sm" onClick={() => base44.auth.logout('/')}>
           <LogOut className="w-4 h-4 mr-2" /> Esci
         </Button>
       </div>

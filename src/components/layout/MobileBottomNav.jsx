@@ -29,7 +29,7 @@ export default function MobileBottomNav() {
   const ariaActive = business?.stato_agente === 'attivo';
 
   const handleLogout = async () => {
-    await base44.auth.logout('/');
+    base44.auth.logout('/');
   };
 
   const handleMenuNav = (path) => {
