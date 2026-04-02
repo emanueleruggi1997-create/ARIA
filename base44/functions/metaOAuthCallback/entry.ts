@@ -46,8 +46,8 @@ Deno.serve(async (req) => {
     return Response.redirect(APP_ERROR_URL, 302);
   }
 
-  const rawUri     = (Deno.env.get('META_REDIRECT_URI') || '').trim();
-  const redirectUri = rawUri.includes('=') ? rawUri.split('=').slice(1).join('=').trim() : rawUri;
+  const redirectUri = (Deno.env.get('META_REDIRECT_URI') || '').trim();
+  console.log('[metaOAuthCallback] redirectUri used:', redirectUri);
 
   // 1. Exchange code → short-lived token (Instagram Business Login API)
   const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {

@@ -7,8 +7,7 @@ Deno.serve(async (req) => {
   const user = await base44.auth.me();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rawUri = (Deno.env.get('META_REDIRECT_URI') || '').trim();
-  const redirectUri = rawUri.includes('=') ? rawUri.split('=').slice(1).join('=').trim() : rawUri;
+  const redirectUri = (Deno.env.get('META_REDIRECT_URI') || '').trim();
 
   if (!redirectUri || !redirectUri.startsWith('http')) {
     console.error('[startMetaOAuth] META_REDIRECT_URI invalid:', redirectUri);
