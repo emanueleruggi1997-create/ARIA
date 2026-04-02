@@ -5,7 +5,7 @@ export default function MobileTabSelect({ tabs, value, onValueChange }) {
   return (
     <>
       {/* Mobile: native select */}
-      <div className="block lg:hidden mb-5">
+      <div className="block lg:hidden mb-5" style={{ position: 'relative' }}>
         <select
           value={value}
           onChange={e => onValueChange(e.target.value)}
@@ -15,7 +15,7 @@ export default function MobileTabSelect({ tabs, value, onValueChange }) {
             color: '#F0F4FF',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '10px',
-            padding: '14px 16px',
+            padding: '14px 44px 14px 16px',
             fontSize: '15px',
             fontFamily: 'Inter, sans-serif',
             appearance: 'none',
@@ -26,6 +26,10 @@ export default function MobileTabSelect({ tabs, value, onValueChange }) {
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
+        {/* Icona ↕ per indicare che è selezionabile */}
+        <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 18, lineHeight: 1 }}>
+          ↕
+        </div>
       </div>
 
       {/* Desktop: normal tabs */}
