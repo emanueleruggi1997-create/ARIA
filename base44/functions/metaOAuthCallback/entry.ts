@@ -5,8 +5,23 @@ const APP_ERROR_URL   = 'https://emaral.it/settings?meta=error&tab=connections';
 const IG_APP_ID       = '2480637305706304';
 const IG_APP_SECRET   = '0c4b035760f5e477bfa80031ab1726a9';
 
+const VERIFY_TOKEN = 'emaral2026';
+
 Deno.serve(async (req) => {
-  const url   = new URL(req.url);
+  const url = new URL(req.url);
+
+  // ── Webhook verification (GET from Meta) ──
+  if (req.method === 'GET') {
+    const mode      = url.searchParams.get('hub.mode');
+    const token     = url.searchParams.get('hub.verify_token');
+    const challenge = url.searchParams.get('hub.challenge');
+    console.log('[metaOAuthCallback] GET verify — mode:', mode, '| token match:', token === VERIFY_TOKEN);
+    if (mode === 'subscribe' && token === VERIFY_TOKEN && challenge) {
+      return new Response(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
+    }
+    // Fall through: could be an OAuth redirect (has code/state params)
+  }
+
   const code  = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
