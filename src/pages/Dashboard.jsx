@@ -6,8 +6,9 @@ import KpiCard from '@/components/dashboard/KpiCard';
 import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
 import MessagesChart from '@/components/dashboard/MessagesChart';
 import RobotMascot from '@/components/dashboard/RobotMascot';
-import { MessageSquare, Users, Calendar, Zap, Bot } from 'lucide-react';
+import { MessageSquare, Users, CalendarDays, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 
@@ -30,9 +31,9 @@ export default function Dashboard() {
     staleTime: 60_000,
   });
 
-  const { data: posts = [] } = useQuery({
-    queryKey: ['posts', business?.id, 'schedulato'],
-    queryFn: () => base44.entities.Post.filter({ business_id: business?.id, stato: 'schedulato' }),
+  const { data: appointments = [] } = useQuery({
+    queryKey: ['appointments', business?.id],
+    queryFn: () => base44.entities.Appointment.filter({ business_id: business?.id }),
     enabled: !!business?.id,
     staleTime: 60_000,
   });
@@ -47,6 +48,7 @@ export default function Dashboard() {
   const aiMessages = messages.filter(m => m.ruolo === 'assistant');
   const aiRate = messages.length > 0 ? Math.round((aiMessages.length / messages.length) * 100) : 0;
   const unreadCount = unreadMessages.length;
+  const upcomingAppointments = appointments.filter(a => a.stato === 'in_attesa' || a.stato === 'confermato');
 
   // Build real chart data from last 7 days
   const chartData = Array.from({ length: 7 }, (_, i) => {
@@ -84,7 +86,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <KpiCard title="Messaggi oggi" value={todayMessages.length} icon={MessageSquare} trend={12} trendLabel="vs ieri" />
         <KpiCard title="Lead attivi" value={activeLeads.length} icon={Users} trend={8} trendLabel="questa settimana" />
-        <KpiCard title="Post schedulati" value={posts.length} icon={Calendar} />
+        <KpiCard title="Appuntamenti" value={upcomingAppointments.length} icon={CalendarDays} />
         <KpiCard title="Tasso risposta AI" value={`${aiRate}%`} icon={Zap} trend={5} trendLabel="vs sett. scorsa" />
       </div>
 
@@ -115,6 +117,22 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Instagram connection notice */}
+      {business && !business.ig_connesso && (
+        <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">📸</span>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Instagram non connesso</p>
+              <p className="text-xs text-muted-foreground">Collega il tuo account per ricevere i DM</p>
+            </div>
+          </div>
+          <Link to="/settings?tab=connections" className="shrink-0 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors">
+            Connetti →
+          </Link>
+        </div>
+      )}
+
       {/* Recent unread messages */}
       <div className="bg-card border border-border rounded-xl p-5">
         <h3 className="text-sm font-semibold text-foreground mb-4">Messaggi non letti</h3>
@@ -142,7 +160,7 @@ export default function Dashboard() {
         aiResponseCount={aiMessages.length}
         business={business}
         activeLeads={activeLeads.length}
-        scheduledPosts={posts.length}
+        scheduledPosts={upcomingAppointments.length}
         lastLead={leads[0] || null}
       />
     </div>

@@ -11,7 +11,7 @@ import { BusinessProvider, useBusiness } from '@/lib/useBusinessContext.jsx';
 import Dashboard from '@/pages/Dashboard';
 import Inbox from '@/pages/Inbox';
 import CRM from '@/pages/CRM';
-import SocialManager from '@/pages/SocialManager';
+import Calendar from '@/pages/Calendar';
 import AgentConfig from '@/pages/AgentConfig';
 import Analytics from '@/pages/Analytics';
 import Settings from '@/pages/Settings.jsx';
@@ -45,7 +45,7 @@ const AppContent = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/crm" element={<CRM />} />
-        <Route path="/social" element={<SocialManager />} />
+        <Route path="/calendar" element={<Calendar />} />
         <Route path="/agent" element={<AgentConfig />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />

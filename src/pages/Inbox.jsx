@@ -119,8 +119,8 @@ export default function Inbox() {
     <Tabs value={filter} onValueChange={setFilter}>
       <TabsList className="w-full bg-secondary">
         <TabsTrigger value="tutti" className="flex-1 text-xs">Tutti</TabsTrigger>
-        <TabsTrigger value="whatsapp" className="flex-1 text-xs">WA</TabsTrigger>
-        <TabsTrigger value="instagram" className="flex-1 text-xs">IG</TabsTrigger>
+        <TabsTrigger value="instagram" className="flex-1 text-xs">📸 IG</TabsTrigger>
+        <TabsTrigger value="whatsapp" className="flex-1 text-xs">💬 WA</TabsTrigger>
         <TabsTrigger value="non_letti" className="flex-1 text-xs">🔴</TabsTrigger>
         <TabsTrigger value="archiviati" className="flex-1 text-xs">📦</TabsTrigger>
       </TabsList>

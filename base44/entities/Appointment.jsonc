@@ -1,0 +1,74 @@
+{
+  "name": "Appointment",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string",
+      "description": "ID del business"
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "ID del contatto CRM (opzionale)"
+    },
+    "contact_nome": {
+      "type": "string",
+      "description": "Nome del cliente"
+    },
+    "titolo": {
+      "type": "string",
+      "description": "Titolo appuntamento"
+    },
+    "data": {
+      "type": "string",
+      "format": "date",
+      "description": "Data appuntamento"
+    },
+    "ora": {
+      "type": "string",
+      "description": "Ora appuntamento (HH:MM)"
+    },
+    "durata_minuti": {
+      "type": "number",
+      "default": 60,
+      "description": "Durata in minuti"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "chiamata",
+        "riunione",
+        "servizio",
+        "altro"
+      ],
+      "default": "servizio"
+    },
+    "stato": {
+      "type": "string",
+      "enum": [
+        "in_attesa",
+        "confermato",
+        "completato",
+        "annullato"
+      ],
+      "default": "in_attesa"
+    },
+    "note": {
+      "type": "string",
+      "description": "Note aggiuntive"
+    },
+    "canale_origine": {
+      "type": "string",
+      "enum": [
+        "instagram",
+        "whatsapp",
+        "manuale"
+      ],
+      "default": "manuale"
+    }
+  },
+  "required": [
+    "business_id",
+    "titolo",
+    "data"
+  ]
+}

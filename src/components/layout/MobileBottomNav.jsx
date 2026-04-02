@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, MessageSquare, Users, Calendar, Menu, Bot, BarChart3, Settings, Shield, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Users, CalendarDays, Menu, Bot, BarChart3, Settings, Shield, X, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
@@ -9,7 +9,7 @@ const mainNav = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Home' },
   { path: '/inbox', icon: MessageSquare, label: 'Inbox' },
   { path: '/crm', icon: Users, label: 'CRM' },
-  { path: '/social', icon: Calendar, label: 'Social' },
+  { path: '/calendar', icon: CalendarDays, label: 'Agenda' },
 ];
 
 const menuItems = [

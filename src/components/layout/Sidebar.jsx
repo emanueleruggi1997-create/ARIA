@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, MessageSquare, Users, Calendar, 
+  LayoutDashboard, MessageSquare, Users, CalendarDays, 
   Bot, BarChart3, Settings, Shield, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
@@ -12,8 +12,8 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/inbox', icon: MessageSquare, label: 'Inbox' },
-  { path: '/crm', icon: Users, label: 'CRM & Email' },
-  { path: '/social', icon: Calendar, label: 'Social Manager' },
+  { path: '/crm', icon: Users, label: 'CRM' },
+  { path: '/calendar', icon: CalendarDays, label: 'Agenda' },
   { path: '/agent', icon: null, label: 'ARIA' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/settings', icon: Settings, label: 'Impostazioni' },
