@@ -8,20 +8,7 @@
  */
 import React, { useState, useEffect } from 'react';
 
-/* ─── CSS animations (iniettate una sola volta) ─── */
-const ANIM_CSS = `
-@keyframes ra-float     { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-8px)} }
-@keyframes ra-wiggle    { 0%,100%{transform:rotate(0deg)} 25%{transform:rotate(-8deg)} 75%{transform:rotate(8deg)} }
-@keyframes ra-droop     { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(5px)} }
-@keyframes ra-shake     { 0%,100%{transform:translateX(0px)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
-@keyframes ra-jump      { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-16px)} }
-@keyframes ra-sway      { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(-5deg)} }
-@keyframes ra-heartbeat { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
-@keyframes ra-bounce    { 0%,100%{transform:translateY(0px) scale(1)} 50%{transform:translateY(-12px) scale(1.05)} }
-@keyframes ra-antenna   { 0%,100%{transform:rotate(-6deg)} 50%{transform:rotate(6deg)} }
-@keyframes ra-blink     { 0%,90%,100%{opacity:1} 95%{opacity:0.05} }
-@media (prefers-reduced-motion:reduce){ .ra-anim{ animation:none!important } }
-`;
+// Animations moved to index.css
 
 const MOOD_ANIM = {
   felice:     'ra-float     3s   ease-in-out infinite',
@@ -136,21 +123,8 @@ function Mouth({ color, mood }) {
 }
 
 /* ─── Main component ─── */
-let styleInjected = false;
-
 export default function RobotARIA({ size = 100, color = '#3B6EF8', mood = 'felice', animated = true }) {
   const [blink, setBlink] = useState(false);
-
-  // Inject CSS once
-  if (!styleInjected && typeof document !== 'undefined') {
-    const el = document.createElement('style');
-    el.setAttribute('data-robot-aria', '1');
-    if (!document.querySelector('[data-robot-aria]')) {
-      el.textContent = ANIM_CSS;
-      document.head.appendChild(el);
-    }
-    styleInjected = true;
-  }
 
   useEffect(() => {
     if (!animated) return;

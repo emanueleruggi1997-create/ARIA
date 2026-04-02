@@ -184,17 +184,6 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
 
   return (
     <>
-      <style>{`
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes panelExpand { from { opacity:0; transform:scale(0.96); } to { opacity:1; transform:scale(1); } }
-        @keyframes robotClick { 0% { transform: scale(1); } 30% { transform: scale(1.2); } 60% { transform: scale(0.9); } 100% { transform: scale(1); } }
-        .robot-click { animation: robotClick 0.4s ease-in-out; }
-        .robot-wrapper { opacity: 0.75; transition: opacity 0.3s ease, transform 0.3s ease; cursor: pointer; }
-        .robot-wrapper:hover { opacity: 1; transform: scale(1.05); }
-        .robot-panel { animation: panelExpand 0.25s ease-out; }
-        .proactive-bubble { animation: fadeInUp 0.3s ease-out; }
-      `}</style>
-
       {/* Backdrop for desktop expanded */}
       {showFullscreen && !isMobile && (
         <div
