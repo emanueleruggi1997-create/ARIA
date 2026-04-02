@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 
 export default function Homepage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Se già autenticato, vai direttamente alla dashboard
+  useEffect(() => {
+    base44.auth.isAuthenticated().then(authed => {
+      if (authed) window.location.href = '/dashboard';
+    });
+  }, []);
 
   return (
     <div style={{ background: '#06080E', color: '#F0F4FF', fontFamily: "'DM Sans', system-ui, sans-serif", overflowX: 'hidden', minHeight: '100vh' }}>
