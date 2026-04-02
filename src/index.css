@@ -120,6 +120,29 @@
   50% { opacity: 0.4; }
 }
 
+/* Homepage animations & classes */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+@keyframes hp-blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+@keyframes hp-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+@keyframes hp-fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+.aria-float { animation: hp-float 4s ease-in-out infinite; }
+.aria-float2 { animation: hp-float 3.5s ease-in-out infinite; }
+.hero-badge-dot { animation: hp-blink 2s infinite; }
+.fade-up-1 { animation: hp-fadeUp 0.8s ease both; }
+.fade-up-2 { animation: hp-fadeUp 0.8s 0.1s ease both; }
+.fade-up-3 { animation: hp-fadeUp 0.8s 0.2s ease both; }
+.fade-up-4 { animation: hp-fadeUp 0.8s 0.3s ease both; }
+.fade-up-5 { animation: hp-fadeUp 0.8s 0.4s ease both; }
+.fade-up-6 { animation: hp-fadeUp 0.8s 0.5s ease both; }
+.feature-card { transition: border-color 0.25s, transform 0.25s; }
+.feature-card:hover { border-color: rgba(59,110,248,0.25) !important; transform: translateY(-3px); }
+.price-card { transition: transform 0.25s; }
+.price-card:hover { transform: translateY(-4px); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(59,110,248,0.4) !important; }
+.btn-secondary:hover { border-color: rgba(255,255,255,0.15) !important; transform: translateY(-2px); }
+.nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+.mood-pill { cursor: default; transition: all 0.2s; }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

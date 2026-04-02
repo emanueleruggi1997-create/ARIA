@@ -13,30 +13,6 @@ export default function Homepage() {
 
   return (
     <div style={{ background: '#06080E', color: '#F0F4FF', fontFamily: "'DM Sans', system-ui, sans-serif", overflowX: 'hidden', minHeight: '100vh' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
-        .aria-float { animation: float 4s ease-in-out infinite; }
-        .aria-float2 { animation: float 3.5s ease-in-out infinite; }
-        .hero-badge-dot { animation: blink 2s infinite; }
-        .fade-up-1 { animation: fadeUp 0.8s ease both; }
-        .fade-up-2 { animation: fadeUp 0.8s 0.1s ease both; }
-        .fade-up-3 { animation: fadeUp 0.8s 0.2s ease both; }
-        .fade-up-4 { animation: fadeUp 0.8s 0.3s ease both; }
-        .fade-up-5 { animation: fadeUp 0.8s 0.4s ease both; }
-        .fade-up-6 { animation: fadeUp 0.8s 0.5s ease both; }
-        .feature-card { transition: border-color 0.25s, transform 0.25s; }
-        .feature-card:hover { border-color: rgba(59,110,248,0.25) !important; transform: translateY(-3px); }
-        .price-card { transition: transform 0.25s; }
-        .price-card:hover { transform: translateY(-4px); }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(59,110,248,0.4) !important; }
-        .btn-secondary:hover { border-color: rgba(255,255,255,0.15) !important; transform: translateY(-2px); }
-        .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
-        .mood-pill { cursor: default; transition: all 0.2s; }
-      `}</style>
-
       {/* BG ORBS */}
       <div style={{ position: 'fixed', borderRadius: '50%', pointerEvents: 'none', zIndex: 0, width: 600, height: 600, top: -200, left: '50%', transform: 'translateX(-50%)', background: 'radial-gradient(circle,rgba(59,110,248,0.12) 0%,transparent 70%)' }} />
       <div style={{ position: 'fixed', borderRadius: '50%', pointerEvents: 'none', zIndex: 0, width: 400, height: 400, bottom: '20%', right: -100, background: 'radial-gradient(circle,rgba(124,58,237,0.08) 0%,transparent 70%)' }} />
