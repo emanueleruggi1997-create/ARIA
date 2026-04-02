@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 // Renders a mini background preview for each dashboard bg type
 export default function DashboardBgPreview({ type, accent, bgUrl, absolute = false }) {
+  const uid = useId().replace(/:/g, '');
   const style = {
     position: absolute ? 'absolute' : 'relative',
     inset: absolute ? 0 : undefined,
@@ -11,12 +12,12 @@ export default function DashboardBgPreview({ type, accent, bgUrl, absolute = fal
     pointerEvents: 'none',
   };
 
-  const bg = renderBg(type, accent, bgUrl);
+  const bg = renderBg(type, accent, bgUrl, uid);
 
   return <div style={style}>{bg}</div>;
 }
 
-function renderBg(type, accent, bgUrl) {
+function renderBg(type, accent, bgUrl, uid) {
   const dim = `${accent}22`;
   const mid = `${accent}44`;
 
@@ -25,17 +26,17 @@ function renderBg(type, accent, bgUrl) {
       return (
         <svg width="100%" height="100%" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid slice">
           <defs>
-            <radialGradient id={`nb-${accent.slice(1)}`} cx="15%" cy="20%" r="60%">
+            <radialGradient id={`nb-${uid}`} cx="15%" cy="20%" r="60%">
               <stop offset="0%" stopColor={accent} stopOpacity="0.25" />
               <stop offset="100%" stopColor={accent} stopOpacity="0" />
             </radialGradient>
-            <radialGradient id={`nb2-${accent.slice(1)}`} cx="85%" cy="80%" r="50%">
+            <radialGradient id={`nb2-${uid}`} cx="85%" cy="80%" r="50%">
               <stop offset="0%" stopColor={accent} stopOpacity="0.2" />
               <stop offset="100%" stopColor={accent} stopOpacity="0" />
             </radialGradient>
           </defs>
-          <rect width="200" height="100" fill={`url(#nb-${accent.slice(1)})`} />
-          <rect width="200" height="100" fill={`url(#nb2-${accent.slice(1)})`} />
+          <rect width="200" height="100" fill={`url(#nb-${uid})`} />
+          <rect width="200" height="100" fill={`url(#nb2-${uid})`} />
         </svg>
       );
 
@@ -43,11 +44,11 @@ function renderBg(type, accent, bgUrl) {
       return (
         <svg width="100%" height="100%" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid slice">
           <defs>
-            <pattern id={`grid-${accent.slice(1)}`} width="20" height="20" patternUnits="userSpaceOnUse">
+            <pattern id={`grid-${uid}`} width="20" height="20" patternUnits="userSpaceOnUse">
               <path d="M 20 0 L 0 0 0 20" fill="none" stroke={accent} strokeWidth="0.4" strokeOpacity="0.25" />
             </pattern>
           </defs>
-          <rect width="200" height="100" fill={`url(#grid-${accent.slice(1)})`} />
+          <rect width="200" height="100" fill={`url(#grid-${uid})`} />
         </svg>
       );
 
@@ -55,11 +56,11 @@ function renderBg(type, accent, bgUrl) {
       return (
         <svg width="100%" height="100%" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid slice">
           <defs>
-            <pattern id={`dots-${accent.slice(1)}`} width="14" height="14" patternUnits="userSpaceOnUse">
+            <pattern id={`dots-${uid}`} width="14" height="14" patternUnits="userSpaceOnUse">
               <circle cx="7" cy="7" r="1" fill={accent} fillOpacity="0.2" />
             </pattern>
           </defs>
-          <rect width="200" height="100" fill={`url(#dots-${accent.slice(1)})`} />
+          <rect width="200" height="100" fill={`url(#dots-${uid})`} />
         </svg>
       );
 
@@ -96,14 +97,14 @@ function renderBg(type, accent, bgUrl) {
       return (
         <svg width="100%" height="100%" viewBox="0 0 200 100" preserveAspectRatio="xMidYMid slice">
           <defs>
-            <linearGradient id={`aurora-${accent.slice(1)}`} x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient id={`aurora-${uid}`} x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor={accent} stopOpacity="0.3" />
               <stop offset="40%" stopColor="#7C3AED" stopOpacity="0.2" />
               <stop offset="70%" stopColor="#10B981" stopOpacity="0.15" />
               <stop offset="100%" stopColor={accent} stopOpacity="0.1" />
             </linearGradient>
           </defs>
-          <ellipse cx="100" cy="-10" rx="120" ry="50" fill={`url(#aurora-${accent.slice(1)})`} />
+          <ellipse cx="100" cy="-10" rx="120" ry="50" fill={`url(#aurora-${uid})`} />
           <ellipse cx="100" cy="-5" rx="90" ry="35" fill={accent} fillOpacity="0.08" />
         </svg>
       );
