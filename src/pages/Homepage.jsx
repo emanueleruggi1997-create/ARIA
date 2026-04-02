@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
 
 export default function Homepage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -59,7 +60,7 @@ export default function Homepage() {
           <a href="#aria" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>ARIA</a>
           <a href="#pricing" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>Prezzi</a>
           <a href="https://emaral.it" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>Emaral Group</a>
-          <a href="https://emaral-systems-ai.base44.app/dashboard" className="nav-cta" style={{ background: '#3B6EF8', color: '#fff', padding: '10px 22px', borderRadius: 8, fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', transition: 'opacity 0.2s, transform 0.2s', display: 'inline-block' }}>Accedi →</a>
+          <button onClick={() => base44.auth.redirectToLogin('/dashboard')} className="nav-cta" style={{ background: '#3B6EF8', color: '#fff', padding: '10px 22px', borderRadius: 8, fontSize: '0.875rem', fontWeight: 500, border: 'none', cursor: 'pointer', transition: 'opacity 0.2s, transform 0.2s', display: 'inline-block' }}>Accedi →</button>
         </div>
 
         {/* Mobile burger */}
@@ -78,7 +79,7 @@ export default function Homepage() {
             return <a key={href} href={href} onClick={() => setMobileMenuOpen(false)} style={{ color: '#8A9AB5', fontSize: '1rem', textDecoration: 'none' }}>{label}</a>;
           })}
           <a href="https://emaral.it" target="_blank" rel="noreferrer" style={{ color: '#8A9AB5', fontSize: '1rem', textDecoration: 'none' }}>Emaral Group</a>
-          <a href="https://emaral-systems-ai.base44.app/dashboard" target="_blank" rel="noreferrer" style={{ background: '#3B6EF8', color: '#fff', padding: '12px 22px', borderRadius: 8, fontSize: '0.95rem', fontWeight: 500, textDecoration: 'none', textAlign: 'center' }}>Accedi →</a>
+          <button onClick={() => base44.auth.redirectToLogin('/dashboard')} style={{ background: '#3B6EF8', color: '#fff', padding: '12px 22px', borderRadius: 8, fontSize: '0.95rem', fontWeight: 500, border: 'none', cursor: 'pointer', textAlign: 'center', width: '100%' }}>Accedi →</button>
         </div>
       )}
 
