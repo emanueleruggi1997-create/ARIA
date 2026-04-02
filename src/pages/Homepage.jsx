@@ -58,7 +58,7 @@ export default function Homepage() {
           <a href="#features" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>Funzionalità</a>
           <a href="#aria" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>ARIA</a>
           <a href="#pricing" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>Prezzi</a>
-          <a href="https://emaralgroup.com" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>Emaral Group</a>
+          <a href="https://emaral.it" target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>Emaral Group</a>
           <a href="/dashboard" className="nav-cta" style={{ background: '#3B6EF8', color: '#fff', padding: '10px 22px', borderRadius: 8, fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', transition: 'opacity 0.2s, transform 0.2s', display: 'inline-block' }}>Accedi →</a>
         </div>
 
@@ -77,7 +77,7 @@ export default function Homepage() {
             const [href, label] = item.split('|');
             return <a key={href} href={href} onClick={() => setMobileMenuOpen(false)} style={{ color: '#8A9AB5', fontSize: '1rem', textDecoration: 'none' }}>{label}</a>;
           })}
-          <a href="https://emaralgroup.com" target="_blank" rel="noreferrer" style={{ color: '#8A9AB5', fontSize: '1rem', textDecoration: 'none' }}>Emaral Group</a>
+          <a href="https://emaral.it" target="_blank" rel="noreferrer" style={{ color: '#8A9AB5', fontSize: '1rem', textDecoration: 'none' }}>Emaral Group</a>
           <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer" style={{ background: '#3B6EF8', color: '#fff', padding: '12px 22px', borderRadius: 8, fontSize: '0.95rem', fontWeight: 500, textDecoration: 'none', textAlign: 'center' }}>Accedi →</a>
         </div>
       )}
@@ -344,10 +344,10 @@ export default function Homepage() {
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '48px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24, position: 'relative', zIndex: 1 }}>
         <div>
           <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '0.9rem', fontWeight: 700, color: '#F0F4FF' }}>Emaral Agent AI</div>
-          <div style={{ color: '#8A9AB5', fontWeight: 300, fontSize: '0.75rem', marginTop: 2, letterSpacing: '0.08em' }}>by Emaral Group — emaralgroup.com</div>
+          <div style={{ color: '#8A9AB5', fontWeight: 300, fontSize: '0.75rem', marginTop: 2, letterSpacing: '0.08em' }}>by Emaral Group — emaral.it</div>
         </div>
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-          {[['#features','Funzionalità'],['#aria','ARIA'],['#pricing','Prezzi'],['https://emaralgroup.com','Emaral Group'],['https://wa.me/393784056561','Contatto']].map(([href, label]) => (
+          {[['#features','Funzionalità'],['#aria','ARIA'],['#pricing','Prezzi'],['https://emaral.it','Emaral Group'],['https://wa.me/393784056561','Contatto']].map(([href, label]) => (
             <a key={label} href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" style={{ color: '#8A9AB5', fontSize: '0.8rem', textDecoration: 'none' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>{label}</a>
           ))}
         </div>
