@@ -78,6 +78,63 @@ Deno.serve(async (req) => {
           });
 
           console.log('[webhookMeta] Message saved for business:', conn.business_id);
+
+          // Check auto_risposta flag before sending AI reply
+          const businesses = await base44.asServiceRole.entities.Business.filter({ id: conn.business_id });
+          const business = businesses[0];
+          if (!business || business.auto_risposta === false) {
+            console.log('[webhookMeta] auto_risposta disabled — skipping AI reply');
+            continue;
+          }
+
+          // Generate AI reply
+          const recentMessages = await base44.asServiceRole.entities.Message.filter(
+            { business_id: conn.business_id, contact_id: contact.id },
+            '-created_date', 10
+          );
+          const history = recentMessages.reverse().map(m => ({
+            role: m.ruolo === 'assistant' ? 'assistant' : 'user',
+            content: m.testo,
+          }));
+
+          const systemPrompt = `Sei ${business.nome_agente || 'ARIA'}, assistente AI di ${business.nome}.
+${business.ai_prompt || ''}
+Tono: ${business.tono || 'professionale'}.
+${business.servizi ? `Servizi: ${business.servizi}` : ''}
+${business.prezzi ? `Prezzi: ${business.prezzi}` : ''}
+${business.cose_da_non_fare ? `Non fare: ${business.cose_da_non_fare}` : ''}
+Rispondi in modo breve e naturale.`;
+
+          const aiRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
+            prompt: text,
+            model: 'gpt_5_mini',
+            response_json_schema: null,
+          });
+
+          const aiReply = typeof aiRes === 'string' ? aiRes : aiRes?.text || aiRes?.content || '';
+          if (!aiReply) continue;
+
+          // Save AI reply
+          await base44.asServiceRole.entities.Message.create({
+            business_id: conn.business_id,
+            contact_id: contact.id,
+            canale: 'instagram',
+            ruolo: 'assistant',
+            testo: aiReply,
+            letto: true,
+          });
+
+          // Send reply via Instagram API
+          const igToken = conn.access_token;
+          const igAccountId = conn.ig_account_id;
+          if (igToken && igAccountId) {
+            await fetch(`https://graph.instagram.com/v19.0/${igAccountId}/messages`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${igToken}` },
+              body: JSON.stringify({ recipient: { id: senderId }, message: { text: aiReply } }),
+            });
+            console.log('[webhookMeta] AI reply sent to:', senderId);
+          }
         } catch (err) {
           console.error('[webhookMeta] Error processing message:', err.message);
         }
