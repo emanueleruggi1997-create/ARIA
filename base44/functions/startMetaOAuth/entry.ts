@@ -1,56 +1,34 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+const IG_APP_ID = '2480637305706304';
+
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const user = await base44.auth.me();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const appId = (Deno.env.get('META_APP_ID') || '').trim();
-  const redirectUri = (Deno.env.get('META_REDIRECT_URI') || '').trim();
+  const rawUri = (Deno.env.get('META_REDIRECT_URI') || '').trim();
+  const redirectUri = rawUri.includes('=') ? rawUri.split('=').slice(1).join('=').trim() : rawUri;
 
-  // --- Guard: validate secrets before doing anything ---
-  if (!appId) {
-    console.error('[startMetaOAuth] META_APP_ID is missing or empty');
-    return Response.json({ error: 'Invalid META_APP_ID configuration' }, { status: 500 });
-  }
-
-  // Clean up accidental "KEY = value" format (the value was stored as "META_REDIRECT_URI = https://...")
-  const cleanRedirectUri = redirectUri.includes('=')
-    ? redirectUri.split('=').slice(1).join('=').trim()
-    : redirectUri;
-
-  if (
-    !cleanRedirectUri ||
-    cleanRedirectUri === 'META_REDIRECT_URI' ||
-    cleanRedirectUri === 'undefined' ||
-    cleanRedirectUri === 'null' ||
-    !cleanRedirectUri.startsWith('http')
-  ) {
-    console.error('[startMetaOAuth] META_REDIRECT_URI is missing or invalid:', JSON.stringify(cleanRedirectUri));
-    return Response.json({
-      error: 'Invalid META_REDIRECT_URI configuration',
-      received: cleanRedirectUri || '(empty)',
-      hint: 'Set META_REDIRECT_URI secret to just the URL value, e.g.: https://emaral.it/api/meta/callback'
-    }, { status: 500 });
+  if (!redirectUri || !redirectUri.startsWith('http')) {
+    console.error('[startMetaOAuth] META_REDIRECT_URI invalid:', redirectUri);
+    return Response.json({ error: 'Invalid META_REDIRECT_URI configuration', received: redirectUri || '(empty)' }, { status: 500 });
   }
 
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
-  const intentType = body.type || 'facebook'; // 'facebook' | 'instagram'
+  const businessId = body.businessId || req.headers.get('x-business-id') || '';
 
-  const scopes = intentType === 'instagram'
-    ? 'email,public_profile,instagram_basic,instagram_manage_messages,pages_messaging,pages_read_engagement'
-    : 'email,public_profile,pages_messaging,pages_read_engagement';
+  // Instagram Business Login API scopes
+  const scopes = 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_manage_insights';
 
-  const state = btoa(JSON.stringify({ userId: user.id, businessId: req.headers.get('x-business-id') || '', type: intentType }));
+  const state = btoa(JSON.stringify({ userId: user.id, businessId, type: 'instagram' }));
 
-  const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(cleanRedirectUri)}&scope=${scopes}&state=${encodeURIComponent(state)}&response_type=code`;
+  // Use Instagram Business OAuth endpoint
+  const authUrl = `https://www.instagram.com/oauth/authorize?client_id=${IG_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&state=${encodeURIComponent(state)}&response_type=code`;
 
-  // Log the exact URL so you can verify it in the backend function logs
-  console.log('[startMetaOAuth] appId:', appId);
-  console.log('[startMetaOAuth] redirectUri (raw from secret):', redirectUri);
-  console.log('[startMetaOAuth] redirectUri (cleaned):', cleanRedirectUri);
-  console.log('[startMetaOAuth] redirectUri (encoded):', encodeURIComponent(cleanRedirectUri));
-  console.log('[startMetaOAuth] final authUrl:', authUrl);
+  console.log('[startMetaOAuth] IG App ID:', IG_APP_ID);
+  console.log('[startMetaOAuth] redirectUri:', redirectUri);
+  console.log('[startMetaOAuth] authUrl:', authUrl);
 
-  return Response.json({ url: authUrl, debug: { appId, redirectUri: cleanRedirectUri } });
+  return Response.json({ url: authUrl });
 });
