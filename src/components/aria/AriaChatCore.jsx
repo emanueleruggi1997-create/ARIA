@@ -670,16 +670,6 @@ export default function AriaChatCore({
         </button>
       </div>
 
-      <style>{`
-        @keyframes typingDot {
-          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-          40% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes pulseDot {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-      `}</style>
     </div>
   );
 }
