@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-const IG_APP_ID = '2480637305706304';
+const IG_APP_ID = Deno.env.get('IG_APP_ID') || '';
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);

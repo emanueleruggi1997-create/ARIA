@@ -2,8 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const APP_SUCCESS_URL = 'https://emaral.it/settings?meta=success&tab=connections';
 const APP_ERROR_URL   = 'https://emaral.it/settings?meta=error&tab=connections';
-const IG_APP_ID       = '2480637305706304';
-const IG_APP_SECRET   = '0c4b035760f5e477bfa80031ab1726a9';
+const IG_APP_ID     = Deno.env.get('IG_APP_ID') || '';
+const IG_APP_SECRET = Deno.env.get('IG_APP_SECRET') || '';
 
 const VERIFY_TOKEN = 'emaral2026';
 
