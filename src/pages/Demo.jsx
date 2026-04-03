@@ -238,13 +238,13 @@ export default function Demo() {
       </main>
 
       {/* ── ARIA REALE — FAB prominente + chat panel ── */}
-      <div style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 200, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+      <div style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 200, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, maxHeight: 'calc(100vh - 80px)' }}>
         
         {/* Chat panel */}
         {chatOpen && (
           <div style={{
             width: ariaChatExpanded ? 520 : 400,
-            height: ariaChatExpanded ? 620 : 520,
+            height: ariaChatExpanded ? 'min(620px, calc(100vh - 220px))' : 'min(520px, calc(100vh - 220px))',
             background: '#0A0D14',
             border: '1px solid rgba(124,58,237,0.4)',
             borderRadius: 20,
