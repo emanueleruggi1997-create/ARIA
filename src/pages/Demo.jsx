@@ -104,6 +104,27 @@ export default function Demo() {
   const [ariaMessages, setAriaMessages] = useState(ARIA_CHAT);
   const [ariaLoading, setAriaLoading] = useState(false);
 
+  // ARIA robot chat (floating, sempre visibile)
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'bot', text: 'Ciao! Sono ARIA 👋 Hai 3 messaggi non letti e 4 lead attivi da seguire oggi.' },
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = React.useRef(null);
+  React.useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages, chatLoading]);
+
+  const sendChat = () => {
+    if (!chatInput.trim()) return;
+    setChatMessages(prev => [...prev, { role: 'user', text: chatInput }]);
+    setChatInput('');
+    setChatLoading(true);
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, { role: 'bot', text: 'Questa è una demo interattiva. In produzione ARIA risponde in tempo reale con piena conoscenza del tuo business!' }]);
+      setChatLoading(false);
+    }, 1000);
+  };
+
   const handleAriaSend = () => {
     if (!ariaInput.trim()) return;
     const msg = { role: 'user', text: ariaInput, ts: format(new Date(), 'HH:mm') };
@@ -120,15 +141,17 @@ export default function Demo() {
     }, 1200);
   };
 
+  const SIDEBAR_TOP = 36; // altezza banner demo
+
   return (
-    <div className="min-h-screen bg-background flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: 'hsl(220 20% 4%)', display: 'flex', fontFamily: "'Inter', sans-serif" }}>
 
       {/* ── DEMO BANNER ── */}
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
         background: 'linear-gradient(90deg, #7C3AED, #3B6EF8)',
         padding: '8px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        fontSize: 12, color: '#fff', fontWeight: 500,
+        fontSize: 12, color: '#fff', fontWeight: 500, height: SIDEBAR_TOP,
       }}>
         <span>🚀 <strong>MODALITÀ DEMO</strong> — Dati di esempio per revisione Meta. Nessun dato reale.</span>
         <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer"
@@ -139,24 +162,24 @@ export default function Demo() {
 
       {/* ── SIDEBAR ── */}
       <aside style={{
-        position: 'fixed', left: 0, top: 36, bottom: 0, zIndex: 40,
+        position: 'fixed', left: 0, top: SIDEBAR_TOP, bottom: 0, zIndex: 40,
         width: collapsed ? 68 : 240, transition: 'width 0.3s',
         background: 'hsl(220 18% 5%)', borderRight: '1px solid hsl(220 15% 12%)',
         display: 'flex', flexDirection: 'column',
       }}>
         {/* Logo */}
-        <div style={{ height: 64, display: 'flex', alignItems: 'center', padding: '0 16px', borderBottom: '1px solid hsl(220 15% 12%)', gap: 12 }}>
+        <div style={{ height: 64, display: 'flex', alignItems: 'center', padding: '0 16px', borderBottom: '1px solid hsl(220 15% 12%)', gap: 12, flexShrink: 0 }}>
           <img src={LOGO_URL} alt="Emaral" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
           {!collapsed && (
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: 'hsl(220 10% 95%)', lineHeight: 1.2 }}>Emaral Agent AI</p>
-              <p style={{ fontSize: 10, color: 'hsl(220 10% 50%)' }}>by Emaral Group</p>
+            <div style={{ overflow: 'hidden' }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'hsl(220 10% 95%)', lineHeight: 1.2, whiteSpace: 'nowrap' }}>Emaral Agent AI</p>
+              <p style={{ fontSize: 10, color: 'hsl(220 10% 50%)', whiteSpace: 'nowrap' }}>by Emaral Group</p>
             </div>
           )}
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto' }}>
           {NAV_ITEMS.map(item => {
             const active = activeTab === item.id;
             const isAria = item.id === 'aria';
@@ -168,8 +191,7 @@ export default function Demo() {
                   background: active ? `${ACCENT}1A` : 'transparent',
                   color: active ? ACCENT : 'hsl(220 10% 70%)',
                   fontSize: 13, fontWeight: active ? 600 : 400, textAlign: 'left',
-                  transition: 'all 0.15s',
-                  fontFamily: 'inherit',
+                  transition: 'all 0.15s', fontFamily: 'inherit',
                 }}>
                 {isAria ? (
                   <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -185,6 +207,13 @@ export default function Demo() {
           })}
         </nav>
 
+        {/* Legal link */}
+        {!collapsed && (
+          <div style={{ padding: '8px 16px' }}>
+            <span style={{ fontSize: 10, color: 'hsl(220 10% 40%)' }}>Termini & Privacy</span>
+          </div>
+        )}
+
         {/* Agent status */}
         {!collapsed && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid hsl(220 15% 12%)' }}>
@@ -197,13 +226,22 @@ export default function Demo() {
 
         {/* Collapse btn */}
         <button onClick={() => setCollapsed(!collapsed)}
-          style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', borderTop: '1px solid hsl(220 15% 12%)', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(220 10% 50%)' }}>
+          style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', borderTop: '1px solid hsl(220 15% 12%)', background: 'none', border: 'none', cursor: 'pointer', color: 'hsl(220 10% 50%)', flexShrink: 0 }}>
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </aside>
 
       {/* ── MAIN CONTENT ── */}
-      <main style={{ marginLeft: collapsed ? 68 : 240, marginTop: 36, flex: 1, transition: 'margin-left 0.3s', minHeight: 'calc(100vh - 36px)' }}>
+      <main style={{ marginLeft: collapsed ? 68 : 240, marginTop: SIDEBAR_TOP, flex: 1, transition: 'margin-left 0.3s', minHeight: `calc(100vh - ${SIDEBAR_TOP}px)` }}>
+        {/* Top header bar — come nella app reale */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 30, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 24px', background: 'hsl(220 20% 4%)', borderBottom: '1px solid hsl(220 15% 12%)' }}>
+          {/* Notification bell mock */}
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'hsl(220 15% 10%)', border: '1px solid hsl(220 15% 15%)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: 'pointer' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(220 10% 70%)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <div style={{ position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: '50%', background: ACCENT, border: '1.5px solid hsl(220 20% 4%)' }} />
+          </div>
+        </div>
+
         {activeTab === 'dashboard' && <DashboardTab />}
         {activeTab === 'inbox' && <InboxTab />}
         {activeTab === 'crm' && <CrmTab />}
@@ -212,35 +250,110 @@ export default function Demo() {
         {activeTab === 'analytics' && <AnalyticsTab />}
         {activeTab === 'connections' && <ConnectionsTab />}
       </main>
+
+      {/* ── ARIA ROBOT MASCOT — fisso in basso a destra (come nella app reale) ── */}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 200, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+        {/* Chat panel */}
+        {chatOpen && (
+          <div style={{
+            width: 360, height: 480, background: '#0A0D14',
+            border: `1px solid ${ACCENT}4D`, borderRadius: 20,
+            boxShadow: `0 20px 60px rgba(0,0,0,0.6), 0 0 24px ${ACCENT}18`,
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            {/* Chat header */}
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 10, background: '#0A0D14', flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: 13, flexShrink: 0 }}>A</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#F0F4FF', fontFamily: 'Inter, sans-serif' }}>ARIA</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
+                  <span style={{ fontSize: 10, color: '#10B981', fontFamily: 'Inter, sans-serif' }}>online</span>
+                </div>
+              </div>
+              <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: '0 4px' }}>×</button>
+            </div>
+            {/* Chat messages */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 6, background: '#0D1017' }}>
+              {chatMessages.map((m, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start', margin: '1px 0' }}>
+                  {m.role === 'bot' && i === 0 || (chatMessages[i-1]?.role !== m.role) ? (
+                    m.role === 'bot' && <span style={{ fontSize: 10, color: '#6B7280', marginBottom: 3, paddingLeft: 4, fontFamily: 'Inter, sans-serif' }}>ARIA</span>
+                  ) : null}
+                  <div style={{ maxWidth: '78%', background: m.role === 'user' ? ACCENT : '#161B26', border: m.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.07)', borderRadius: m.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px', padding: '9px 14px', fontSize: 13, color: '#F0F4FF', lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'Inter, sans-serif' }}>
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: '#161B26', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '18px 18px 18px 4px', width: 'fit-content', alignItems: 'center' }}>
+                  {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: ACCENT, animation: `typingDot 1.2s ${i*0.2}s infinite ease-in-out` }} />)}
+                  <span style={{ fontSize: 10, color: '#6B7280', marginLeft: 4, fontFamily: 'Inter, sans-serif' }}>ARIA sta scrivendo...</span>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            {/* Chat input */}
+            <div style={{ padding: '10px 14px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 8, background: '#0A0D14', flexShrink: 0 }}>
+              <input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChat()}
+                placeholder="Scrivi ad ARIA..."
+                style={{ flex: 1, background: '#161B26', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '10px 16px', color: '#F0F4FF', fontSize: 13, outline: 'none', fontFamily: 'Inter, sans-serif' }}
+              />
+              <button onClick={sendChat} style={{ width: 40, height: 40, borderRadius: '50%', background: chatInput.trim() ? ACCENT : '#1E2330', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s' }}>
+                <svg width="15" height="15" viewBox="0 0 12 12" fill="none"><path d="M1 6h10M6 1l5 5-5 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Robot mascot button */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <div
+            onClick={() => setChatOpen(o => !o)}
+            style={{ cursor: 'pointer', opacity: 0.82, transition: 'transform 0.2s, opacity 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.opacity = '1'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = '0.82'; }}
+          >
+            <svg width="80" height="100" viewBox="0 0 110 140" style={{ filter: `drop-shadow(0 4px 20px ${ACCENT}55)` }}>
+              <g transform="translate(18,0) scale(0.68)">
+                <polygon points="18,8 82,8 76,22 18,22" fill="#F0F4FF"/>
+                <polygon points="18,28 80,28 74,42 18,42" fill="#F0F4FF"/>
+                <polygon points="42,28 80,28 58,42 42,42 62,35" fill="#06080E"/>
+                <polygon points="18,48 76,48 70,62 18,62" fill="#F0F4FF"/>
+                <circle cx="88" cy="6" r="8" fill={ACCENT}>
+                  <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+                </circle>
+              </g>
+              <rect x="8" y="52" width="18" height="6" rx="3" fill={ACCENT} fillOpacity="0.6" transform="rotate(-32 8 52)"/>
+              <rect x="76" y="52" width="18" height="6" rx="3" fill={ACCENT} fillOpacity="0.6" transform="rotate(32 94 52)"/>
+              <rect x="26" y="52" width="58" height="38" rx="13" fill={ACCENT} fillOpacity="0.12" stroke={ACCENT} strokeWidth="1.5"/>
+              <circle cx="40" cy="71" r="6" fill={ACCENT}/>
+              <circle cx="70" cy="71" r="6" fill={ACCENT}/>
+              <circle cx="41" cy="70" r="2.5" fill="#F0F4FF"/>
+              <circle cx="71" cy="70" r="2.5" fill="#F0F4FF"/>
+              <path d="M42 82 Q55 89 68 82" fill="none" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round"/>
+              <rect x="22" y="96" width="66" height="30" rx="10" fill={ACCENT} fillOpacity="0.1" stroke={ACCENT} strokeWidth="1.5"/>
+              <rect x="34" y="104" width="11" height="11" rx="4" fill={ACCENT} fillOpacity="0.4"/>
+              <rect x="50" y="104" width="11" height="11" rx="4" fill={ACCENT} fillOpacity="0.4"/>
+              <rect x="66" y="104" width="11" height="11" rx="4" fill={ACCENT} fillOpacity="0.4"/>
+              <rect x="32" y="126" width="16" height="12" rx="5" fill={ACCENT} fillOpacity="0.35"/>
+              <rect x="62" y="126" width="16" height="12" rx="5" fill={ACCENT} fillOpacity="0.35"/>
+            </svg>
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: ACCENT, textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>ARIA</span>
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ══ TAB: DASHBOARD ══ */
 function DashboardTab() {
-  const [chatOpen, setChatOpen] = React.useState(false);
-  const [chatMessages, setChatMessages] = React.useState([
-    { role: 'bot', text: 'Ciao! Sono ARIA 👋 Come posso aiutarti oggi?' },
-  ]);
-  const [chatInput, setChatInput] = React.useState('');
-  const [chatLoading, setChatLoading] = React.useState(false);
-  const endRef = React.useRef(null);
-  React.useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages, chatLoading]);
-
-  const sendChat = () => {
-    if (!chatInput.trim()) return;
-    const msg = { role: 'user', text: chatInput };
-    setChatMessages(prev => [...prev, msg]);
-    setChatInput('');
-    setChatLoading(true);
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, { role: 'bot', text: 'Questa è una demo interattiva. In produzione ARIA risponde in tempo reale con piena conoscenza del tuo business!' }]);
-      setChatLoading(false);
-    }, 1000);
-  };
-
   return (
-    <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: 24, position: 'relative' }}>
+    <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'hsl(220 10% 95%)' }}>Dashboard</h1>
         <p style={{ fontSize: 13, color: 'hsl(220 10% 50%)', marginTop: 2 }}>
@@ -324,95 +437,6 @@ function DashboardTab() {
         </div>
       </div>
 
-      {/* ── ARIA Robot in basso a destra ── */}
-      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-        {/* Chat panel */}
-        {chatOpen && (
-          <div style={{
-            width: 360, height: 480, background: '#0A0D14',
-            border: `1px solid ${ACCENT}4D`, borderRadius: 20,
-            boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 20px ${ACCENT}11`,
-            display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          }}>
-            {/* Header */}
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 10, background: '#0A0D14' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: 13 }}>A</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#F0F4FF' }}>ARIA</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
-                  <span style={{ fontSize: 10, color: '#10B981' }}>online</span>
-                </div>
-              </div>
-              <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
-            </div>
-            {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 8, background: '#0D1017' }}>
-              {chatMessages.map((m, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                  <div style={{ maxWidth: '78%', background: m.role === 'user' ? ACCENT : '#161B26', border: m.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.07)', borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', padding: '9px 13px', fontSize: 13, color: '#F0F4FF', lineHeight: 1.55 }}>
-                    {m.text}
-                  </div>
-                </div>
-              ))}
-              {chatLoading && (
-                <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: '#161B26', borderRadius: '16px 16px 16px 4px', width: 'fit-content' }}>
-                  {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: ACCENT, animation: `typingDot 1.2s ${i*0.2}s infinite ease-in-out` }} />)}
-                </div>
-              )}
-              <div ref={endRef} />
-            </div>
-            {/* Input */}
-            <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 8, background: '#0A0D14' }}>
-              <input
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendChat()}
-                placeholder="Scrivi ad ARIA..."
-                style={{ flex: 1, background: '#161B26', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '9px 14px', color: '#F0F4FF', fontSize: 13, outline: 'none', fontFamily: 'Inter, sans-serif' }}
-              />
-              <button onClick={sendChat} style={{ width: 38, height: 38, borderRadius: '50%', background: chatInput.trim() ? ACCENT : '#1E2330', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M1 6h10M6 1l5 5-5 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Robot button */}
-        <div onClick={() => setChatOpen(o => !o)}
-          style={{ cursor: 'pointer', transition: 'transform 0.2s', opacity: 0.85 }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.opacity = 1; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = 0.85; }}
-        >
-          {/* Robot SVG */}
-          <svg width="80" height="100" viewBox="0 0 110 140" style={{ filter: `drop-shadow(0 4px 16px ${ACCENT}44)` }}>
-            <g transform="translate(18,0) scale(0.68)">
-              <polygon points="18,8 82,8 76,22 18,22" fill="#F0F4FF"/>
-              <polygon points="18,28 80,28 74,42 18,42" fill="#F0F4FF"/>
-              <polygon points="42,28 80,28 58,42 42,42 62,35" fill="#06080E"/>
-              <polygon points="18,48 76,48 70,62 18,62" fill="#F0F4FF"/>
-              <circle cx="88" cy="6" r="8" fill={ACCENT}>
-                <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
-              </circle>
-            </g>
-            <rect x="8" y="52" width="18" height="6" rx="3" fill={ACCENT} fillOpacity="0.6" transform="rotate(-32 8 52)"/>
-            <rect x="76" y="52" width="18" height="6" rx="3" fill={ACCENT} fillOpacity="0.6" transform="rotate(32 94 52)"/>
-            <rect x="26" y="52" width="58" height="38" rx="13" fill={ACCENT} fillOpacity="0.12" stroke={ACCENT} strokeWidth="1.5"/>
-            <circle cx="40" cy="71" r="6" fill={ACCENT}/>
-            <circle cx="70" cy="71" r="6" fill={ACCENT}/>
-            <circle cx="41" cy="70" r="2.5" fill="#F0F4FF"/>
-            <circle cx="71" cy="70" r="2.5" fill="#F0F4FF"/>
-            <path d="M42 82 Q55 89 68 82" fill="none" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round"/>
-            <rect x="22" y="96" width="66" height="30" rx="10" fill={ACCENT} fillOpacity="0.1" stroke={ACCENT} strokeWidth="1.5"/>
-            <rect x="34" y="104" width="11" height="11" rx="4" fill={ACCENT} fillOpacity="0.4"/>
-            <rect x="50" y="104" width="11" height="11" rx="4" fill={ACCENT} fillOpacity="0.4"/>
-            <rect x="66" y="104" width="11" height="11" rx="4" fill={ACCENT} fillOpacity="0.4"/>
-            <rect x="32" y="126" width="16" height="12" rx="5" fill={ACCENT} fillOpacity="0.35"/>
-            <rect x="62" y="126" width="16" height="12" rx="5" fill={ACCENT} fillOpacity="0.35"/>
-          </svg>
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: ACCENT, textAlign: 'center', textTransform: 'uppercase' }}>ARIA</div>
-      </div>
     </div>
   );
 }
