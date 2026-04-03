@@ -39,6 +39,7 @@ export default function Homepage() {
 
         {/* Desktop nav */}
         <div className="hidden lg:flex" style={{ alignItems: 'center', gap: 32 }}>
+          <a href="/demo" style={{ textDecoration: 'none', color: '#F0F4FF', fontSize: '0.875rem', fontWeight: 600, transition: 'color 0.2s', background: 'rgba(59,110,248,0.15)', border: '1px solid rgba(59,110,248,0.4)', padding: '7px 16px', borderRadius: 8 }}>🖥 Demo</a>
           <a href="#features" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>Funzionalità</a>
           <a href="#aria" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>ARIA</a>
           <a href="#pricing" style={{ textDecoration: 'none', color: '#8A9AB5', fontSize: '0.875rem', fontWeight: 400, transition: 'color 0.2s' }} onMouseEnter={e=>e.target.style.color='#F0F4FF'} onMouseLeave={e=>e.target.style.color='#8A9AB5'}>Prezzi</a>
