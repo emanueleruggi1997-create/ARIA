@@ -218,8 +218,29 @@ export default function Demo() {
 
 /* ══ TAB: DASHBOARD ══ */
 function DashboardTab() {
+  const [chatOpen, setChatOpen] = React.useState(false);
+  const [chatMessages, setChatMessages] = React.useState([
+    { role: 'bot', text: 'Ciao! Sono ARIA 👋 Come posso aiutarti oggi?' },
+  ]);
+  const [chatInput, setChatInput] = React.useState('');
+  const [chatLoading, setChatLoading] = React.useState(false);
+  const endRef = React.useRef(null);
+  React.useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages, chatLoading]);
+
+  const sendChat = () => {
+    if (!chatInput.trim()) return;
+    const msg = { role: 'user', text: chatInput };
+    setChatMessages(prev => [...prev, msg]);
+    setChatInput('');
+    setChatLoading(true);
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, { role: 'bot', text: 'Questa è una demo interattiva. In produzione ARIA risponde in tempo reale con piena conoscenza del tuo business!' }]);
+      setChatLoading(false);
+    }, 1000);
+  };
+
   return (
-    <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: 24, position: 'relative' }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'hsl(220 10% 95%)' }}>Dashboard</h1>
         <p style={{ fontSize: 13, color: 'hsl(220 10% 50%)', marginTop: 2 }}>
@@ -301,6 +322,96 @@ function DashboardTab() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── ARIA Robot in basso a destra ── */}
+      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+        {/* Chat panel */}
+        {chatOpen && (
+          <div style={{
+            width: 360, height: 480, background: '#0A0D14',
+            border: `1px solid ${ACCENT}4D`, borderRadius: 20,
+            boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 20px ${ACCENT}11`,
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 10, background: '#0A0D14' }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: ACCENT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: 13 }}>A</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#F0F4FF' }}>ARIA</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
+                  <span style={{ fontSize: 10, color: '#10B981' }}>online</span>
+                </div>
+              </div>
+              <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+            </div>
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 8, background: '#0D1017' }}>
+              {chatMessages.map((m, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{ maxWidth: '78%', background: m.role === 'user' ? ACCENT : '#161B26', border: m.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.07)', borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', padding: '9px 13px', fontSize: 13, color: '#F0F4FF', lineHeight: 1.55 }}>
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: '#161B26', borderRadius: '16px 16px 16px 4px', width: 'fit-content' }}>
+                  {[0,1,2].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: ACCENT, animation: `typingDot 1.2s ${i*0.2}s infinite ease-in-out` }} />)}
+                </div>
+              )}
+              <div ref={endRef} />
+            </div>
+            {/* Input */}
+            <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 8, background: '#0A0D14' }}>
+              <input
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChat()}
+                placeholder="Scrivi ad ARIA..."
+                style={{ flex: 1, background: '#161B26', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '9px 14px', color: '#F0F4FF', fontSize: 13, outline: 'none', fontFamily: 'Inter, sans-serif' }}
+              />
+              <button onClick={sendChat} style={{ width: 38, height: 38, borderRadius: '50%', background: chatInput.trim() ? ACCENT : '#1E2330', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M1 6h10M6 1l5 5-5 5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Robot button */}
+        <div onClick={() => setChatOpen(o => !o)}
+          style={{ cursor: 'pointer', transition: 'transform 0.2s', opacity: 0.85 }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.opacity = 1; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = 0.85; }}
+        >
+          {/* Robot SVG */}
+          <svg width="80" height="100" viewBox="0 0 110 140" style={{ filter: `drop-shadow(0 4px 16px ${ACCENT}44)` }}>
+            <g transform="translate(18,0) scale(0.68)">
+              <polygon points="18,8 82,8 76,22 18,22" fill="#F0F4FF"/>
+              <polygon points="18,28 80,28 74,42 18,42" fill="#F0F4FF"/>
+              <polygon points="42,28 80,28 58,42 42,42 62,35" fill="#06080E"/>
+              <polygon points="18,48 76,48 70,62 18,62" fill="#F0F4FF"/>
+              <circle cx="88" cy="6" r="8" fill={ACCENT}>
+                <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+              </circle>
+            </g>
+            <rect x="8" y="52" width="18" height="6" rx="3" fill={ACCENT} fillOpacity="0.6" transform="rotate(-32 8 52)"/>
+            <rect x="76" y="52" width="18" height="6" rx="3" fill={ACCENT} fillOpacity="0.6" transform="rotate(32 94 52)"/>
+            <rect x="26" y="52" width="58" height="38" rx="13" fill={ACCENT} fillOpacity="0.12" stroke={ACCENT} strokeWidth="1.5"/>
+            <circle cx="40" cy="71" r="6" fill={ACCENT}/>
+            <circle cx="70" cy="71" r="6" fill={ACCENT}/>
+            <circle cx="41" cy="70" r="2.5" fill="#F0F4FF"/>
+            <circle cx="71" cy="70" r="2.5" fill="#F0F4FF"/>
+            <path d="M42 82 Q55 89 68 82" fill="none" stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round"/>
+            <rect x="22" y="96" width="66" height="30" rx="10" fill={ACCENT} fillOpacity="0.1" stroke={ACCENT} strokeWidth="1.5"/>
+            <rect x="34" y="104" width="11" height="11" rx="4" fill={ACCENT} fillOpacity="0.4"/>
+            <rect x="50" y="104" width="11" height="11" rx="4" fill={ACCENT} fillOpacity="0.4"/>
+            <rect x="66" y="104" width="11" height="11" rx="4" fill={ACCENT} fillOpacity="0.4"/>
+            <rect x="32" y="126" width="16" height="12" rx="5" fill={ACCENT} fillOpacity="0.35"/>
+            <rect x="62" y="126" width="16" height="12" rx="5" fill={ACCENT} fillOpacity="0.35"/>
+          </svg>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: ACCENT, textAlign: 'center', textTransform: 'uppercase' }}>ARIA</div>
       </div>
     </div>
   );
