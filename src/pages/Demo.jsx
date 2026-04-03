@@ -237,17 +237,18 @@ export default function Demo() {
         {activeTab === 'connections' && <ConnectionsTab />}
       </main>
 
-      {/* ── ARIA REALE — robot mascot + chat panel (come nella app reale) ── */}
-      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 200, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-        {/* AriaChatCore reale */}
+      {/* ── ARIA REALE — FAB prominente + chat panel ── */}
+      <div style={{ position: 'fixed', bottom: 28, right: 28, zIndex: 200, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 }}>
+        
+        {/* Chat panel */}
         {chatOpen && (
           <div style={{
-            width: ariaChatExpanded ? 520 : 380,
-            height: ariaChatExpanded ? 600 : 500,
+            width: ariaChatExpanded ? 520 : 400,
+            height: ariaChatExpanded ? 620 : 520,
             background: '#0A0D14',
-            border: '1px solid rgba(124,58,237,0.3)',
+            border: '1px solid rgba(124,58,237,0.4)',
             borderRadius: 20,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 24px rgba(124,58,237,0.12)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.7), 0 0 40px rgba(124,58,237,0.2)',
             overflow: 'hidden',
             transition: 'width 0.25s, height 0.25s',
           }}>
@@ -269,43 +270,76 @@ export default function Demo() {
           </div>
         )}
 
-        {/* Robot mascot button */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <div
+        {/* FAB prominente */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          {/* Callout bubble — solo quando chiuso */}
+          {!chatOpen && (
+            <div style={{
+              background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',
+              color: '#fff', borderRadius: '16px 16px 4px 16px',
+              padding: '10px 16px', fontSize: 12, fontWeight: 600,
+              boxShadow: '0 8px 24px rgba(124,58,237,0.45)',
+              maxWidth: 220, lineHeight: 1.4, textAlign: 'right',
+              animation: 'fadeInUp 0.4s ease',
+            }}>
+              👋 Ciao! Sono ARIA, il tuo assistente AI.<br/>
+              <span style={{ opacity: 0.85, fontWeight: 400 }}>Chiedimi qualsiasi cosa!</span>
+            </div>
+          )}
+
+          {/* Bottone principale */}
+          <button
             onClick={() => setChatOpen(o => !o)}
-            style={{ cursor: 'pointer', opacity: 0.82, transition: 'transform 0.2s, opacity 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.opacity = '1'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = '0.82'; }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              background: chatOpen ? '#1E1B2E' : 'linear-gradient(135deg, #7C3AED, #5B21B6)',
+              border: chatOpen ? '1px solid rgba(124,58,237,0.4)' : 'none',
+              borderRadius: 20, padding: '12px 20px 12px 14px',
+              cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+              boxShadow: chatOpen ? 'none' : '0 8px 32px rgba(124,58,237,0.5), 0 0 0 0 rgba(124,58,237,0.4)',
+              transition: 'all 0.2s',
+              animation: chatOpen ? 'none' : 'ariaPulse 2.5s infinite',
+            }}
+            onMouseEnter={e => { if (!chatOpen) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
           >
-            <svg width="80" height="100" viewBox="0 0 110 140" style={{ filter: 'drop-shadow(0 4px 20px rgba(124,58,237,0.55))' }}>
-              <g transform="translate(18,0) scale(0.68)">
-                <polygon points="18,8 82,8 76,22 18,22" fill="#F0F4FF"/>
-                <polygon points="18,28 80,28 74,42 18,42" fill="#F0F4FF"/>
-                <polygon points="42,28 80,28 58,42 42,42 62,35" fill="#06080E"/>
-                <polygon points="18,48 76,48 70,62 18,62" fill="#F0F4FF"/>
-                <circle cx="88" cy="6" r="8" fill="#7C3AED">
-                  <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
-                </circle>
-              </g>
-              <rect x="8" y="52" width="18" height="6" rx="3" fill="#7C3AED" fillOpacity="0.6" transform="rotate(-32 8 52)"/>
-              <rect x="76" y="52" width="18" height="6" rx="3" fill="#7C3AED" fillOpacity="0.6" transform="rotate(32 94 52)"/>
-              <rect x="26" y="52" width="58" height="38" rx="13" fill="#7C3AED" fillOpacity="0.12" stroke="#7C3AED" strokeWidth="1.5"/>
-              <circle cx="40" cy="71" r="6" fill="#7C3AED"/>
-              <circle cx="70" cy="71" r="6" fill="#7C3AED"/>
-              <circle cx="41" cy="70" r="2.5" fill="#F0F4FF"/>
-              <circle cx="71" cy="70" r="2.5" fill="#F0F4FF"/>
-              <path d="M42 82 Q55 89 68 82" fill="none" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round"/>
-              <rect x="22" y="96" width="66" height="30" rx="10" fill="#7C3AED" fillOpacity="0.1" stroke="#7C3AED" strokeWidth="1.5"/>
-              <rect x="34" y="104" width="11" height="11" rx="4" fill="#7C3AED" fillOpacity="0.4"/>
-              <rect x="50" y="104" width="11" height="11" rx="4" fill="#7C3AED" fillOpacity="0.4"/>
-              <rect x="66" y="104" width="11" height="11" rx="4" fill="#7C3AED" fillOpacity="0.4"/>
-              <rect x="32" y="126" width="16" height="12" rx="5" fill="#7C3AED" fillOpacity="0.35"/>
-              <rect x="62" y="126" width="16" height="12" rx="5" fill="#7C3AED" fillOpacity="0.35"/>
-            </svg>
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.15em', color: '#7C3AED', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>ARIA</span>
+            {/* Avatar */}
+            <div style={{
+              width: 44, height: 44, borderRadius: '50%',
+              background: chatOpen ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.15)',
+              border: '2px solid rgba(255,255,255,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, position: 'relative',
+            }}>
+              <span style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>A</span>
+              {/* Online dot */}
+              <div style={{
+                position: 'absolute', bottom: 1, right: 1,
+                width: 11, height: 11, borderRadius: '50%',
+                background: '#10B981', border: '2px solid #0A0D14',
+                boxShadow: '0 0 6px #10B981',
+              }} />
+            </div>
+
+            {/* Text */}
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+                {chatOpen ? '✕ Chiudi ARIA' : 'Parla con ARIA'}
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>
+                {chatOpen ? 'Assistente AI' : 'Assistente AI · Online'}
+              </div>
+            </div>
+          </button>
         </div>
       </div>
+
+      <style>{`
+        @keyframes ariaPulse {
+          0%, 100% { box-shadow: 0 8px 32px rgba(124,58,237,0.5), 0 0 0 0 rgba(124,58,237,0.4); }
+          50% { box-shadow: 0 8px 32px rgba(124,58,237,0.5), 0 0 0 10px rgba(124,58,237,0); }
+        }
+      `}</style>
     </div>
   );
 }
