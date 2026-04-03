@@ -270,74 +270,81 @@ export default function Demo() {
           </div>
         )}
 
-        {/* FAB prominente */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-          {/* Callout bubble — solo quando chiuso */}
+        {/* Robot + label */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+
+          {/* Bubble callout — solo quando chiuso */}
           {!chatOpen && (
             <div style={{
-              background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',
-              color: '#fff', borderRadius: '16px 16px 4px 16px',
-              padding: '10px 16px', fontSize: 12, fontWeight: 600,
-              boxShadow: '0 8px 24px rgba(124,58,237,0.45)',
-              maxWidth: 220, lineHeight: 1.4, textAlign: 'right',
+              background: 'linear-gradient(135deg,#7C3AED,#5B21B6)',
+              color: '#fff', borderRadius: '14px 14px 4px 14px',
+              padding: '9px 14px', fontSize: 12, fontWeight: 600,
+              boxShadow: '0 6px 20px rgba(124,58,237,0.5)',
+              marginBottom: 8, lineHeight: 1.45, textAlign: 'center',
               animation: 'fadeInUp 0.4s ease',
+              whiteSpace: 'nowrap',
             }}>
-              👋 Ciao! Sono ARIA, il tuo assistente AI.<br/>
-              <span style={{ opacity: 0.85, fontWeight: 400 }}>Chiedimi qualsiasi cosa!</span>
+              👋 Ciao! Sono <strong>ARIA</strong><br/>
+              <span style={{ fontWeight: 400, opacity: 0.85, fontSize: 11 }}>Chiedimi qualsiasi cosa →</span>
             </div>
           )}
 
-          {/* Bottone principale */}
-          <button
+          {/* Robot SVG — grande e animato */}
+          <div
             onClick={() => setChatOpen(o => !o)}
             style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              background: chatOpen ? '#1E1B2E' : 'linear-gradient(135deg, #7C3AED, #5B21B6)',
-              border: chatOpen ? '1px solid rgba(124,58,237,0.4)' : 'none',
-              borderRadius: 20, padding: '12px 20px 12px 14px',
-              cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-              boxShadow: chatOpen ? 'none' : '0 8px 32px rgba(124,58,237,0.5), 0 0 0 0 rgba(124,58,237,0.4)',
-              transition: 'all 0.2s',
-              animation: chatOpen ? 'none' : 'ariaPulse 2.5s infinite',
+              cursor: 'pointer',
+              animation: 'ariaFloat 3s ease-in-out infinite',
+              filter: 'drop-shadow(0 6px 28px rgba(124,58,237,0.7))',
+              transition: 'filter 0.2s, transform 0.2s',
             }}
-            onMouseEnter={e => { if (!chatOpen) e.currentTarget.style.transform = 'translateY(-2px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+            onMouseEnter={e => { e.currentTarget.style.filter = 'drop-shadow(0 8px 36px rgba(124,58,237,0.95))'; e.currentTarget.style.transform = 'scale(1.07)'; }}
+            onMouseLeave={e => { e.currentTarget.style.filter = 'drop-shadow(0 6px 28px rgba(124,58,237,0.7))'; e.currentTarget.style.transform = 'scale(1)'; }}
           >
-            {/* Avatar */}
-            <div style={{
-              width: 44, height: 44, borderRadius: '50%',
-              background: chatOpen ? 'rgba(124,58,237,0.2)' : 'rgba(255,255,255,0.15)',
-              border: '2px solid rgba(255,255,255,0.25)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, position: 'relative',
-            }}>
-              <span style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>A</span>
-              {/* Online dot */}
-              <div style={{
-                position: 'absolute', bottom: 1, right: 1,
-                width: 11, height: 11, borderRadius: '50%',
-                background: '#10B981', border: '2px solid #0A0D14',
-                boxShadow: '0 0 6px #10B981',
-              }} />
-            </div>
+            <svg width="110" height="136" viewBox="0 0 110 140">
+              <g transform="translate(18,0) scale(0.68)">
+                <polygon points="18,8 82,8 76,22 18,22" fill="#F0F4FF"/>
+                <polygon points="18,28 80,28 74,42 18,42" fill="#F0F4FF"/>
+                <polygon points="42,28 80,28 58,42 42,42 62,35" fill="#06080E"/>
+                <polygon points="18,48 76,48 70,62 18,62" fill="#F0F4FF"/>
+                <circle cx="88" cy="6" r="8" fill="#7C3AED">
+                  <animate attributeName="opacity" values="1;0.2;1" dur="1.8s" repeatCount="indefinite"/>
+                </circle>
+              </g>
+              <rect x="8" y="52" width="18" height="6" rx="3" fill="#7C3AED" fillOpacity="0.7" transform="rotate(-32 8 52)"/>
+              <rect x="76" y="52" width="18" height="6" rx="3" fill="#7C3AED" fillOpacity="0.7" transform="rotate(32 94 52)"/>
+              {/* Body */}
+              <rect x="26" y="52" width="58" height="38" rx="13" fill="#7C3AED" fillOpacity="0.15" stroke="#7C3AED" strokeWidth="1.8"/>
+              {/* Eyes */}
+              <circle cx="40" cy="71" r="7" fill="#7C3AED"/>
+              <circle cx="70" cy="71" r="7" fill="#7C3AED"/>
+              <circle cx="41" cy="70" r="3" fill="#F0F4FF"/>
+              <circle cx="71" cy="70" r="3" fill="#F0F4FF"/>
+              {/* Smile */}
+              <path d="M42 82 Q55 91 68 82" fill="none" stroke="#7C3AED" strokeWidth="2.8" strokeLinecap="round"/>
+              {/* Keyboard */}
+              <rect x="22" y="96" width="66" height="30" rx="10" fill="#7C3AED" fillOpacity="0.12" stroke="#7C3AED" strokeWidth="1.8"/>
+              <rect x="34" y="104" width="11" height="11" rx="4" fill="#7C3AED" fillOpacity="0.5"/>
+              <rect x="50" y="104" width="11" height="11" rx="4" fill="#7C3AED" fillOpacity="0.5"/>
+              <rect x="66" y="104" width="11" height="11" rx="4" fill="#7C3AED" fillOpacity="0.5"/>
+              <rect x="32" y="126" width="16" height="12" rx="5" fill="#7C3AED" fillOpacity="0.4"/>
+              <rect x="62" y="126" width="16" height="12" rx="5" fill="#7C3AED" fillOpacity="0.4"/>
+            </svg>
+          </div>
 
-            {/* Text */}
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
-                {chatOpen ? '✕ Chiudi ARIA' : 'Parla con ARIA'}
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>
-                {chatOpen ? 'Assistente AI' : 'Assistente AI · Online'}
-              </div>
-            </div>
-          </button>
+          {/* Label con dot online */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10B981', boxShadow: '0 0 6px #10B981' }} />
+            <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.18em', color: '#C4B5FD', textTransform: 'uppercase', fontFamily: 'Inter, sans-serif' }}>ARIA</span>
+          </div>
         </div>
+
       </div>
 
       <style>{`
-        @keyframes ariaPulse {
-          0%, 100% { box-shadow: 0 8px 32px rgba(124,58,237,0.5), 0 0 0 0 rgba(124,58,237,0.4); }
-          50% { box-shadow: 0 8px 32px rgba(124,58,237,0.5), 0 0 0 10px rgba(124,58,237,0); }
+        @keyframes ariaFloat {
+          0%,100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
         }
       `}</style>
     </div>
