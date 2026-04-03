@@ -22,6 +22,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import AriaChat from '@/pages/AriaChat';
 import Legal from '@/pages/Legal';
 import Homepage from '@/pages/Homepage';
+import Demo from '@/pages/Demo';
 import { base44 } from '@/api/base44Client';
 
 const Spinner = () => (
@@ -90,6 +91,7 @@ function App() {
             <Routes>
               {/* Rotte pubbliche — nessun auth check */}
               <Route path="/" element={<Homepage />} />
+              <Route path="/demo" element={<Demo />} />
               <Route path="/legal" element={<Legal />} />
 
               {/* Tutte le altre rotte richiedono autenticazione */}
