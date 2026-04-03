@@ -140,7 +140,7 @@ export default function Demo() {
         <span style={{ lineHeight: 1.4 }}>
           🚀 <strong>MODALITÀ DEMO</strong> — Stai esplorando Emaral Agent AI. Gestisci messaggi WhatsApp e Instagram con ARIA, il tuo assistente AI. CRM, Agenda, Analytics e molto altro — tutto in un'unica piattaforma. Accedi o registrati per usare la versione reale.
         </span>
-        <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer"
+        <a href="https://emaral.it/register"
           style={{ color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.18)', padding: '5px 14px', borderRadius: 8, fontWeight: 600, fontSize: 12, flexShrink: 0 }}>
           Inizia gratis → 
         </a>

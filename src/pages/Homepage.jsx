@@ -85,7 +85,7 @@ export default function Homepage() {
         </p>
 
         <div className="fade-up-4" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 72 }}>
-          <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer" className="btn-primary" style={{ background: '#3B6EF8', color: '#fff', padding: '15px 32px', borderRadius: 10, fontSize: '0.94rem', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 24px rgba(59,110,248,0.2)' }}>
+          <a href="https://emaral.it/register" className="btn-primary" style={{ background: '#3B6EF8', color: '#fff', padding: '15px 32px', borderRadius: 10, fontSize: '0.94rem', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 24px rgba(59,110,248,0.2)' }}>
             Inizia gratis — 2 mesi al prezzo di 1
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -296,7 +296,7 @@ export default function Homepage() {
                   {p.features.map(f => <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'rgba(255,255,255,0.70)', fontWeight: 400 }}><span style={{ width: 4, height: 4, borderRadius: '50%', background: '#3B6EF8', flexShrink: 0, display: 'inline-block' }}/>{f}</div>)}
                   {p.noFeatures.map(f => <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.875rem', color: 'rgba(255,255,255,0.25)', fontWeight: 400 }}><span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', flexShrink: 0, display: 'inline-block' }}/>{f}</div>)}
                 </div>
-                <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer" style={{ display: 'block', textAlign: 'center', padding: 13, borderRadius: 10, fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', transition: 'all 0.2s', background: p.btnStyle === 'main' ? '#3B6EF8' : 'transparent', color: p.btnStyle === 'main' ? '#fff' : '#F0F4FF', border: p.btnStyle === 'main' ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>{p.btn}</a>
+                <a href="https://emaral.it/register" style={{ display: 'block', textAlign: 'center', padding: 13, borderRadius: 10, fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', transition: 'all 0.2s', background: p.btnStyle === 'main' ? '#3B6EF8' : 'transparent', color: p.btnStyle === 'main' ? '#fff' : '#F0F4FF', border: p.btnStyle === 'main' ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>{p.btn}</a>
               </div>
             ))}
           </div>
@@ -314,7 +314,7 @@ export default function Homepage() {
             <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 'clamp(1.6rem,4vw,2.5rem)', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 16, position: 'relative', lineHeight: 1.15 }}>Pronto a far lavorare<br/><span style={{ color: '#3B6EF8' }}>l'AI per te?</span></h2>
             <p style={{ color: 'rgba(255,255,255,0.70)', fontSize: 'clamp(0.94rem,1.5vw,1.05rem)', marginBottom: 36, position: 'relative', maxWidth: 480, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.65, fontWeight: 400 }}>Inizia oggi con 2 mesi al prezzo di 1. Nessuna carta richiesta subito. Attiva e testa ARIA in meno di 5 minuti.</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center', flexWrap: 'wrap', position: 'relative' }}>
-              <a href="https://emaral-systems-ai.base44.app" target="_blank" rel="noreferrer" className="btn-primary" style={{ background: '#3B6EF8', color: '#fff', padding: '15px 32px', borderRadius: 10, fontSize: '0.94rem', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 24px rgba(59,110,248,0.2)' }}>
+              <a href="https://emaral.it/register" className="btn-primary" style={{ background: '#3B6EF8', color: '#fff', padding: '15px 32px', borderRadius: 10, fontSize: '0.94rem', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 24px rgba(59,110,248,0.2)' }}>
                 Attiva Emaral Agent AI →
               </a>
               <a href="https://wa.me/393784056561?text=Ciao%20Emaral%2C%20vorrei%20info%20su%20Emaral%20Agent%20AI" target="_blank" rel="noreferrer" className="btn-secondary" style={{ background: 'transparent', color: '#F0F4FF', padding: '15px 32px', borderRadius: 10, fontSize: '0.95rem', fontWeight: 400, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid rgba(255,255,255,0.06)', transition: 'border-color 0.2s, transform 0.2s' }}>
