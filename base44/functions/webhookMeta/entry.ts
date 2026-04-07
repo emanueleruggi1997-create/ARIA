@@ -99,10 +99,13 @@ async function processMessage({ base44, entryId, senderId, text }) {
       .map(a => `${a.data}${a.ora ? ` ${a.ora}` : ''}${a.durata_minuti ? ` (${a.durata_minuti} min)` : ''}`)
       .join(', ');
 
-    const giorniAttivi = business?.giorni_attivi?.length ? business.giorni_attivi.join(', ') : 'lun, mar, mer, gio, ven';
-    const orarioInizio = business?.orario_inizio || '09:00';
-    const orarioFine = business?.orario_fine || '18:00';
-    const disponibilitaBase = `Giorni lavorativi: ${giorniAttivi}. Orario: ${orarioInizio}–${orarioFine}.`;
+    // Usa i campi del RESPONSABILE (non di ARIA) per la disponibilità appuntamenti
+    const giorniAttivi = business?.responsabile_giorni_attivi?.length
+      ? business.responsabile_giorni_attivi.join(', ')
+      : business?.giorni_attivi?.length ? business.giorni_attivi.join(', ') : 'lun, mar, mer, gio, ven';
+    const orarioInizio = business?.responsabile_orario_inizio || '09:00';
+    const orarioFine = business?.responsabile_orario_fine || '18:00';
+    const disponibilitaBase = `Giorni disponibili del responsabile: ${giorniAttivi}. Orario: ${orarioInizio}–${orarioFine}.`;
 
     if (busySlots) {
       availabilityContext = `\n\nDATA E ORA ATTUALE (fuso orario Italia): ${nowItaly}\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nSlot già occupati in agenda: ${busySlots}\nRegole:\n- Usa la data e ora attuale per capire quali giorni proporre (non proporre date nel passato).\n- Se il cliente chiede un giorno/orario occupato o fuori orario lavorativo, digli che non sei disponibile e proponi SUBITO uno slot libero specifico (giorno + ora) all'interno dei tuoi orari.\n- Non dire mai perché sei occupato né cosa hai in agenda.\n- Sii proattivo e concreto: "purtroppo mercoledì non ho disponibilità, ma venerdì alle 16:00 sono libero — ti va?"`;
@@ -113,9 +116,12 @@ async function processMessage({ base44, entryId, senderId, text }) {
     console.log('[webhookMeta] Could not fetch agenda:', e.message);
   }
 
-  const giorniAttivi = business?.giorni_attivi?.length ? business.giorni_attivi.join(', ') : 'lun, mar, mer, gio, ven';
-  const orarioInizio = business?.orario_inizio || '09:00';
-  const orarioFine = business?.orario_fine || '18:00';
+  // Disponibilità responsabile per mostrare nel prompt
+  const giorniAttivi = business?.responsabile_giorni_attivi?.length
+    ? business.responsabile_giorni_attivi.join(', ')
+    : business?.giorni_attivi?.length ? business.giorni_attivi.join(', ') : 'lun, mar, mer, gio, ven';
+  const orarioInizio = business?.responsabile_orario_inizio || '09:00';
+  const orarioFine = business?.responsabile_orario_fine || '18:00';
 
   const systemPrompt = `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".
 ${business.ai_prompt || ''}

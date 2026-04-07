@@ -1,0 +1,264 @@
+{
+  "name": "Business",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome del business"
+    },
+    "settore": {
+      "type": "string",
+      "description": "Settore di attivit\u00e0"
+    },
+    "citta": {
+      "type": "string"
+    },
+    "sito_web": {
+      "type": "string"
+    },
+    "telefono": {
+      "type": "string"
+    },
+    "piva": {
+      "type": "string"
+    },
+    "piano": {
+      "type": "string",
+      "enum": [
+        "starter",
+        "pro",
+        "agency"
+      ],
+      "default": "starter"
+    },
+    "wa_number": {
+      "type": "string"
+    },
+    "wa_api_key": {
+      "type": "string"
+    },
+    "wa_connesso": {
+      "type": "boolean",
+      "default": false
+    },
+    "ig_username": {
+      "type": "string"
+    },
+    "ig_connesso": {
+      "type": "boolean",
+      "default": false
+    },
+    "fb_username": {
+      "type": "string"
+    },
+    "fb_connesso": {
+      "type": "boolean",
+      "default": false
+    },
+    "email_provider": {
+      "type": "string"
+    },
+    "email_smtp_host": {
+      "type": "string"
+    },
+    "email_smtp_porta": {
+      "type": "string"
+    },
+    "email_smtp_user": {
+      "type": "string"
+    },
+    "email_smtp_pass": {
+      "type": "string"
+    },
+    "email_connessa": {
+      "type": "boolean",
+      "default": false
+    },
+    "notif_escalation": {
+      "type": "boolean",
+      "default": true
+    },
+    "notif_report_settimanale": {
+      "type": "boolean",
+      "default": false
+    },
+    "notif_limite_piano": {
+      "type": "boolean",
+      "default": true
+    },
+    "tono": {
+      "type": "string",
+      "enum": [
+        "formale",
+        "amichevole",
+        "professionale",
+        "diretto"
+      ],
+      "default": "professionale"
+    },
+    "servizi": {
+      "type": "string"
+    },
+    "prezzi": {
+      "type": "string"
+    },
+    "ai_prompt": {
+      "type": "string"
+    },
+    "nome_agente": {
+      "type": "string",
+      "default": "ARIA"
+    },
+    "ruolo_agente": {
+      "type": "string"
+    },
+    "lingua": {
+      "type": "string",
+      "default": "Italiano"
+    },
+    "cose_da_non_fare": {
+      "type": "string"
+    },
+    "faq": {
+      "type": "string"
+    },
+    "auto_risposta": {
+      "type": "boolean",
+      "default": true
+    },
+    "orario_inizio": {
+      "type": "string",
+      "default": "08:00",
+      "description": "Orario inizio risposta automatica ARIA"
+    },
+    "orario_fine": {
+      "type": "string",
+      "default": "20:00",
+      "description": "Orario fine risposta automatica ARIA"
+    },
+    "giorni_attivi": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Giorni in cui ARIA risponde automaticamente"
+    },
+    "messaggio_fuori_orario": {
+      "type": "string"
+    },
+    "fuori_orario_attivo": {
+      "type": "boolean",
+      "default": true
+    },
+    "escalation_rules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "email_notifica": {
+      "type": "string"
+    },
+    "attivo": {
+      "type": "boolean",
+      "default": true
+    },
+    "stato_agente": {
+      "type": "string",
+      "enum": [
+        "attivo",
+        "pausa",
+        "off"
+      ],
+      "default": "attivo"
+    },
+    "responsabile_orario_inizio": {
+      "type": "string",
+      "default": "09:00",
+      "description": "Orario inizio disponibilit\u00e0 responsabile per appuntamenti"
+    },
+    "responsabile_orario_fine": {
+      "type": "string",
+      "default": "18:00",
+      "description": "Orario fine disponibilit\u00e0 responsabile per appuntamenti"
+    },
+    "responsabile_giorni_attivi": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Giorni in cui il responsabile \u00e8 disponibile per appuntamenti"
+    },
+    "aria_name": {
+      "type": "string",
+      "default": "ARIA",
+      "description": "Nome ARIA (canonical)"
+    },
+    "aria_color": {
+      "type": "string",
+      "default": "#3B6EF8",
+      "description": "Colore ARIA (canonical)"
+    },
+    "aria_mood": {
+      "type": "string",
+      "default": "felice",
+      "description": "Umore ARIA (canonical)"
+    },
+    "robot_color": {
+      "type": "string"
+    },
+    "robot_name": {
+      "type": "string"
+    },
+    "robot_mood": {
+      "type": "string"
+    },
+    "theme_name": {
+      "type": "string",
+      "default": "emaral",
+      "description": "Nome tema attivo"
+    },
+    "theme_accent": {
+      "type": "string",
+      "default": "#3B6EF8",
+      "description": "Colore accento tema"
+    },
+    "theme_bg": {
+      "type": "string",
+      "default": "#080A0F",
+      "description": "Colore sfondo tema"
+    },
+    "dashboard_bg": {
+      "type": "string",
+      "default": "pure",
+      "description": "Tipo sfondo dashboard"
+    },
+    "font_family": {
+      "type": "string",
+      "default": "inter",
+      "description": "Font selezionato"
+    },
+    "sidebar_mode": {
+      "type": "string",
+      "default": "expanded",
+      "description": "Modalit\u00e0 sidebar"
+    },
+    "density": {
+      "type": "string",
+      "default": "normal",
+      "description": "Densit\u00e0 interfaccia"
+    },
+    "custom_bg_url": {
+      "type": "string",
+      "description": "URL immagine sfondo personalizzato"
+    },
+    "sync_aria_color": {
+      "type": "boolean",
+      "default": false,
+      "description": "Sincronizza colore ARIA col tema"
+    }
+  },
+  "required": [
+    "nome"
+  ]
+}

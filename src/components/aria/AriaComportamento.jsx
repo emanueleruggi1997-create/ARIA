@@ -40,9 +40,12 @@ export default function AriaComportamento({ form, updateField, ariaColor }) {
 
   return (
     <div className="space-y-5">
-      {/* Orari */}
+      {/* Orari ARIA */}
       <div className="bg-card border border-border rounded-2xl p-5 space-y-5">
-        <h2 className="text-base font-semibold text-foreground">🕐 Quando risponde</h2>
+        <div>
+          <h2 className="text-base font-semibold text-foreground">🤖 Orari di risposta di ARIA</h2>
+          <p className="text-xs text-muted-foreground mt-1">In questi orari ARIA risponde automaticamente ai messaggi. Separati dalla disponibilità del responsabile per gli appuntamenti (gestita in Agenda).</p>
+        </div>
 
         <div className="flex items-center justify-between">
           <div>

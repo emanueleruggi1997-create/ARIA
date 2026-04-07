@@ -16,17 +16,17 @@ const GIORNI = [
 ];
 
 export default function AvailabilityPanel({ business, onSaved }) {
-  const [giorni, setGiorni] = useState(business?.giorni_attivi || ['lun', 'mar', 'mer', 'gio', 'ven']);
-  const [orarioInizio, setOrarioInizio] = useState(business?.orario_inizio || '09:00');
-  const [orarioFine, setOrarioFine] = useState(business?.orario_fine || '18:00');
+  const [giorni, setGiorni] = useState(business?.responsabile_giorni_attivi || business?.giorni_attivi || ['lun', 'mar', 'mer', 'gio', 'ven']);
+  const [orarioInizio, setOrarioInizio] = useState(business?.responsabile_orario_inizio || '09:00');
+  const [orarioFine, setOrarioFine] = useState(business?.responsabile_orario_fine || '18:00');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (business) {
-      setGiorni(business.giorni_attivi || ['lun', 'mar', 'mer', 'gio', 'ven']);
-      setOrarioInizio(business.orario_inizio || '09:00');
-      setOrarioFine(business.orario_fine || '18:00');
+      setGiorni(business.responsabile_giorni_attivi || business.giorni_attivi || ['lun', 'mar', 'mer', 'gio', 'ven']);
+      setOrarioInizio(business.responsabile_orario_inizio || '09:00');
+      setOrarioFine(business.responsabile_orario_fine || '18:00');
     }
   }, [business?.id]);
 
@@ -38,9 +38,9 @@ export default function AvailabilityPanel({ business, onSaved }) {
     if (!business?.id) return;
     setSaving(true);
     await base44.entities.Business.update(business.id, {
-      giorni_attivi: giorni,
-      orario_inizio: orarioInizio,
-      orario_fine: orarioFine,
+      responsabile_giorni_attivi: giorni,
+      responsabile_orario_inizio: orarioInizio,
+      responsabile_orario_fine: orarioFine,
     });
     setSaving(false);
     setSaved(true);
@@ -54,8 +54,8 @@ export default function AvailabilityPanel({ business, onSaved }) {
         <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
           <Clock className="w-4 h-4 text-primary" />
         </div>
-        <h3 className="text-sm font-semibold text-foreground">Le mie disponibilità</h3>
-        <p className="text-xs text-muted-foreground ml-1">— ARIA le usa per gestire le prenotazioni</p>
+        <h3 className="text-sm font-semibold text-foreground">Disponibilità del responsabile</h3>
+        <p className="text-xs text-muted-foreground ml-1">— ARIA la mostra ai clienti quando prenotano</p>
       </div>
 
       {/* Giorni */}
