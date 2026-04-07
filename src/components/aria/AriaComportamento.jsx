@@ -3,6 +3,7 @@ import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const GIORNI = [
@@ -30,6 +31,12 @@ export default function AriaComportamento({ form, updateField, ariaColor }) {
     updateField('giorni_attivi', updated);
   };
 
+  const setAlways247 = () => {
+    updateField('orario_inizio', '00:00');
+    updateField('orario_fine', '23:59');
+    updateField('giorni_attivi', ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']);
+  };
+
   const toggleEscalation = (id) => {
     const rules = form.escalation_rules || [];
     const updated = rules.includes(id)
@@ -55,7 +62,7 @@ export default function AriaComportamento({ form, updateField, ariaColor }) {
           <Switch checked={form.auto_risposta} onCheckedChange={v => updateField('auto_risposta', v)} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 mb-3">
           <div>
             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dalle</Label>
             <Input
@@ -75,6 +82,15 @@ export default function AriaComportamento({ form, updateField, ariaColor }) {
             />
           </div>
         </div>
+
+        <Button 
+          onClick={setAlways247}
+          variant="outline"
+          size="sm"
+          className="w-full mb-4"
+        >
+          ⚡ Rispondi sempre 24/7
+        </Button>
 
         <div>
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 block">Giorni attivi</Label>
