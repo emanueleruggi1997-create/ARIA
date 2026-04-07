@@ -88,16 +88,21 @@ async function processMessage({ base44, entryId, senderId, text }) {
       { business_id: businessId },
       'data',
       50
-    );
+    ).catch(() => []);
     const busySlots = upcomingApts
       .filter(a => a.data >= today && (a.stato === 'confermato' || a.stato === 'in_attesa'))
       .map(a => `${a.data}${a.ora ? ` ${a.ora}` : ''}${a.durata_minuti ? ` (${a.durata_minuti} min)` : ''}`)
       .join(', ');
 
+    const giorniAttivi = business?.giorni_attivi?.length ? business.giorni_attivi.join(', ') : 'lun, mar, mer, gio, ven';
+    const orarioInizio = business?.orario_inizio || '09:00';
+    const orarioFine = business?.orario_fine || '18:00';
+    const disponibilitaBase = `Giorni lavorativi: ${giorniAttivi}. Orario: ${orarioInizio}–${orarioFine}.`;
+
     if (busySlots) {
-      availabilityContext = `\n\nAGENDA — SLOT OCCUPATI (solo uso interno, NON rivelare questi dettagli al cliente):\n${busySlots}\nRegole disponibilità:\n- Se il cliente chiede un giorno/orario che è occupato, rispondi in modo naturale tipo "purtroppo quel giorno non abbiamo disponibilità" e suggerisci SUBITO il giorno/orario libero più vicino (es: "ma venerdì alle 15:00 siamo liberi, ti va?").\n- Non dire mai perché sei occupato, né il nome di altri clienti, né i dettagli di altri appuntamenti.\n- Sii proattivo: proponi sempre un'alternativa concreta con giorno e ora.`;
+      availabilityContext = `\n\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nSlot già occupati in agenda: ${busySlots}\nRegole:\n- Se il cliente chiede un giorno/orario occupato o fuori orario lavorativo, digli che non sei disponibile e proponi SUBITO uno slot libero specifico (giorno + ora) all'interno dei tuoi orari.\n- Non dire mai perché sei occupato né cosa hai in agenda.\n- Sii proattivo e concreto: "purtroppo mercoledì non ho disponibilità, ma venerdì alle 16:00 sono libero — ti va?"`;
     } else {
-      availabilityContext = `\n\nAGENDA: nessun appuntamento in programma, sei completamente libero. Puoi confermare qualsiasi disponibilità il cliente chieda.`;
+      availabilityContext = `\n\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nNessun appuntamento in agenda — sei completamente libero nei tuoi orari lavorativi.`;
     }
   } catch (e) {
     console.log('[webhookMeta] Could not fetch agenda:', e.message);
@@ -244,7 +249,9 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     console.log('[webhookMeta] Event received:', JSON.stringify(body).slice(0, 400));
 
+    // Webhooks from Meta have no user auth — use service role only
     const base44 = createClientFromRequest(req);
+    // Override so all entity calls go through asServiceRole by default
     const entries = body.entry || [];
 
     // Risposta immediata a Meta (< 20s requirement) — processa in background

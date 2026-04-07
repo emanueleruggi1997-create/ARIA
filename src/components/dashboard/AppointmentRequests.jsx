@@ -70,7 +70,9 @@ export default function AppointmentRequests({ businessId }) {
       10
     ),
     enabled: !!businessId,
-    refetchInterval: 20_000,
+    refetchInterval: 10_000,
+    refetchOnMount: true,
+    staleTime: 0,
   });
 
   const invalidate = () => {

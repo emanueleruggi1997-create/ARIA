@@ -11,6 +11,7 @@ import { Plus, CalendarDays, Clock, User, CheckCircle2, XCircle, Circle, Phone, 
 import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import AvailabilityPanel from '@/components/calendar/AvailabilityPanel';
 
 const STATI = {
   in_attesa: { label: 'In attesa', color: 'text-yellow-400', bg: 'bg-yellow-400/10', icon: Circle },
@@ -327,6 +328,9 @@ export default function Calendar() {
           })}
         </div>
       )}
+
+      {/* Availability Panel */}
+      <AvailabilityPanel business={business} onSaved={refresh} />
 
       <AppointmentModal
         open={modalOpen}
