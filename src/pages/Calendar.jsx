@@ -54,11 +54,16 @@ function AppointmentModal({ open, onClose, appointment, businessId, contacts, on
     if (!form.titolo.trim() || !form.data) return;
     setSaving(true);
     try {
-      const data = { ...form, business_id: businessId };
-      if (isEdit) {
-        await base44.entities.Appointment.update(appointment.id, data);
+      // Se viene impostato come annullato → elimina direttamente
+      if (isEdit && form.stato === 'annullato') {
+        await base44.entities.Appointment.delete(appointment.id);
       } else {
-        await base44.entities.Appointment.create(data);
+        const data = { ...form, business_id: businessId };
+        if (isEdit) {
+          await base44.entities.Appointment.update(appointment.id, data);
+        } else {
+          await base44.entities.Appointment.create(data);
+        }
       }
       onSaved();
       onClose();
