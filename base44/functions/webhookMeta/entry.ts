@@ -25,6 +25,19 @@ async function processMessage({ base44, entryId, senderId, text }) {
   if (!businessId) { console.error('[webhookMeta] Could not resolve business_id'); return; }
   conn.business_id = businessId;
 
+  // Fetch sender's Instagram username
+  let senderName = `IG_${senderId}`;
+  try {
+    const igToken = conn.access_token;
+    const profileRes = await fetch(`https://graph.instagram.com/v21.0/${senderId}?fields=name,username&access_token=${igToken}`);
+    const profileData = await profileRes.json();
+    if (profileData.username) senderName = `@${profileData.username}`;
+    else if (profileData.name) senderName = profileData.name;
+    console.log('[webhookMeta] Sender name resolved:', senderName);
+  } catch (e) {
+    console.log('[webhookMeta] Could not fetch sender profile:', e.message);
+  }
+
   // Find or create contact
   const contacts = await base44.asServiceRole.entities.Contact.filter({
     business_id: businessId, numero: senderId, canale: 'instagram',
@@ -32,9 +45,13 @@ async function processMessage({ base44, entryId, senderId, text }) {
   let contact = contacts[0];
   if (!contact) {
     contact = await base44.asServiceRole.entities.Contact.create({
-      business_id: businessId, nome: `IG_${senderId}`,
+      business_id: businessId, nome: senderName,
       numero: senderId, canale: 'instagram', stato: 'lead',
     });
+  } else if (contact.nome === `IG_${senderId}` && senderName !== `IG_${senderId}`) {
+    // Update name if it was previously a raw ID
+    await base44.asServiceRole.entities.Contact.update(contact.id, { nome: senderName });
+    contact.nome = senderName;
   }
 
   // Save incoming message
