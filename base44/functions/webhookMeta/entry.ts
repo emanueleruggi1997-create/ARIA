@@ -69,6 +69,36 @@ async function processMessage({ base44, entryId, senderId, text }) {
     return;
   }
 
+  // Check if current time is within ARIA's operating hours
+  const nowItaly = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
+  const [datePart, timePart] = nowItaly.split(', ');
+  const [hours, minutes] = timePart.split(':').map(Number);
+  const currentMinutes = hours * 60 + minutes;
+
+  const [startH, startM] = (business.orario_inizio || '08:00').split(':').map(Number);
+  const startMinutes = startH * 60 + startM;
+  const [endH, endM] = (business.orario_fine || '20:00').split(':').map(Number);
+  const endMinutes = endH * 60 + endM;
+
+  // If start == 00:00 and end == 23:59 (or similar 24h range), always respond
+  const is24h = (startMinutes === 0 && endMinutes === 1439); // 23:59 = 1439 minutes
+  const withinHours = is24h || (currentMinutes >= startMinutes && currentMinutes < endMinutes);
+
+  if (!withinHours && business.fuori_orario_attivo) {
+    console.log('[webhookMeta] Outside operating hours, sending out-of-hours message');
+    // Send out-of-hours message via Instagram
+    const igToken = conn.access_token;
+    const igAccountId = conn.ig_account_id;
+    if (igToken && igAccountId) {
+      const sendRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${igToken}` },
+        body: JSON.stringify({ recipient: { id: senderId }, message: { text: business.messaggio_fuori_orario || 'Siamo fuori orario. Ti risponderemo non appena possibile!' } }),
+      });
+    }
+    return;
+  }
+
   // Build prompt with history
   const recentMessages = await base44.asServiceRole.entities.Message.filter(
     { business_id: businessId, contact_id: contact.id }, '-created_date', 10
