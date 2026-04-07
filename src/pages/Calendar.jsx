@@ -139,9 +139,27 @@ function AppointmentModal({ open, onClose, appointment, businessId, contacts, on
             <Input value={form.note} onChange={e => set('note', e.target.value)} placeholder="Note aggiuntive..." className="mt-1 bg-secondary border-border" />
           </div>
 
-          <Button onClick={handleSave} disabled={!form.titolo.trim() || !form.data || saving} className="w-full">
-            {saving ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 inline-block" />Salvataggio...</> : (isEdit ? 'Salva modifiche' : 'Crea appuntamento')}
-          </Button>
+          <div className="flex gap-2">
+            {isEdit && form.stato === 'annullato' && (
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  setSaving(true);
+                  await base44.entities.Appointment.delete(appointment.id);
+                  onSaved();
+                  onClose();
+                  setSaving(false);
+                }}
+                disabled={saving}
+                className="flex-1"
+              >
+                🗑️ Elimina definitivamente
+              </Button>
+            )}
+            <Button onClick={handleSave} disabled={!form.titolo.trim() || !form.data || saving} className="flex-1">
+              {saving ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 inline-block" />Salvataggio...</> : (isEdit ? 'Salva modifiche' : 'Crea appuntamento')}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
