@@ -111,6 +111,75 @@ REGOLE FONDAMENTALI:
     canale: 'instagram', ruolo: 'assistant', testo: aiReply, letto: true,
   });
 
+  // Detect appointment request in the conversation
+  try {
+    const appointmentDetection = await base44.asServiceRole.integrations.Core.InvokeLLM({
+      prompt: `Analizza questo messaggio di un cliente e rispondi SOLO con un JSON.
+Messaggio cliente: "${text}"
+Risposta ARIA: "${aiReply}"
+
+Determina se il cliente ha richiesto o confermato un appuntamento/prenotazione/incontro.
+Rispondi ESATTAMENTE con questo JSON (niente altro):
+{"is_appointment": true/false, "titolo": "titolo breve dell'appuntamento o null", "data_raw": "data/ora menzionata o null", "note": "dettagli utili o null"}`,
+      response_json_schema: {
+        type: 'object',
+        properties: {
+          is_appointment: { type: 'boolean' },
+          titolo: { type: 'string' },
+          data_raw: { type: 'string' },
+          note: { type: 'string' },
+        },
+      },
+    });
+
+    if (appointmentDetection?.is_appointment) {
+      // Parse date if possible
+      let appointmentDate = null;
+      let appointmentTime = null;
+      if (appointmentDetection.data_raw) {
+        const parsed = new Date(appointmentDetection.data_raw);
+        if (!isNaN(parsed.getTime())) {
+          appointmentDate = parsed.toISOString().split('T')[0];
+          appointmentTime = parsed.toTimeString().slice(0, 5);
+        } else {
+          // Try to extract time pattern HH:MM
+          const timeMatch = appointmentDetection.data_raw.match(/(\d{1,2})[:\.](\d{2})/);
+          if (timeMatch) appointmentTime = `${timeMatch[1].padStart(2,'0')}:${timeMatch[2]}`;
+          // Use tomorrow as fallback date
+          const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+          appointmentDate = tomorrow.toISOString().split('T')[0];
+        }
+      } else {
+        const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+        appointmentDate = tomorrow.toISOString().split('T')[0];
+      }
+
+      // Check if appointment already exists for this contact to avoid duplicates
+      const existingApts = await base44.asServiceRole.entities.Appointment.filter({
+        business_id: businessId,
+        contact_id: contact.id,
+        stato: 'in_attesa',
+      });
+
+      if (!existingApts.length) {
+        await base44.asServiceRole.entities.Appointment.create({
+          business_id: businessId,
+          contact_id: contact.id,
+          contact_nome: contact.nome,
+          titolo: appointmentDetection.titolo || `Appuntamento con ${contact.nome}`,
+          data: appointmentDate,
+          ora: appointmentTime || '10:00',
+          stato: 'in_attesa',
+          canale_origine: 'instagram',
+          note: appointmentDetection.note || `Richiesta via Instagram DM: "${text}"`,
+        });
+        console.log('[webhookMeta] Appointment created for contact:', contact.nome);
+      }
+    }
+  } catch (e) {
+    console.log('[webhookMeta] Appointment detection error:', e.message);
+  }
+
   // Send via Instagram API
   const igToken = conn.access_token;
   const igAccountId = conn.ig_account_id;

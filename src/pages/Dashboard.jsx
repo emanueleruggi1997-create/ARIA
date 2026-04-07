@@ -7,6 +7,7 @@ import KpiCard from '@/components/dashboard/KpiCard';
 import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
 import MessagesChart from '@/components/dashboard/MessagesChart';
 import RobotMascot from '@/components/dashboard/RobotMascot';
+import AppointmentRequests from '@/components/dashboard/AppointmentRequests';
 import { MessageSquare, Users, CalendarDays, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
@@ -143,6 +144,9 @@ export default function Dashboard() {
           </Link>
         </div>
       )}
+
+      {/* Appointment Requests */}
+      <AppointmentRequests businessId={business?.id} />
 
       {/* Recent unread messages */}
       <div className="bg-card border border-border rounded-xl p-5">
