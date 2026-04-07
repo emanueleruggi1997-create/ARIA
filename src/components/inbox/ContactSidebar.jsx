@@ -84,7 +84,7 @@ export default function ContactSidebar({ contact, businessId, onRefresh }) {
       canale: contact.canale,
       stato: 'nuovo',
     });
-    toast({ title: '🎯 Convertito in Lead!', description: 'Puoi trovarlo nella sezione CRM.' });
+    toast({ title: '🎯 Convertito in Lead!', description: 'Puoi trovarlo nella sezione CRM.', duration: 3000 });
     setConverting(false);
   };
 

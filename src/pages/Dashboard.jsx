@@ -1,6 +1,7 @@
 import React from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/lib/AuthContext';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import KpiCard from '@/components/dashboard/KpiCard';
 import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
@@ -16,6 +17,7 @@ const GIORNI_LABELS = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
 
 export default function Dashboard() {
   const { business } = useBusiness();
+  const { user } = useAuth();
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', business?.id],
@@ -30,6 +32,15 @@ export default function Dashboard() {
     enabled: !!business?.id,
     staleTime: 60_000,
   });
+
+  const { data: metaConnections = [] } = useQuery({
+    queryKey: ['meta-connection-dashboard', user?.id],
+    queryFn: () => base44.entities.MetaConnection.filter({ user_id: user?.id }),
+    enabled: !!user?.id,
+    staleTime: 60_000,
+  });
+
+  const igReallyConnected = metaConnections.some(c => c.ig_connected && c.ig_account_id);
 
   const { data: appointments = [] } = useQuery({
     queryKey: ['appointments', business?.id],
@@ -118,7 +129,7 @@ export default function Dashboard() {
       </div>
 
       {/* Instagram connection notice */}
-      {business && !business.ig_connesso && (
+      {business && !igReallyConnected && (
         <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
           <div className="flex items-center gap-3">
             <span className="text-xl">📸</span>

@@ -23,13 +23,19 @@ export default function NotificationsBell() {
     refetchInterval: 30000,
   });
 
-  const toggleOpen = async () => {
-    if (!open && unreadMessages.length > 0) {
+  const markAllRead = async () => {
+    if (unreadMessages.length > 0) {
       await Promise.all(unreadMessages.map(m => base44.entities.Message.update(m.id, { letto: true })));
       queryClient.invalidateQueries({ queryKey: ['unread-notifications', business?.id] });
       queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
     }
-    setOpen(v => !v);
+  };
+
+  const toggleOpen = () => setOpen(v => !v);
+
+  const handleClose = async () => {
+    setOpen(false);
+    await markAllRead();
   };
 
   return (
@@ -48,7 +54,7 @@ export default function NotificationsBell() {
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-40" onClick={handleClose} />
           <div className="absolute right-0 top-11 z-50 w-80 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
               <p className="text-sm font-semibold text-foreground">Notifiche</p>
