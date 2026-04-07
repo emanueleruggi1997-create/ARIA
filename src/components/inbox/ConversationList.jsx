@@ -14,10 +14,11 @@ export default function ConversationList({ conversations, activeId, onSelect, on
   }, []);
 
   const filtered = conversations.filter(c => {
-    if (filter === 'whatsapp') return c.canale === 'whatsapp';
-    if (filter === 'instagram') return c.canale === 'instagram';
-    if (filter === 'non_letti') return c.unreadCount > 0;
     if (filter === 'archiviati') return c.archiviata;
+    if (filter === 'whatsapp') return c.canale === 'whatsapp' && !c.archiviata;
+    if (filter === 'instagram') return c.canale === 'instagram' && !c.archiviata;
+    if (filter === 'non_letti') return c.unreadCount > 0 && !c.archiviata;
+    // "tutti" — mostra tutti inclusi quelli senza messaggi, esclusi archiviati
     return !c.archiviata;
   });
 

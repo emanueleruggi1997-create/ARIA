@@ -25,9 +25,10 @@ export default function Inbox() {
 
   const { data: allMessages = [] } = useQuery({
     queryKey: ['all-messages', business?.id],
-    queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 200),
+    queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 500),
     enabled: !!business?.id,
-    staleTime: 15_000,
+    staleTime: 10_000,
+    refetchInterval: 15_000, // polling ogni 15s per messaggi in tempo reale
   });
 
   const conversations = useMemo(() => {
