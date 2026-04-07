@@ -40,9 +40,9 @@ export default function Analytics() {
     staleTime: 120_000,
   });
 
-  const { data: posts = [] } = useQuery({
-    queryKey: ['analytics-posts', business?.id],
-    queryFn: () => base44.entities.Post.filter({ business_id: business?.id }),
+  const { data: appointments = [] } = useQuery({
+    queryKey: ['analytics-appointments', business?.id],
+    queryFn: () => base44.entities.Appointment.filter({ business_id: business?.id }),
     enabled: !!business?.id,
     staleTime: 120_000,
   });
@@ -70,16 +70,19 @@ export default function Analytics() {
     value: leads.filter(l => l.stato === s).length,
   })).filter(d => d.value > 0);
 
-  // Post performance
-  const postData = posts.filter(p => p.stato === 'pubblicato').slice(0, 6).map((p, i) => ({
-    name: `Post ${i + 1}`,
-    reach: p.reach || 0,
-    likes: p.likes || 0,
-    commenti: p.commenti || 0,
-  }));
+  // Appointments by day (last 7 days)
+  const appointmentData = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dateStr = d.toDateString();
+    return {
+      name: ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][d.getDay()],
+      appuntamenti: appointments.filter(a => new Date(a.created_date).toDateString() === dateStr).length,
+    };
+  });
 
   const aiRate = messages.length > 0 ? Math.round((messages.filter(m => m.ruolo === 'assistant').length / messages.length) * 100) : 0;
-  const publishedThisMonth = posts.filter(p => p.stato === 'pubblicato').length;
+  const confirmedAppointments = appointments.filter(a => a.stato === 'confermato').length;
   const wonRate = leads.length > 0 ? Math.round((leads.filter(l => l.stato === 'chiuso_vinto').length / leads.length) * 100) : 0;
 
   const handleExportCSV = () => {
@@ -104,7 +107,7 @@ export default function Analytics() {
         <KpiCard title="AI Response Rate" value={`${aiRate}%`} icon={Zap} />
         <KpiCard title="Tempo medio risposta" value="< 30s" icon={Clock} />
         <KpiCard title="Lead convertiti" value={`${wonRate}%`} icon={TrendingUp} />
-        <KpiCard title="Post pubblicati" value={publishedThisMonth} icon={Calendar} />
+        <KpiCard title="Appuntamenti confermati" value={confirmedAppointments} icon={Calendar} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -145,26 +148,19 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Post performance */}
+        {/* Appointments trend */}
         <div className="bg-card border border-border rounded-xl p-5 lg:col-span-2">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Performance Post</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4">Appuntamenti ultimi 7 giorni</h3>
           <div className="h-56">
-            {postData.length > 0 ? (
-              <ResponsiveContainer>
-                <BarChart data={postData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,15%,15%)" />
-                  <XAxis dataKey="name" tick={{ fill: 'hsl(220,10%,50%)', fontSize: 11 }} axisLine={false} />
-                  <YAxis tick={{ fill: 'hsl(220,10%,50%)', fontSize: 11 }} axisLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Bar dataKey="reach" fill="hsl(222,85%,60%)" name="Reach" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="likes" fill="hsl(160,60%,45%)" name="Likes" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="commenti" fill="hsl(30,80%,55%)" name="Commenti" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Nessun post pubblicato</div>
-            )}
+            <ResponsiveContainer>
+              <BarChart data={appointmentData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,15%,15%)" />
+                <XAxis dataKey="name" tick={{ fill: 'hsl(220,10%,50%)', fontSize: 11 }} axisLine={false} />
+                <YAxis allowDecimals={false} tick={{ fill: 'hsl(220,10%,50%)', fontSize: 11 }} axisLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="appuntamenti" fill="hsl(160,60%,45%)" name="Appuntamenti" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

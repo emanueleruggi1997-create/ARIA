@@ -43,9 +43,29 @@ Deno.serve(async (req) => {
 
         // Find the MetaConnection to get business_id
         try {
-          const connections = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
+          // Try by ig_account_id first, fallback to user_id match
+          let connections = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
+          if (!connections.length) {
+            connections = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: entry.id });
+          }
           const conn = connections[0];
-          if (!conn?.business_id) continue;
+          if (!conn) { console.log('[webhookMeta] No MetaConnection found for entry.id:', entry.id); continue; }
+
+          // Resolve business_id: stored directly or look up via user_id
+          let resolvedBusinessId = conn.business_id || '';
+          if (!resolvedBusinessId && conn.user_id) {
+            const businesses = await base44.asServiceRole.entities.Business.filter({});
+            // Find business owned by this user
+            const match = businesses.find(b => b.created_by && b.created_by === conn.user_id);
+            if (match) {
+              resolvedBusinessId = match.id;
+              // Patch the connection so future lookups are fast
+              await base44.asServiceRole.entities.MetaConnection.update(conn.id, { business_id: resolvedBusinessId });
+              console.log('[webhookMeta] Patched business_id on MetaConnection:', resolvedBusinessId);
+            }
+          }
+          if (!resolvedBusinessId) { console.log('[webhookMeta] Could not resolve business_id for conn:', conn.id); continue; }
+          conn.business_id = resolvedBusinessId;
 
           // Find or create contact
           const contacts = await base44.asServiceRole.entities.Contact.filter({
