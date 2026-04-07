@@ -200,21 +200,41 @@ REGOLE FONDAMENTALI:
 Messaggio cliente: "${text}"
 Risposta ARIA: "${aiReply}"
 
-Determina se il cliente ha richiesto o confermato un appuntamento/prenotazione/incontro.
+Determina se il cliente ha richiesto un appuntamento e ha fornito TUTTE le informazioni necessarie:
+- Un orario specifico (o giorni/date indicate)
+- Un tipo di appuntamento (telefonata, zoom, email, in_persona)
+- Dati di contatto (telefono o email per la conferma)
+
 Rispondi ESATTAMENTE con questo JSON (niente altro):
-{"is_appointment": true/false, "titolo": "titolo breve dell'appuntamento o null", "data_raw": "data/ora menzionata o null", "note": "dettagli utili o null"}`,
+{
+  "is_appointment": true/false,
+  "has_time": true/false,
+  "has_contact_method": true/false,
+  "has_contact_data": true/false,
+  "titolo": "titolo breve o null",
+  "data_raw": "data/ora menzionata o null",
+  "tipo_appuntamento": "telefonata|zoom|email|in_persona|null",
+  "contact_method": "numero_telefono|email|null",
+  "note": "dettagli utili o null"
+}`,
       response_json_schema: {
         type: 'object',
         properties: {
           is_appointment: { type: 'boolean' },
+          has_time: { type: 'boolean' },
+          has_contact_method: { type: 'boolean' },
+          has_contact_data: { type: 'boolean' },
           titolo: { type: 'string' },
           data_raw: { type: 'string' },
+          tipo_appuntamento: { type: 'string' },
+          contact_method: { type: 'string' },
           note: { type: 'string' },
         },
       },
     });
 
-    if (appointmentDetection?.is_appointment) {
+    // Solo crea appuntamento se ha TUTTI i dati necessari
+    if (appointmentDetection?.is_appointment && appointmentDetection?.has_time && appointmentDetection?.has_contact_method && appointmentDetection?.has_contact_data) {
       // Parse date if possible
       let appointmentDate = null;
       let appointmentTime = null;
@@ -251,12 +271,15 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
           titolo: appointmentDetection.titolo || `Appuntamento con ${contact.nome}`,
           data: appointmentDate,
           ora: appointmentTime || '10:00',
+          tipo: appointmentDetection.tipo_appuntamento || 'altro',
           stato: 'in_attesa',
           canale_origine: 'instagram',
-          note: appointmentDetection.note || `Richiesta via Instagram DM: "${text}"`,
+          note: `${appointmentDetection.tipo_appuntamento ? 'Tipo: ' + appointmentDetection.tipo_appuntamento + '. ' : ''}${appointmentDetection.contact_method ? 'Contatto: ' + appointmentDetection.contact_method + '. ' : ''}${appointmentDetection.note || 'Richiesta via Instagram DM'}`,
         });
-        console.log('[webhookMeta] Appointment created for contact:', contact.nome);
+        console.log('[webhookMeta] Appointment created with full details for:', contact.nome);
       }
+    } else if (appointmentDetection?.is_appointment && !appointmentDetection?.has_time) {
+      console.log('[webhookMeta] Appointment request but missing time - ARIA should ask for it');
     }
   } catch (e) {
     console.log('[webhookMeta] Appointment detection error:', e.message);
