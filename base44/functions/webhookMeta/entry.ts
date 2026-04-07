@@ -95,9 +95,9 @@ async function processMessage({ base44, entryId, senderId, text }) {
       .join(', ');
 
     if (busySlots) {
-      availabilityContext = `\n\nAGENDA — SLOT OCCUPATI (solo uso interno, NON rivelare questi dettagli al cliente):\n${busySlots}\nSe il cliente chiede disponibilità in uno di questi slot, digli che non sei disponibile e suggerisci orari alternativi vicini. Non dire mai perché sei occupato né cosa hai in agenda.`;
+      availabilityContext = `\n\nAGENDA — SLOT OCCUPATI (solo uso interno, NON rivelare questi dettagli al cliente):\n${busySlots}\nRegole disponibilità:\n- Se il cliente chiede un giorno/orario che è occupato, rispondi in modo naturale tipo "purtroppo quel giorno non abbiamo disponibilità" e suggerisci SUBITO il giorno/orario libero più vicino (es: "ma venerdì alle 15:00 siamo liberi, ti va?").\n- Non dire mai perché sei occupato, né il nome di altri clienti, né i dettagli di altri appuntamenti.\n- Sii proattivo: proponi sempre un'alternativa concreta con giorno e ora.`;
     } else {
-      availabilityContext = `\n\nAGENDA: nessun appuntamento in programma, sei libero.`;
+      availabilityContext = `\n\nAGENDA: nessun appuntamento in programma, sei completamente libero. Puoi confermare qualsiasi disponibilità il cliente chieda.`;
     }
   } catch (e) {
     console.log('[webhookMeta] Could not fetch agenda:', e.message);
