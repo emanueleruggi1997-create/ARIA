@@ -83,7 +83,12 @@ async function processMessage({ base44, entryId, senderId, text }) {
   // PRIVACY: we only expose date+time slots (no names, no titles, no notes)
   let availabilityContext = '';
   try {
-    const today = new Date().toISOString().split('T')[0];
+    // Current date/time in Italy timezone
+    const nowItaly = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const todayItaly = new Date().toLocaleDateString('it-IT', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' });
+    // Convert dd/mm/yyyy → yyyy-mm-dd for comparisons
+    const [dd, mm, yyyy] = todayItaly.split('/');
+    const today = `${yyyy}-${mm}-${dd}`;
     const upcomingApts = await base44.asServiceRole.entities.Appointment.filter(
       { business_id: businessId },
       'data',
@@ -100,9 +105,9 @@ async function processMessage({ base44, entryId, senderId, text }) {
     const disponibilitaBase = `Giorni lavorativi: ${giorniAttivi}. Orario: ${orarioInizio}–${orarioFine}.`;
 
     if (busySlots) {
-      availabilityContext = `\n\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nSlot già occupati in agenda: ${busySlots}\nRegole:\n- Se il cliente chiede un giorno/orario occupato o fuori orario lavorativo, digli che non sei disponibile e proponi SUBITO uno slot libero specifico (giorno + ora) all'interno dei tuoi orari.\n- Non dire mai perché sei occupato né cosa hai in agenda.\n- Sii proattivo e concreto: "purtroppo mercoledì non ho disponibilità, ma venerdì alle 16:00 sono libero — ti va?"`;
+      availabilityContext = `\n\nDATA E ORA ATTUALE (fuso orario Italia): ${nowItaly}\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nSlot già occupati in agenda: ${busySlots}\nRegole:\n- Usa la data e ora attuale per capire quali giorni proporre (non proporre date nel passato).\n- Se il cliente chiede un giorno/orario occupato o fuori orario lavorativo, digli che non sei disponibile e proponi SUBITO uno slot libero specifico (giorno + ora) all'interno dei tuoi orari.\n- Non dire mai perché sei occupato né cosa hai in agenda.\n- Sii proattivo e concreto: "purtroppo mercoledì non ho disponibilità, ma venerdì alle 16:00 sono libero — ti va?"`;
     } else {
-      availabilityContext = `\n\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nNessun appuntamento in agenda — sei completamente libero nei tuoi orari lavorativi.`;
+      availabilityContext = `\n\nDATA E ORA ATTUALE (fuso orario Italia): ${nowItaly}\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nNessun appuntamento in agenda — sei completamente libero nei tuoi orari lavorativi. Usa la data attuale per proporre date future concrete (non nel passato).`;
     }
   } catch (e) {
     console.log('[webhookMeta] Could not fetch agenda:', e.message);
