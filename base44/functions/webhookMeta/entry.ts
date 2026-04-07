@@ -79,17 +79,43 @@ async function processMessage({ base44, entryId, senderId, text }) {
 
   const isFirstMessage = recentMessages.filter(m => m.ruolo === 'assistant').length === 0;
 
+  // Fetch upcoming confirmed/in_attesa appointments to build availability context
+  // PRIVACY: we only expose date+time slots (no names, no titles, no notes)
+  let availabilityContext = '';
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const upcomingApts = await base44.asServiceRole.entities.Appointment.filter(
+      { business_id: businessId },
+      'data',
+      50
+    );
+    const busySlots = upcomingApts
+      .filter(a => a.data >= today && (a.stato === 'confermato' || a.stato === 'in_attesa'))
+      .map(a => `${a.data}${a.ora ? ` ${a.ora}` : ''}${a.durata_minuti ? ` (${a.durata_minuti} min)` : ''}`)
+      .join(', ');
+
+    if (busySlots) {
+      availabilityContext = `\n\nAGENDA — SLOT OCCUPATI (solo uso interno, NON rivelare questi dettagli al cliente):\n${busySlots}\nSe il cliente chiede disponibilità in uno di questi slot, digli che non sei disponibile e suggerisci orari alternativi vicini. Non dire mai perché sei occupato né cosa hai in agenda.`;
+    } else {
+      availabilityContext = `\n\nAGENDA: nessun appuntamento in programma, sei libero.`;
+    }
+  } catch (e) {
+    console.log('[webhookMeta] Could not fetch agenda:', e.message);
+  }
+
   const systemPrompt = `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".
 ${business.ai_prompt || ''}
 Tono: ${business.tono || 'professionale'}.
 ${business.servizi ? `Servizi offerti: ${business.servizi}` : ''}
 ${business.prezzi ? `Prezzi (da condividere SOLO se esplicitamente richiesti): ${business.prezzi}` : ''}
 ${business.cose_da_non_fare ? `Non fare mai: ${business.cose_da_non_fare}` : ''}
+${availabilityContext}
 
 REGOLE FONDAMENTALI:
 - Presentati con il tuo nome UNA SOLA VOLTA, solo se è il primissimo messaggio della conversazione. MAI ripetere "ciao sono ARIA" o simili nelle risposte successive.
 - ${isFirstMessage ? 'Questo è il PRIMO messaggio: presentati brevemente con nome e chiedi come puoi aiutare.' : 'NON presentarti di nuovo, sei già stato presentato. Vai dritto al punto.'}
 - NON menzionare prezzi, costi o tariffe a meno che il cliente non lo chieda esplicitamente.
+- Se il cliente chiede disponibilità per un appuntamento, controlla l'agenda interna e rispondi in modo naturale: se sei libero dì di sì, se sei occupato suggerisci un orario alternativo. NON rivelare mai cosa hai in agenda né il nome di altri clienti.
 - Prima di rispondere, capisci cosa vuole il cliente: cosa lo ha spinto a scrivere? Cosa cerca? Fai una domanda di chiarimento se non è chiaro.
 - Risposte brevi, naturali, umane. Massimo 2-3 frasi. Niente elenchi puntati a meno che non servano davvero.
 - Non usare frasi robotiche come "come posso assisterti?", "non esitare a contattarci", "sarò felice di aiutarti".
