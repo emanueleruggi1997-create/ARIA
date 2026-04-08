@@ -60,8 +60,8 @@ export default function ConversationList({ conversations, activeId, onSelect, on
   const handleTouchEnd = (e, id) => {
     if (touchStartX.current === null) return;
     const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (diff > 60) setSwipeId(id);
-    else if (diff < -30) setSwipeId(null);
+    if (diff > 50) setSwipeId(id);
+    else if (diff < -20) setSwipeId(null);
     touchStartX.current = null;
   };
 
@@ -79,15 +79,16 @@ export default function ConversationList({ conversations, activeId, onSelect, on
             onTouchStart={e => handleTouchStart(e, conv.contact_id)}
             onTouchEnd={e => handleTouchEnd(e, conv.contact_id)}
           >
-            {/* Swipe delete background — only visible when swiped */}
-            {isSwiped && (
-              <button
-                className="absolute inset-y-0 right-0 w-20 bg-destructive flex items-center justify-center"
-                onClick={() => { onDelete?.(conv); setSwipeId(null); }}
-              >
-                <Trash2 className="w-5 h-5 text-white" />
-              </button>
-            )}
+            {/* Swipe delete background */}
+            <div
+              className={cn(
+                "absolute inset-y-0 right-0 w-20 bg-destructive flex items-center justify-center transition-opacity duration-200",
+                isSwiped ? "opacity-100" : "opacity-0 pointer-events-none"
+              )}
+              onClick={() => { onDelete?.(conv); setSwipeId(null); }}
+            >
+              <Trash2 className="w-5 h-5 text-white" />
+            </div>
 
             {/* Main row */}
             <div
