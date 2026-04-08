@@ -93,7 +93,7 @@ export default function ConversationList({ conversations, activeId, onSelect, on
             {/* Main row */}
             <div
               className={cn(
-                "relative transition-transform duration-200",
+                "relative transition-transform duration-200 group",
                 isSwiped ? "-translate-x-20" : "translate-x-0"
               )}
             >
@@ -144,11 +144,12 @@ export default function ConversationList({ conversations, activeId, onSelect, on
                 </div>
               </button>
 
-              {/* Context menu */}
-              <div ref={menuRef} className="absolute right-3 top-1/2 -translate-y-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity hidden group-hover:flex">
+              {/* Context menu — always rendered, visible on hover */}
+              <div ref={menuRef} className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
                 <button
                   onClick={e => { e.stopPropagation(); setMenuId(menuId === conv.contact_id ? null : conv.contact_id); }}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-secondary/80 hover:bg-secondary transition-colors"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-secondary/80 hover:bg-secondary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  style={{ opacity: menuId === conv.contact_id ? 1 : undefined }}
                 >
                   <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
@@ -162,7 +163,7 @@ export default function ConversationList({ conversations, activeId, onSelect, on
                       className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-secondary transition-colors">
                       <Archive className="w-3.5 h-3.5" /> Archivia
                     </button>
-                    <button onClick={() => { onDelete?.(conv); setMenuId(null); }}
+                    <button onClick={e => { e.stopPropagation(); onDelete?.(conv); setMenuId(null); }}
                       className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-destructive/10 text-destructive transition-colors border-t border-border">
                       <Trash2 className="w-3.5 h-3.5" /> Elimina
                     </button>
