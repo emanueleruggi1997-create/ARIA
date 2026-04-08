@@ -24,11 +24,8 @@ export function BusinessProvider({ children }) {
     loadingRef.current = true;
     try {
       const user = await base44.auth.me();
-      // Prima cerca business creato dall'utente, poi qualsiasi business accessibile
-      let businesses = await base44.entities.Business.filter({ created_by: user.email });
-      if (businesses.length === 0) {
-        businesses = await base44.entities.Business.list();
-      }
+      // Carica SOLO il business dell'utente corrente — nessun fallback su altri business
+      const businesses = await base44.entities.Business.filter({ created_by: user.email });
       if (businesses.length > 0) {
         const biz = businesses[0];
         const prev = business;
@@ -60,10 +57,7 @@ export function BusinessProvider({ children }) {
   const refreshBusiness = useCallback(async () => {
     try {
       const user = await base44.auth.me();
-      let businesses = await base44.entities.Business.filter({ created_by: user.email });
-      if (businesses.length === 0) {
-        businesses = await base44.entities.Business.list();
-      }
+      const businesses = await base44.entities.Business.filter({ created_by: user.email });
       if (businesses.length > 0) {
         const biz = businesses[0];
         setBusiness(biz);
