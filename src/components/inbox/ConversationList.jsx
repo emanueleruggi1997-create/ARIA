@@ -148,7 +148,7 @@ export default function ConversationList({ conversations, activeId, onSelect, on
               <div ref={menuRef} className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
                 <button
                   onClick={e => { e.stopPropagation(); setMenuId(menuId === conv.contact_id ? null : conv.contact_id); }}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-secondary/80 hover:bg-secondary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-secondary/80 hover:bg-secondary transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
                   style={{ opacity: menuId === conv.contact_id ? 1 : undefined }}
                 >
                   <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
