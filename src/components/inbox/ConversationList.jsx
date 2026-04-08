@@ -144,28 +144,27 @@ export default function ConversationList({ conversations, activeId, onSelect, on
                 </div>
               </button>
 
-              {/* Context menu — always rendered, visible on hover */}
+              {/* Context menu — always visible button */}
               <div ref={menuRef} className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
                 <button
                   onClick={e => { e.stopPropagation(); setMenuId(menuId === conv.contact_id ? null : conv.contact_id); }}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-secondary/80 hover:bg-secondary transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
-                  style={{ opacity: menuId === conv.contact_id ? 1 : undefined }}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-secondary hover:bg-secondary/80 transition-colors"
                 >
-                  <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
+                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
                 </button>
                 {menuId === conv.contact_id && (
-                  <div className="absolute right-0 top-8 w-44 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-20">
-                    <button onClick={() => { onMarkRead?.(conv); setMenuId(null); }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-secondary transition-colors">
-                      <CheckCheck className="w-3.5 h-3.5" /> Segna come letto
+                  <div className="absolute right-0 top-9 w-48 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
+                    <button onClick={e => { e.stopPropagation(); onMarkRead?.(conv); setMenuId(null); }}
+                      className="w-full flex items-center gap-2 px-3 py-3 text-sm hover:bg-secondary transition-colors">
+                      <CheckCheck className="w-4 h-4" /> Segna come letto
                     </button>
-                    <button onClick={() => { onArchive?.(conv); setMenuId(null); }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-secondary transition-colors">
-                      <Archive className="w-3.5 h-3.5" /> Archivia
+                    <button onClick={e => { e.stopPropagation(); onArchive?.(conv); setMenuId(null); }}
+                      className="w-full flex items-center gap-2 px-3 py-3 text-sm hover:bg-secondary transition-colors">
+                      <Archive className="w-4 h-4" /> Archivia
                     </button>
                     <button onClick={e => { e.stopPropagation(); onDelete?.(conv); setMenuId(null); }}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-destructive/10 text-destructive transition-colors border-t border-border">
-                      <Trash2 className="w-3.5 h-3.5" /> Elimina
+                      className="w-full flex items-center gap-2 px-3 py-3 text-sm hover:bg-destructive/10 text-destructive transition-colors border-t border-border">
+                      <Trash2 className="w-4 h-4" /> Elimina
                     </button>
                   </div>
                 )}
