@@ -5,16 +5,44 @@ import { useAuth } from '@/lib/AuthContext';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import KpiCard from '@/components/dashboard/KpiCard';
 import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
-import MessagesChart from '@/components/dashboard/MessagesChart';
 import RobotMascot from '@/components/dashboard/RobotMascot';
 import AppointmentRequests from '@/components/dashboard/AppointmentRequests';
-import { MessageSquare, Users, CalendarDays, Zap } from 'lucide-react';
+import TodayTasks from '@/components/dashboard/TodayTasks';
+import AriaProactiveWidget from '@/components/dashboard/AriaProactiveWidget';
+import MessagesChartEnhanced from '@/components/dashboard/MessagesChartEnhanced';
+import { MessageSquare, Users, CalendarDays, Zap, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-const GIORNI_LABELS = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+function getGreeting(name) {
+  const h = new Date().getHours();
+  const saluto = h >= 6 && h < 12 ? 'Buongiorno' : h >= 12 && h < 18 ? 'Buon pomeriggio' : 'Buonasera';
+  const firstName = name?.split(' ')[0] || '';
+  return `${saluto}${firstName ? `, ${firstName}` : ''} 👋`;
+}
+
+const STATO_LABELS = {
+  nuovo: 'Nuovo',
+  qualificato: 'Qualificato',
+  preventivo_inviato: 'Preventivo',
+  chiuso_vinto: 'Vinto',
+  chiuso_perso: 'Perso',
+};
+
+const STATO_COLORS = {
+  nuovo: 'text-blue-400 bg-blue-400/10',
+  qualificato: 'text-yellow-400 bg-yellow-400/10',
+  preventivo_inviato: 'text-purple-400 bg-purple-400/10',
+  chiuso_vinto: 'text-green-400 bg-green-400/10',
+  chiuso_perso: 'text-red-400 bg-red-400/10',
+};
+
+const CANALE_COLORS = {
+  instagram: 'text-pink-400 bg-pink-400/10',
+  whatsapp: 'text-green-400 bg-green-400/10',
+};
 
 export default function Dashboard() {
   const { business } = useBusiness();
@@ -22,14 +50,14 @@ export default function Dashboard() {
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', business?.id],
-    queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 50),
+    queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 200),
     enabled: !!business?.id,
     staleTime: 30_000,
   });
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads', business?.id],
-    queryFn: () => base44.entities.Lead.filter({ business_id: business?.id }, '-created_date', 10),
+    queryFn: () => base44.entities.Lead.filter({ business_id: business?.id }, '-created_date', 20),
     enabled: !!business?.id,
     staleTime: 60_000,
   });
@@ -50,84 +78,69 @@ export default function Dashboard() {
     staleTime: 60_000,
   });
 
+  const today = format(new Date(), 'yyyy-MM-dd');
+
   const unreadMessages = messages.filter(m => !m.letto && m.ruolo === 'user');
   const todayMessages = messages.filter(m => {
     const d = new Date(m.created_date);
-    const now = new Date();
-    return d.toDateString() === now.toDateString();
+    return d.toDateString() === new Date().toDateString();
   });
   const activeLeads = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato));
   const aiMessages = messages.filter(m => m.ruolo === 'assistant');
   const aiRate = messages.length > 0 ? Math.round((aiMessages.length / messages.length) * 100) : 0;
-  const unreadCount = unreadMessages.length;
   const upcomingAppointments = appointments.filter(a => a.stato === 'in_attesa' || a.stato === 'confermato');
-
-  // Build real chart data from last 7 days
-  const chartData = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const dateStr = d.toDateString();
-    return {
-      giorno: GIORNI_LABELS[d.getDay()],
-      messaggi: messages.filter(m => new Date(m.created_date).toDateString() === dateStr).length,
-    };
-  });
-
-  const statoLabels = {
-    nuovo: 'Nuovo',
-    qualificato: 'Qualificato',
-    preventivo_inviato: 'Preventivo',
-    chiuso_vinto: 'Vinto',
-    chiuso_perso: 'Perso',
-  };
+  const todayAppointments = appointments.filter(a => a.data === today);
+  const unreadCount = unreadMessages.length;
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+    <div className="p-4 md:p-6 lg:p-8 space-y-5 md:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {business?.nome || 'Il tuo business'} — {format(new Date(), 'd MMMM yyyy', { locale: it })}
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            {getGreeting(user?.full_name)}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5 capitalize">
+            {format(new Date(), 'EEEE d MMMM yyyy', { locale: it })}
           </p>
         </div>
-        <AgentStatusBadge status={business?.stato_agente} />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-xs font-semibold text-green-400">ATTIVO</span>
+          </div>
+        </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <KpiCard title="Messaggi oggi" value={todayMessages.length} icon={MessageSquare} trend={12} trendLabel="vs ieri" />
-        <KpiCard title="Lead attivi" value={activeLeads.length} icon={Users} trend={8} trendLabel="questa settimana" />
-        <KpiCard title="Appuntamenti" value={upcomingAppointments.length} icon={CalendarDays} />
-        <KpiCard title="Tasso risposta AI" value={`${aiRate}%`} icon={Zap} trend={5} trendLabel="vs sett. scorsa" />
+        <Link to="/inbox">
+          <KpiCard title="Messaggi oggi" value={todayMessages.length} icon={MessageSquare} trend={12} trendLabel="vs ieri" />
+        </Link>
+        <Link to="/crm">
+          <KpiCard title="Lead attivi" value={activeLeads.length} icon={Users} trend={8} trendLabel="questa settimana" />
+        </Link>
+        <Link to="/calendar">
+          <KpiCard title="Appuntamenti" value={upcomingAppointments.length} icon={CalendarDays} />
+        </Link>
+        <Link to="/analytics">
+          <KpiCard title="Risposta AI" value={`${aiRate}%`} icon={Zap} trend={5} trendLabel="vs sett. scorsa" />
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart */}
-        <div className="lg:col-span-2">
-          <MessagesChart data={chartData} />
-        </div>
-
-        {/* Recent leads */}
-        <div className="bg-card border border-border rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Ultimi Lead</h3>
-          <div className="space-y-3">
-            {leads.slice(0, 3).length > 0 ? leads.slice(0, 3).map(lead => (
-              <div key={lead.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                <div>
-                  <p className="text-sm font-medium text-foreground">{lead.contact_nome || 'Lead'}</p>
-                  <p className="text-xs text-muted-foreground">{lead.tipo_progetto || 'Non specificato'}</p>
-                </div>
-                <Badge variant="outline" className="text-[10px]">
-                  {statoLabels[lead.stato] || lead.stato}
-                </Badge>
-              </div>
-            )) : (
-              <p className="text-sm text-muted-foreground text-center py-6">Nessun lead ancora</p>
-            )}
-          </div>
-        </div>
+      {/* ARIA proattiva + Cosa fare oggi */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <AriaProactiveWidget business={business} messages={messages} leads={leads} />
+        <TodayTasks
+          unreadMessages={unreadCount}
+          pendingLeads={activeLeads.length}
+          todayAppointments={todayAppointments.length}
+          pendingCampaigns={0}
+        />
       </div>
+
+      {/* Chart */}
+      <MessagesChartEnhanced messages={messages} />
 
       {/* Instagram connection notice */}
       {business && !igReallyConnected && (
@@ -148,28 +161,76 @@ export default function Dashboard() {
       {/* Appointment Requests */}
       <AppointmentRequests businessId={business?.id} />
 
-      {/* Recent unread messages */}
-      <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-4">Messaggi non letti</h3>
-        <div className="space-y-2">
-          {unreadMessages.slice(0, 5).length > 0 ? unreadMessages.slice(0, 5).map(msg => (
-            <div key={msg.id} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <MessageSquare className="w-3.5 h-3.5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-foreground truncate">{msg.testo}</p>
-                <p className="text-xs text-muted-foreground">{msg.canale === 'whatsapp' ? 'WhatsApp' : 'Instagram'}</p>
-              </div>
-              <span className="text-[10px] text-muted-foreground shrink-0">
-                {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
-              </span>
-            </div>
-          )) : (
-            <p className="text-sm text-muted-foreground text-center py-6">Nessun messaggio non letto</p>
-          )}
+      {/* Two column: Leads + Messaggi non letti */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Ultimi 5 Lead */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-foreground">Ultimi Lead</h3>
+            <Link to="/crm" className="text-xs text-primary hover:underline">Vedi tutti →</Link>
+          </div>
+          <div className="space-y-2">
+            {leads.slice(0, 5).length > 0 ? leads.slice(0, 5).map(lead => (
+              <Link
+                key={lead.id}
+                to="/crm"
+                className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
+                  {(lead.contact_nome || '?')[0].toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{lead.contact_nome || 'Lead'}</p>
+                  <p className="text-xs text-muted-foreground truncate">{lead.tipo_progetto || 'Non specificato'}</p>
+                </div>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${STATO_COLORS[lead.stato] || 'text-muted-foreground bg-secondary'}`}>
+                    {STATO_LABELS[lead.stato] || lead.stato}
+                  </span>
+                  {lead.canale && (
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${CANALE_COLORS[lead.canale] || 'text-muted-foreground bg-secondary'}`}>
+                      {lead.canale === 'instagram' ? 'IG' : 'WA'}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            )) : (
+              <p className="text-sm text-muted-foreground text-center py-6">Nessun lead ancora</p>
+            )}
+          </div>
+        </div>
+
+        {/* Messaggi non letti */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-foreground">Messaggi non letti</h3>
+            <Link to="/inbox" className="text-xs text-primary hover:underline">Vai all'inbox →</Link>
+          </div>
+          <div className="space-y-2">
+            {unreadMessages.slice(0, 3).length > 0 ? unreadMessages.slice(0, 3).map(msg => (
+              <Link
+                key={msg.id}
+                to="/inbox"
+                className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-foreground truncate">{msg.testo}</p>
+                  <p className="text-xs text-muted-foreground">{msg.canale === 'whatsapp' ? '🟢 WhatsApp' : '📸 Instagram'}</p>
+                </div>
+                <span className="text-[10px] text-muted-foreground shrink-0">
+                  {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
+                </span>
+              </Link>
+            )) : (
+              <p className="text-sm text-muted-foreground text-center py-6">Nessun messaggio non letto 🎉</p>
+            )}
+          </div>
         </div>
       </div>
+
       <RobotMascot
         newMessageCount={unreadCount}
         aiResponseCount={aiMessages.length}

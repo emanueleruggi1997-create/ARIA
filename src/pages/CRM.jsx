@@ -7,6 +7,8 @@ import MobileTabSelect from '@/components/ui/MobileTabSelect';
 import LeadCard from '@/components/crm/LeadCard';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
 import ContactsTab from '@/components/crm/ContactsTab';
+import MailingListTab from '@/components/crm/MailingListTab';
+import EmailCampaignsTab from '@/components/crm/EmailCampaignsTab';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -84,13 +86,18 @@ function LeadsKanban({ businessId }) {
 
   const wonLeads = leads.filter(l => l.stato === 'chiuso_vinto').length;
   const convRate = leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0;
+  const totalPipeline = leads.reduce((acc, l) => acc + (l.budget_max || l.budget_min || 0), 0);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-muted-foreground">{leads.length} lead totali</span>
-          <span className="text-xs text-muted-foreground">Conversione: {convRate}%</span>
+      {/* Header stats */}
+      <div className="flex flex-wrap items-center gap-4 justify-between">
+        <div className="flex flex-wrap gap-3">
+          <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-lg">{leads.length} lead totali</span>
+          {totalPipeline > 0 && (
+            <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-lg">€{totalPipeline.toLocaleString('it-IT')} pipeline</span>
+          )}
+          <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-lg">{convRate}% conversione</span>
         </div>
         <Button onClick={() => setShowCreate(true)} size="sm" className="hidden md:flex">
           <Plus className="w-4 h-4 mr-2" /> Nuovo Lead
@@ -201,11 +208,37 @@ export default function CRM() {
   const { business } = useBusiness();
   const [crmTab, setCrmTab] = useState('lead');
 
+  const { data: leads = [] } = useQuery({
+    queryKey: ['leads', business?.id],
+    queryFn: () => base44.entities.Lead.filter({ business_id: business?.id }),
+    enabled: !!business?.id,
+    staleTime: 30_000,
+  });
+
+  const { data: emailContacts = [] } = useQuery({
+    queryKey: ['email-contacts', business?.id],
+    queryFn: () => base44.entities.ContactEmail.filter({ business_id: business?.id }),
+    enabled: !!business?.id,
+    staleTime: 60_000,
+  });
+
+  const { data: campaigns = [] } = useQuery({
+    queryKey: ['email-campaigns', business?.id],
+    queryFn: () => base44.entities.EmailCampaign.filter({ business_id: business?.id }),
+    enabled: !!business?.id,
+    staleTime: 60_000,
+  });
+
+  const activeLeads = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato)).length;
+  const activeEmailContacts = emailContacts.filter(c => c.stato === 'attivo').length;
+
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">CRM</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Lead e contatti dai tuoi canali Instagram</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {activeLeads} lead attivi · {activeEmailContacts} contatti email · {campaigns.length} campagne
+        </p>
       </div>
 
       <Tabs value={crmTab} onValueChange={setCrmTab}>
@@ -213,8 +246,9 @@ export default function CRM() {
           value={crmTab}
           onValueChange={setCrmTab}
           tabs={[
-            { value: 'lead', label: '👥 Lead' },
-            { value: 'contatti', label: '📋 Contatti' },
+            { value: 'lead', label: '👥 Lead & Contatti' },
+            { value: 'mailing', label: '📧 Mailing List' },
+            { value: 'campagne', label: '✉️ Campagne Email' },
           ]}
         />
 
@@ -222,8 +256,12 @@ export default function CRM() {
           <LeadsKanban businessId={business?.id} />
         </TabsContent>
 
-        <TabsContent value="contatti" className="mt-4">
-          <ContactsTab businessId={business?.id} />
+        <TabsContent value="mailing" className="mt-4">
+          <MailingListTab businessId={business?.id} />
+        </TabsContent>
+
+        <TabsContent value="campagne" className="mt-4">
+          <EmailCampaignsTab businessId={business?.id} />
         </TabsContent>
       </Tabs>
     </div>

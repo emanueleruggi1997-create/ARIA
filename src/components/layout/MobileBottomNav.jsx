@@ -4,6 +4,7 @@ import { LayoutDashboard, MessageSquare, Users, CalendarDays, Menu, Bot, BarChar
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { useQuery } from '@tanstack/react-query';
 
 const mainNav = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Home' },
@@ -27,6 +28,14 @@ export default function MobileBottomNav() {
   const ariaColor = business?.robot_color || business?.avatar_agente || '#3B6EF8';
   const ariaName = business?.robot_name || business?.nome_agente || 'ARIA';
   const ariaActive = business?.stato_agente === 'attivo';
+
+  const { data: leads = [] } = useQuery({
+    queryKey: ['leads', business?.id],
+    queryFn: () => base44.entities.Lead.filter({ business_id: business?.id }),
+    enabled: !!business?.id,
+    staleTime: 60_000,
+  });
+  const activeLeadCount = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato)).length;
 
   const handleLogout = async () => {
     base44.auth.logout('/');
@@ -104,13 +113,21 @@ export default function MobileBottomNav() {
       <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[#0F1219] border-t border-border z-40 flex items-center">
         {mainNav.map(item => {
           const isActive = location.pathname === item.path;
+          const isCRM = item.path === '/crm';
           return (
             <Link
               key={item.path}
               to={item.path}
               className="flex-1 flex flex-col items-center justify-center h-full gap-0.5 relative"
             >
-              <item.icon className={cn("w-5 h-5 transition-colors", isActive ? 'text-primary' : 'text-muted-foreground')} />
+              <div className="relative">
+                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? 'text-primary' : 'text-muted-foreground')} />
+                {isCRM && activeLeadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[14px] h-3.5 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center px-0.5">
+                    {activeLeadCount > 99 ? '99+' : activeLeadCount}
+                  </span>
+                )}
+              </div>
               <span className={cn("text-[10px] font-medium transition-colors", isActive ? 'text-primary' : 'text-muted-foreground')}>
                 {item.label}
               </span>

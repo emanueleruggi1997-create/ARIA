@@ -64,11 +64,20 @@ export default function Analytics() {
     };
   });
 
-  // Leads by status
-  const leadStatusData = ['nuovo', 'qualificato', 'preventivo_inviato', 'chiuso_vinto', 'chiuso_perso'].map(s => ({
-    name: s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-    value: leads.filter(l => l.stato === s).length,
-  })).filter(d => d.value > 0);
+  const LEAD_STATI = [
+    { key: 'nuovo', label: 'Nuovo', color: 'hsl(222,85%,60%)' },
+    { key: 'qualificato', label: 'Qualificato', color: 'hsl(45,90%,55%)' },
+    { key: 'preventivo_inviato', label: 'Preventivo', color: 'hsl(280,65%,60%)' },
+    { key: 'chiuso_vinto', label: 'Vinto', color: 'hsl(142,60%,50%)' },
+    { key: 'chiuso_perso', label: 'Perso', color: 'hsl(0,72%,51%)' },
+  ];
+
+  // Leads by status — always include all stati so the donut is always complete
+  const leadStatusData = LEAD_STATI.map(s => ({
+    name: s.label,
+    value: leads.filter(l => l.stato === s.key).length,
+    color: s.color,
+  }));
 
   // Appointments by day (last 7 days)
   const appointmentData = Array.from({ length: 7 }, (_, i) => {
@@ -86,7 +95,7 @@ export default function Analytics() {
   const wonRate = leads.length > 0 ? Math.round((leads.filter(l => l.stato === 'chiuso_vinto').length / leads.length) * 100) : 0;
 
   const handleExportCSV = () => {
-    const rows = [['Tipo', 'Totale'], ['Messaggi', messages.length], ['Lead', leads.length], ['Post', posts.length], ['AI Rate', aiRate + '%']];
+    const rows = [['Tipo', 'Totale'], ['Messaggi', messages.length], ['Lead', leads.length], ['AI Rate', aiRate + '%']];
     const csv = rows.map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -129,22 +138,52 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Leads pie chart */}
+        {/* Leads donut chart — fixed */}
         <div className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-sm font-semibold text-foreground mb-4">Lead per stato</h3>
-          <div className="h-56">
-            {leadStatusData.length > 0 ? (
-              <ResponsiveContainer>
+          <div className="flex items-center gap-4">
+            <div className="h-48 w-48 shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={leadStatusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }) => `${name} (${value})`}>
-                    {leadStatusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  <Pie
+                    data={leadStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={45}
+                    outerRadius={72}
+                    dataKey="value"
+                    strokeWidth={2}
+                    stroke="hsl(220,18%,7%)"
+                    startAngle={90}
+                    endAngle={-270}
+                  >
+                    {leadStatusData.map((entry, i) => (
+                      <Cell key={i} fill={entry.value > 0 ? entry.color : 'hsl(220,15%,15%)'} />
+                    ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip
+                    content={({ active, payload }) =>
+                      active && payload?.length ? (
+                        <div className="bg-card border border-border rounded-lg px-3 py-2 shadow-lg">
+                          <p className="text-sm font-medium" style={{ color: payload[0].payload.color }}>{payload[0].name}: {payload[0].value}</p>
+                        </div>
+                      ) : null
+                    }
+                  />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Nessun dato</div>
-            )}
+            </div>
+            <div className="flex-1 space-y-2">
+              {leadStatusData.map((entry, i) => (
+                <div key={i} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: entry.color }} />
+                    <span className="text-xs text-muted-foreground">{entry.name}</span>
+                  </div>
+                  <span className="text-xs font-semibold text-foreground">{entry.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
