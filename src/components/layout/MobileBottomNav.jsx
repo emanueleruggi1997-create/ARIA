@@ -4,6 +4,7 @@ import { LayoutDashboard, MessageSquare, Users, CalendarDays, Menu, Bot, BarChar
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 
 const mainNav = [
@@ -13,11 +14,10 @@ const mainNav = [
   { path: '/calendar', icon: CalendarDays, label: 'Agenda' },
 ];
 
-const menuItems = [
+const baseMenuItems = [
   { path: '/agent', icon: Bot, label: 'ARIA', isAria: true },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/settings', icon: Settings, label: 'Impostazioni' },
-  { path: '/admin', icon: Shield, label: 'Admin' },
 ];
 
 export default function MobileBottomNav() {
@@ -25,6 +25,11 @@ export default function MobileBottomNav() {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { business } = useBusiness();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const menuItems = isAdmin
+    ? [...baseMenuItems, { path: '/admin', icon: Shield, label: 'Admin' }]
+    : baseMenuItems;
   const ariaColor = business?.robot_color || business?.avatar_agente || '#3B6EF8';
   const ariaName = business?.robot_name || business?.nome_agente || 'ARIA';
   const ariaActive = business?.stato_agente === 'attivo';

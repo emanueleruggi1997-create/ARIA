@@ -6,6 +6,7 @@ import AdminBusiness from '@/components/admin/AdminBusiness';
 import AdminPerformance from '@/components/admin/AdminPerformance';
 import AdminLogs from '@/components/admin/AdminLogs';
 import AdminSistema from '@/components/admin/AdminSistema';
+import { useAuth } from '@/lib/AuthContext';
 
 const TABS = [
   { id: 'business',     label: '👥 Business' },
@@ -17,6 +18,18 @@ const TABS = [
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('business');
   const [logFilter, setLogFilter] = useState('Tutti');
+  const { user } = useAuth();
+
+  // Blocca accesso a non-admin
+  if (user?.role !== 'admin') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-8">
+        <Shield className="w-12 h-12 text-destructive/60" />
+        <h2 className="text-xl font-bold text-foreground">Accesso negato</h2>
+        <p className="text-muted-foreground text-sm">Questa sezione è riservata agli amministratori.</p>
+      </div>
+    );
+  }
 
   const { data: businesses = [], isLoading } = useQuery({
     queryKey: ['admin-businesses'],

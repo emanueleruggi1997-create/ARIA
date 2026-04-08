@@ -7,6 +7,7 @@ import {
 
 const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/93eb01793_emaralagentai.png';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { useAuth } from '@/lib/AuthContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -22,6 +23,8 @@ const navItems = [
 export default function Sidebar({ collapsed, setCollapsed }) {
   const location = useLocation();
   const { business } = useBusiness();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   return (
     <aside className={cn(
@@ -81,19 +84,21 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           );
         })}
 
-        {/* Admin link */}
-        <Link
-          to="/admin"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-            location.pathname === '/admin'
-              ? "bg-primary/10 text-primary"
-              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          )}
-        >
-          <Shield className="w-[18px] h-[18px] shrink-0" />
-          {!collapsed && <span>Admin</span>}
-        </Link>
+        {/* Admin link — solo per admin */}
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+              location.pathname === '/admin'
+                ? "bg-primary/10 text-primary"
+                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            )}
+          >
+            <Shield className="w-[18px] h-[18px] shrink-0" />
+            {!collapsed && <span>Admin</span>}
+          </Link>
+        )}
       </nav>
 
       {/* Legal link */}
