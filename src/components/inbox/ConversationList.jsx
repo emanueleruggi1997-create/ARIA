@@ -79,10 +79,15 @@ export default function ConversationList({ conversations, activeId, onSelect, on
             onTouchStart={e => handleTouchStart(e, conv.contact_id)}
             onTouchEnd={e => handleTouchEnd(e, conv.contact_id)}
           >
-            {/* Swipe delete background */}
-            <div className="absolute inset-y-0 right-0 w-20 bg-destructive flex items-center justify-center rounded-r-lg">
-              <Trash2 className="w-5 h-5 text-white" />
-            </div>
+            {/* Swipe delete background — only visible when swiped */}
+            {isSwiped && (
+              <button
+                className="absolute inset-y-0 right-0 w-20 bg-destructive flex items-center justify-center"
+                onClick={() => { onDelete?.(conv); setSwipeId(null); }}
+              >
+                <Trash2 className="w-5 h-5 text-white" />
+              </button>
+            )}
 
             {/* Main row */}
             <div
