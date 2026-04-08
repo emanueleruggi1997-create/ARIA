@@ -7,15 +7,14 @@ import { it } from 'date-fns/locale';
 const IgIcon = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <defs>
-      <radialGradient id="ig-grad" cx="30%" cy="107%" r="150%">
+      <radialGradient id="ig-grad2" cx="30%" cy="107%" r="150%">
         <stop offset="0%" stopColor="#fdf497" />
-        <stop offset="5%" stopColor="#fdf497" />
         <stop offset="45%" stopColor="#fd5949" />
         <stop offset="60%" stopColor="#d6249f" />
         <stop offset="90%" stopColor="#285AEB" />
       </radialGradient>
     </defs>
-    <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#ig-grad)" />
+    <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#ig-grad2)" />
     <circle cx="12" cy="12" r="4.5" stroke="white" strokeWidth="1.8" fill="none" />
     <circle cx="17.5" cy="6.5" r="1.2" fill="white" />
   </svg>
@@ -36,18 +35,108 @@ function formatTime(dateStr) {
   return format(d, 'd MMM', { locale: it });
 }
 
-export default function ConversationList({ conversations, activeId, onSelect, onMarkRead, onArchive, onDelete, filter }) {
-  const [menuId, setMenuId] = useState(null);
-  const [swipeId, setSwipeId] = useState(null);
+function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
-  const touchStartX = useRef(null);
+  const hasUnread = conv.unreadCount > 0;
 
   useEffect(() => {
-    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuId(null); };
+    if (!menuOpen) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [menuOpen]);
 
+  return (
+    <div className="relative">
+      {/* Row */}
+      <div
+        className={cn(
+          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
+          isActive ? "bg-primary/10" : hasUnread ? "bg-secondary/40 hover:bg-secondary/60" : "hover:bg-secondary/30"
+        )}
+        onClick={() => { setMenuOpen(false); onSelect(conv); }}
+      >
+        {/* Avatar */}
+        <div className={cn(
+          "w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-sm font-bold",
+          isActive ? "bg-primary text-white" : "bg-secondary text-foreground"
+        )}>
+          {(conv.nome || '?')[0].toUpperCase()}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 pr-8">
+          <div className="flex items-center justify-between gap-2 mb-0.5">
+            <p className={cn("text-[15px] truncate", hasUnread ? "font-bold text-foreground" : "font-medium text-foreground/90")}>
+              {conv.nome}
+            </p>
+            <span className="text-[11px] text-muted-foreground shrink-0">{formatTime(conv.lastMessageTime)}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {conv.canale === 'instagram' ? <IgIcon size={13} /> : <WaIcon size={13} />}
+            <p className={cn("text-[13px] truncate", hasUnread ? "text-foreground/80" : "text-muted-foreground")}>
+              {conv.lastMessage || 'Nessun messaggio'}
+            </p>
+          </div>
+        </div>
+
+        {hasUnread && (
+          <div className="absolute right-10 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+        )}
+      </div>
+
+      {/* Menu button — always visible */}
+      <div ref={menuRef} className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
+        <button
+          className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+          onMouseDown={e => e.stopPropagation()}
+          onTouchStart={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
+        >
+          <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+        </button>
+
+        {menuOpen && (
+          <div
+            className="absolute right-0 top-9 w-48 bg-card border border-border rounded-xl shadow-2xl overflow-hidden z-50"
+            onMouseDown={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+          >
+            <button
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+              onClick={e => { e.stopPropagation(); onMarkRead?.(conv); setMenuOpen(false); }}
+            >
+              <CheckCheck className="w-4 h-4" /> Segna come letto
+            </button>
+            <button
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+              onClick={e => { e.stopPropagation(); onArchive?.(conv); setMenuOpen(false); }}
+            >
+              <Archive className="w-4 h-4" /> Archivia
+            </button>
+            <button
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors border-t border-border"
+              onClick={e => { e.stopPropagation(); onDelete?.(conv); setMenuOpen(false); }}
+            >
+              <Trash2 className="w-4 h-4" /> Elimina
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function ConversationList({ conversations, activeId, onSelect, onMarkRead, onArchive, onDelete, filter }) {
   const filtered = conversations.filter(c => {
     if (filter === 'archiviati') return c.archiviata;
     if (filter === 'whatsapp') return c.canale === 'whatsapp' && !c.archiviata;
@@ -56,134 +145,29 @@ export default function ConversationList({ conversations, activeId, onSelect, on
     return !c.archiviata;
   });
 
-  const handleTouchStart = (e, id) => { touchStartX.current = e.touches[0].clientX; };
-  const handleTouchEnd = (e, id) => {
-    if (touchStartX.current === null) return;
-    const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (diff > 50) setSwipeId(id);
-    else if (diff < -20) setSwipeId(null);
-    touchStartX.current = null;
-  };
+  if (filtered.length === 0) {
+    return (
+      <div className="text-center py-16 text-muted-foreground px-4">
+        <div className="text-4xl mb-3">💬</div>
+        <p className="text-sm font-medium text-foreground">Nessuna conversazione ancora</p>
+        <p className="text-xs mt-1">I messaggi WhatsApp e Instagram appariranno qui</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-0">
-      {filtered.length > 0 ? filtered.map((conv, idx) => {
-        const isActive = activeId === conv.contact_id;
-        const hasUnread = conv.unreadCount > 0;
-        const isSwiped = swipeId === conv.contact_id;
-
-        return (
-          <div
-            key={conv.contact_id}
-            className="relative overflow-hidden"
-            onTouchStart={e => handleTouchStart(e, conv.contact_id)}
-            onTouchEnd={e => handleTouchEnd(e, conv.contact_id)}
-          >
-            {/* Swipe delete background */}
-            <div
-              className={cn(
-                "absolute inset-y-0 right-0 w-20 bg-destructive flex items-center justify-center transition-opacity duration-200",
-                isSwiped ? "opacity-100" : "opacity-0 pointer-events-none"
-              )}
-              onClick={() => { onDelete?.(conv); setSwipeId(null); }}
-            >
-              <Trash2 className="w-5 h-5 text-white" />
-            </div>
-
-            {/* Main row */}
-            <div
-            className={cn(
-              "relative transition-transform duration-200 group",
-              isSwiped ? "-translate-x-20" : "translate-x-0"
-            )}
-            >
-            <button
-              onClick={() => { if (menuId === conv.contact_id) return; setSwipeId(null); onSelect(conv); }}
-              className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors pr-12",
-                isActive ? "bg-primary/10" : hasUnread ? "bg-secondary/40 hover:bg-secondary/60" : "hover:bg-secondary/30"
-              )}
-            >
-                {/* Avatar */}
-                <div className={cn(
-                  "w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-sm font-bold",
-                  isActive ? "bg-primary text-white" : "bg-secondary text-foreground"
-                )}>
-                  {(conv.nome || '?')[0].toUpperCase()}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2 mb-0.5">
-                    <p className={cn(
-                      "text-[15px] truncate",
-                      hasUnread ? "font-bold text-foreground" : "font-medium text-foreground/90"
-                    )}>
-                      {conv.nome}
-                    </p>
-                    <span className="text-[11px] text-muted-foreground shrink-0">
-                      {formatTime(conv.lastMessageTime)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    {conv.canale === 'instagram' ? <IgIcon size={13} /> : <WaIcon size={13} />}
-                    <p className={cn(
-                      "text-[13px] truncate",
-                      hasUnread ? "text-foreground/80" : "text-muted-foreground"
-                    )}>
-                      {conv.lastMessage || 'Nessun messaggio'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right indicators */}
-                <div className="shrink-0 flex flex-col items-end gap-1">
-                  {hasUnread && (
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                  )}
-                </div>
-              </button>
-
-              {/* Context menu — always visible button */}
-              <div ref={menuRef} className="absolute right-2 top-1/2 -translate-y-1/2 z-10" onMouseDown={e => e.stopPropagation()}>
-                <button
-                  onClick={e => { e.stopPropagation(); setMenuId(prev => prev === conv.contact_id ? null : conv.contact_id); }}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-secondary hover:bg-secondary/80 transition-colors"
-                >
-                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                </button>
-                {menuId === conv.contact_id && (
-                  <div className="absolute right-0 top-9 w-48 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-50">
-                    <button onClick={e => { e.stopPropagation(); onMarkRead?.(conv); setMenuId(null); }}
-                      className="w-full flex items-center gap-2 px-3 py-3 text-sm hover:bg-secondary transition-colors">
-                      <CheckCheck className="w-4 h-4" /> Segna come letto
-                    </button>
-                    <button onClick={e => { e.stopPropagation(); onArchive?.(conv); setMenuId(null); }}
-                      className="w-full flex items-center gap-2 px-3 py-3 text-sm hover:bg-secondary transition-colors">
-                      <Archive className="w-4 h-4" /> Archivia
-                    </button>
-                    <button onClick={e => { e.stopPropagation(); onDelete?.(conv); setMenuId(null); }}
-                      className="w-full flex items-center gap-2 px-3 py-3 text-sm hover:bg-destructive/10 text-destructive transition-colors border-t border-border">
-                      <Trash2 className="w-4 h-4" /> Elimina
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Separator */}
-              {idx < filtered.length - 1 && (
-                <div className="absolute bottom-0 left-16 right-0 h-px bg-white/[0.04]" />
-              )}
-            </div>
-          </div>
-        );
-      }) : (
-        <div className="text-center py-16 text-muted-foreground px-4">
-          <div className="text-4xl mb-3">💬</div>
-          <p className="text-sm font-medium text-foreground">Nessuna conversazione ancora</p>
-          <p className="text-xs mt-1">I messaggi WhatsApp e Instagram appariranno qui</p>
-        </div>
-      )}
+    <div className="divide-y divide-white/[0.04]">
+      {filtered.map(conv => (
+        <ConvRow
+          key={conv.contact_id}
+          conv={conv}
+          isActive={activeId === conv.contact_id}
+          onSelect={onSelect}
+          onMarkRead={onMarkRead}
+          onArchive={onArchive}
+          onDelete={onDelete}
+        />
+      ))}
     </div>
   );
 }
