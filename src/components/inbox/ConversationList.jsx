@@ -92,18 +92,18 @@ export default function ConversationList({ conversations, activeId, onSelect, on
 
             {/* Main row */}
             <div
+            className={cn(
+              "relative transition-transform duration-200 group",
+              isSwiped ? "-translate-x-20" : "translate-x-0"
+            )}
+            >
+            <button
+              onClick={() => { if (menuId === conv.contact_id) return; setSwipeId(null); onSelect(conv); }}
               className={cn(
-                "relative transition-transform duration-200 group",
-                isSwiped ? "-translate-x-20" : "translate-x-0"
+                "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors pr-12",
+                isActive ? "bg-primary/10" : hasUnread ? "bg-secondary/40 hover:bg-secondary/60" : "hover:bg-secondary/30"
               )}
             >
-              <button
-                onClick={() => { setSwipeId(null); onSelect(conv); }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
-                  isActive ? "bg-primary/10" : hasUnread ? "bg-secondary/40 hover:bg-secondary/60" : "hover:bg-secondary/30"
-                )}
-              >
                 {/* Avatar */}
                 <div className={cn(
                   "w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-sm font-bold",
@@ -145,9 +145,9 @@ export default function ConversationList({ conversations, activeId, onSelect, on
               </button>
 
               {/* Context menu — always visible button */}
-              <div ref={menuRef} className="absolute right-2 top-1/2 -translate-y-1/2 z-10">
+              <div ref={menuRef} className="absolute right-2 top-1/2 -translate-y-1/2 z-10" onMouseDown={e => e.stopPropagation()}>
                 <button
-                  onClick={e => { e.stopPropagation(); setMenuId(menuId === conv.contact_id ? null : conv.contact_id); }}
+                  onClick={e => { e.stopPropagation(); setMenuId(prev => prev === conv.contact_id ? null : conv.contact_id); }}
                   className="w-8 h-8 rounded-lg flex items-center justify-center bg-secondary hover:bg-secondary/80 transition-colors"
                 >
                   <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
