@@ -47,8 +47,8 @@ export default function AppLayout() {
         {/* Spacer for mobile fixed header */}
         <div className="h-14 md:hidden" />
         <Outlet />
-        {/* Spacer for mobile bottom nav */}
-        <div className="h-16 md:hidden" />
+        {/* Spacer for mobile bottom nav (68px + safe-area) */}
+        <div className="h-[68px] md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
       </main>
 
       {/* Mobile bottom nav */}

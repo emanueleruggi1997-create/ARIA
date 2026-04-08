@@ -93,7 +93,7 @@ export default function Dashboard() {
   const unreadCount = unreadMessages.length;
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-5 md:space-y-6">
+    <div className="px-5 py-5 md:p-6 lg:p-8 space-y-3 md:space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -113,18 +113,18 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Link to="/inbox">
-          <KpiCard title="Messaggi oggi" value={todayMessages.length} icon={MessageSquare} trend={12} trendLabel="vs ieri" />
+          <KpiCard title="Messaggi oggi" value={todayMessages.length} icon={MessageSquare} trend={12} trendLabel="vs ieri" accent="blue" />
         </Link>
         <Link to="/crm">
-          <KpiCard title="Lead attivi" value={activeLeads.length} icon={Users} trend={8} trendLabel="questa settimana" />
+          <KpiCard title="Lead attivi" value={activeLeads.length} icon={Users} trend={8} trendLabel="questa settimana" accent="green" />
         </Link>
         <Link to="/calendar">
-          <KpiCard title="Appuntamenti" value={upcomingAppointments.length} icon={CalendarDays} />
+          <KpiCard title="Appuntamenti" value={upcomingAppointments.length} icon={CalendarDays} accent="purple" />
         </Link>
         <Link to="/analytics">
-          <KpiCard title="Risposta AI" value={`${aiRate}%`} icon={Zap} trend={5} trendLabel="vs sett. scorsa" />
+          <KpiCard title="Risposta AI" value={`${aiRate}%`} icon={Zap} trend={5} trendLabel="vs sett. scorsa" accent="cyan" />
         </Link>
       </div>
 

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Send, Bot, User, Sparkles, Loader2, Mail } from 'lucide-react';
+import { Send, Bot, Sparkles, Loader2, Mail, MoreVertical, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
+import { it } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 
@@ -15,6 +15,33 @@ const QUICK_MESSAGES = [
   'Siete aperti domani?',
 ];
 
+function DateSeparator({ date }) {
+  const d = new Date(date);
+  let label;
+  if (isToday(d)) label = 'Oggi';
+  else if (isYesterday(d)) label = 'Ieri';
+  else label = format(d, 'd MMMM', { locale: it });
+  return (
+    <div className="flex items-center justify-center my-4">
+      <span className="text-[11px] text-muted-foreground bg-white/[0.06] px-3 py-1 rounded-full">{label}</span>
+    </div>
+  );
+}
+
+function groupByDay(messages) {
+  const groups = [];
+  let lastDay = null;
+  for (const msg of messages) {
+    const day = msg.created_date ? format(new Date(msg.created_date), 'yyyy-MM-dd') : 'unknown';
+    if (day !== lastDay) {
+      groups.push({ type: 'separator', date: msg.created_date, key: `sep-${day}` });
+      lastDay = day;
+    }
+    groups.push({ type: 'message', msg, key: msg.id });
+  }
+  return groups;
+}
+
 export default function ChatView({ conversation, messages, onSendMessage, onRefresh }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -23,6 +50,7 @@ export default function ChatView({ conversation, messages, onSendMessage, onRefr
   const [manualMode, setManualMode] = useState(false);
   const [genMs, setGenMs] = useState(null);
   const endRef = useRef(null);
+  const textareaRef = useRef(null);
   const { business } = useBusiness();
 
   useEffect(() => {
@@ -36,6 +64,7 @@ export default function ChatView({ conversation, messages, onSendMessage, onRefr
       await onSendMessage(messageText, ruolo);
       setText('');
       setAiPreview('');
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
     } finally {
       setSending(false);
     }
@@ -65,6 +94,12 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
     }
   };
 
+  const handleTextareaChange = (e) => {
+    setText(e.target.value);
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  };
+
   if (!conversation) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -76,83 +111,98 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
     );
   }
 
+  const grouped = groupByDay(messages);
+
   return (
     <div className="flex-1 flex flex-col h-full min-w-0">
       {/* Header */}
-      <div className="h-14 px-4 flex items-center justify-between border-b border-border shrink-0">
+      <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.06] bg-[#0C0F1A] shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-            <span className="text-sm font-semibold text-primary">{(conversation.nome || '?')[0].toUpperCase()}</span>
+          <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+            <span className="text-sm font-bold text-primary">{(conversation.nome || '?')[0].toUpperCase()}</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-foreground">{conversation.nome}</p>
-            <div className="flex items-center gap-1.5">
-              <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-medium",
-                conversation.canale === 'whatsapp' ? 'bg-green-500/10 text-green-400' : 'bg-pink-500/10 text-pink-400'
-              )}>
-                {conversation.canale === 'whatsapp' ? '📱 WA' : '📸 IG'}
-              </span>
-              {conversation.stato && (
-                <span className="text-[10px] text-muted-foreground capitalize">• {conversation.stato}</span>
-              )}
-            </div>
+            <p className="text-[15px] font-semibold text-foreground leading-tight">{conversation.nome}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {conversation.canale === 'whatsapp' ? '💬 WhatsApp' : '📸 Instagram'}
+              {conversation.stato ? ` · ${conversation.stato}` : ''}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              if (window.__addToMailingList) window.__addToMailingList(conversation);
-            }}
-            className="hidden sm:flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-secondary border border-border hover:border-primary/30 text-muted-foreground transition-colors"
-            title="Aggiungi alla mailing list"
+            onClick={() => { if (window.__addToMailingList) window.__addToMailingList(conversation); }}
+            className="hidden sm:flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-lg bg-secondary border border-border hover:border-primary/30 text-muted-foreground transition-colors"
           >
-            <Mail className="w-3 h-3" /> Mailing list
+            <Mail className="w-3 h-3" /> Mailing
           </button>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="hidden sm:inline">Manuale</span>
+            <span className="hidden sm:inline text-[11px]">Manuale</span>
             <Switch checked={manualMode} onCheckedChange={setManualMode} />
           </div>
         </div>
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{
-        backgroundImage: manualMode ? 'none' : 'radial-gradient(circle, hsl(220 15% 13%) 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-      }}>
+      <div
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+        style={{ background: 'linear-gradient(180deg, #080A0F 0%, #0C0F1A 100%)' }}
+      >
         {messages.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">Nessun messaggio in questa conversazione</div>
         )}
-        {messages.map(msg => (
-          <div key={msg.id} className={cn("flex", msg.ruolo === 'user' ? 'justify-start' : 'justify-end')}>
-            <div className={cn(
-              "max-w-[75%] rounded-2xl px-4 py-2.5",
-              msg.ruolo === 'user' ? 'bg-secondary text-foreground rounded-tl-sm' :
-              msg.ruolo === 'assistant' ? 'bg-primary text-primary-foreground rounded-tr-sm' :
-              'bg-green-600 text-white rounded-tr-sm'
-            )}>
-              <div className="flex items-center gap-1 mb-1">
-                {msg.ruolo === 'assistant' && <span className="text-[10px] opacity-70 flex items-center gap-0.5"><Bot className="w-3 h-3" /> 🤖 AI</span>}
-                {msg.ruolo === 'human' && <span className="text-[10px] opacity-70 flex items-center gap-0.5"><User className="w-3 h-3" /> 👤 Tu</span>}
+
+        {grouped.map((item, idx) => {
+          if (item.type === 'separator') {
+            return <DateSeparator key={item.key} date={item.date} />;
+          }
+          const msg = item.msg;
+          const isUser = msg.ruolo === 'user';
+          const isAI = msg.ruolo === 'assistant';
+          const isHuman = msg.ruolo === 'human';
+          const isRight = !isUser;
+
+          // Check consecutive messages from same sender
+          const prevItem = grouped[idx - 1];
+          const prevMsg = prevItem?.type === 'message' ? prevItem.msg : null;
+          const isConsecutive = prevMsg && prevMsg.ruolo === msg.ruolo;
+
+          return (
+            <div key={item.key} className={cn("flex", isRight ? "justify-end" : "justify-start", isConsecutive ? "mt-0.5" : "mt-3")}>
+              <div className={cn(
+                "max-w-[78%] px-4 py-2.5 text-[15px] leading-[1.5]",
+                isUser && "bg-[#1C2333] text-foreground rounded-[4px_18px_18px_18px]",
+                isAI && "bg-primary text-white rounded-[18px_4px_18px_18px]",
+                isHuman && "bg-[#2D4A8A] text-white rounded-[18px_4px_18px_18px]",
+                isConsecutive && isUser && "rounded-[4px_18px_18px_4px]",
+                isConsecutive && isRight && "rounded-[18px_4px_4px_18px]",
+              )}>
+                <p>{msg.testo}</p>
+                <div className={cn("flex items-center gap-1 mt-1", isRight ? "justify-end" : "justify-start")}>
+                  {isAI && <span className="text-[10px] opacity-70">🤖</span>}
+                  {isHuman && <span className="text-[10px] opacity-70">👤</span>}
+                  <p className={cn(
+                    "text-[11px]",
+                    isUser ? "text-muted-foreground" : "text-white/60"
+                  )}>
+                    {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
+                  </p>
+                </div>
               </div>
-              <p className="text-sm leading-relaxed">{msg.testo}</p>
-              <p className={cn("text-[10px] mt-1", msg.ruolo === 'user' ? 'text-muted-foreground' : 'opacity-60')}>
-                {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
-              </p>
             </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={endRef} />
       </div>
 
       {/* Quick messages */}
       {messages.length === 0 && !manualMode && (
-        <div className="px-4 py-2 border-t border-border">
-          <p className="text-xs text-muted-foreground mb-2">Esempi di messaggi del cliente:</p>
+        <div className="px-4 py-2 border-t border-white/[0.06]">
+          <p className="text-[11px] text-muted-foreground mb-2">Esempi messaggi cliente:</p>
           <div className="flex flex-wrap gap-1.5">
             {QUICK_MESSAGES.map(q => (
               <button key={q} onClick={() => handleSend(q, 'user')}
-                className="text-xs px-2.5 py-1 rounded-full bg-secondary border border-border hover:border-primary/30 text-muted-foreground transition-all">
+                className="text-[12px] px-2.5 py-1 rounded-full bg-secondary border border-border hover:border-primary/30 text-muted-foreground transition-all">
                 {q}
               </button>
             ))}
@@ -163,11 +213,11 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
       {/* AI Preview */}
       {aiPreview && (
         <div className="px-4 py-3 bg-primary/5 border-t border-primary/20">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-primary font-medium">✨ Risposta AI suggerita:</p>
-            {genMs && <span className="text-xs text-muted-foreground">⚡ {genMs}ms</span>}
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[12px] text-primary font-semibold">✨ Risposta AI suggerita:</p>
+            {genMs && <span className="text-[11px] text-muted-foreground">⚡ {genMs}ms</span>}
           </div>
-          <p className="text-sm text-foreground bg-secondary rounded-lg p-2">{aiPreview}</p>
+          <p className="text-[14px] text-foreground bg-secondary rounded-xl p-3 leading-relaxed">{aiPreview}</p>
           <div className="flex gap-2 mt-2">
             <Button size="sm" onClick={() => handleSend(aiPreview, 'assistant')}>Invia</Button>
             <Button size="sm" variant="outline" onClick={() => setText(aiPreview)}>Modifica</Button>
@@ -176,29 +226,54 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
         </div>
       )}
 
-      {/* Input area — sticky on mobile */}
-      <div className="p-3 border-t border-border shrink-0 space-y-2 bg-background" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+      {/* Input area */}
+      <div
+        className="px-3 py-3 border-t border-white/[0.06] bg-[#0F1219] shrink-0"
+        style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+      >
         {manualMode && (
-          <div className="flex items-center gap-1 text-xs text-yellow-400 bg-yellow-500/10 rounded-lg px-2 py-1">
+          <div className="flex items-center gap-1 text-[12px] text-yellow-400 bg-yellow-500/10 rounded-lg px-2.5 py-1.5 mb-2">
             👤 Modalità manuale attiva — l'AI non risponde automaticamente
           </div>
         )}
         <div className="flex items-end gap-2">
-          <Button variant="outline" size="sm" onClick={handleGenerateAI} disabled={generating} className="shrink-0 h-9">
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            {!generating && <span className="ml-1 text-xs hidden sm:inline">AI</span>}
-          </Button>
-          <Textarea
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend(text, 'human'))}
-            placeholder={manualMode ? "Rispondi manualmente..." : "Scrivi risposta o usa ✨ AI..."}
-            className="bg-secondary border-border resize-none min-h-[36px] max-h-24 text-sm"
-            rows={1}
-          />
-          <Button size="sm" onClick={() => handleSend(text, 'human')} disabled={!text.trim() || sending} className="shrink-0 h-9">
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </Button>
+          {/* AI button left */}
+          <button
+            onClick={handleGenerateAI}
+            disabled={generating}
+            className="shrink-0 w-10 h-10 rounded-full bg-secondary border border-border hover:border-primary/40 flex items-center justify-center transition-all"
+            title="Genera risposta AI"
+          >
+            {generating ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Sparkles className="w-4 h-4 text-primary" />}
+          </button>
+
+          {/* Input */}
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={handleTextareaChange}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend(text, 'human'))}
+              placeholder="Scrivi un messaggio..."
+              rows={1}
+              className="w-full bg-secondary border border-border rounded-3xl px-4 py-2.5 text-[15px] text-foreground placeholder:text-muted-foreground resize-none outline-none focus:border-primary/40 transition-colors leading-[1.5]"
+              style={{ minHeight: '42px', maxHeight: '120px' }}
+            />
+          </div>
+
+          {/* Send button */}
+          <button
+            onClick={() => handleSend(text, 'human')}
+            disabled={!text.trim() || sending}
+            className={cn(
+              "shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all",
+              text.trim() && !sending
+                ? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                : "bg-secondary text-muted-foreground cursor-not-allowed"
+            )}
+          >
+            {sending ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <Send className="w-4 h-4 text-white" />}
+          </button>
         </div>
       </div>
     </div>

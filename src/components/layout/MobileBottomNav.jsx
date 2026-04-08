@@ -53,7 +53,8 @@ export default function MobileBottomNav() {
         <div className="fixed inset-0 z-50" onClick={() => setDrawerOpen(false)}>
           <div className="absolute inset-0 bg-black/60" />
           <div
-            className="absolute bottom-0 left-0 right-0 bg-[#0F1219] border-t border-border rounded-t-2xl pb-20"
+            className="absolute bottom-0 left-0 right-0 bg-[#0C0F1A] border-t border-white/[0.05] rounded-t-2xl pb-24"
+            style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
@@ -110,39 +111,50 @@ export default function MobileBottomNav() {
       )}
 
       {/* Bottom bar */}
-      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-[#0F1219] border-t border-border z-40 flex items-center">
-        {mainNav.map(item => {
-          const isActive = location.pathname === item.path;
-          const isCRM = item.path === '/crm';
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="flex-1 flex flex-col items-center justify-center h-full gap-0.5 relative"
-            >
-              <div className="relative">
-                <item.icon className={cn("w-5 h-5 transition-colors", isActive ? 'text-primary' : 'text-muted-foreground')} />
-                {isCRM && activeLeadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 min-w-[14px] h-3.5 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center px-0.5">
-                    {activeLeadCount > 99 ? '99+' : activeLeadCount}
-                  </span>
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-40 flex items-stretch bg-[#0C0F1A]"
+        style={{
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        <div className="flex w-full h-[68px]">
+          {mainNav.map(item => {
+            const isActive = location.pathname === item.path;
+            const isCRM = item.path === '/crm';
+            const isInbox = item.path === '/inbox';
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className="flex-1 flex flex-col items-center justify-center gap-1 relative min-h-[44px]"
+              >
+                <div className="relative">
+                  <item.icon className={cn("w-6 h-6 transition-colors", isActive ? 'text-primary' : 'text-muted-foreground')} />
+                  {isCRM && activeLeadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center px-0.5">
+                      {activeLeadCount > 99 ? '99+' : activeLeadCount}
+                    </span>
+                  )}
+                </div>
+                <span className={cn("text-[10px] font-medium transition-colors", isActive ? 'text-primary' : 'text-muted-foreground')}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 h-[3px] bg-primary rounded-full" />
                 )}
-              </div>
-              <span className={cn("text-[10px] font-medium transition-colors", isActive ? 'text-primary' : 'text-muted-foreground')}>
-                {item.label}
-              </span>
-              {isActive && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-primary rounded-full" />}
-            </Link>
-          );
-        })}
-        {/* Menu button */}
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="flex-1 flex flex-col items-center justify-center h-full gap-0.5"
-        >
-          <Menu className="w-5 h-5 text-muted-foreground" />
-          <span className="text-[10px] font-medium text-muted-foreground">Menu</span>
-        </button>
+              </Link>
+            );
+          })}
+          {/* Menu button */}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center gap-1 min-h-[44px]"
+          >
+            <Menu className="w-6 h-6 text-muted-foreground" />
+            <span className="text-[10px] font-medium text-muted-foreground">Menu</span>
+          </button>
+        </div>
       </nav>
     </>
   );

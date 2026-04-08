@@ -140,7 +140,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6 max-w-2xl">
+    <div className="px-5 py-5 md:p-6 lg:p-8 space-y-4 md:space-y-6 max-w-2xl">
       {mounted && metaNotice === 'success' && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium">
           ✓ Account Meta collegato con successo!

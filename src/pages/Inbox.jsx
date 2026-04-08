@@ -5,8 +5,8 @@ import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import ConversationList from '@/components/inbox/ConversationList';
 import ChatView from '@/components/inbox/ChatView';
 import ContactSidebar from '@/components/inbox/ContactSidebar';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, ArrowLeft } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function Inbox() {
   const { business } = useBusiness();
@@ -116,29 +116,49 @@ export default function Inbox() {
     }
   };
 
-  const FilterTabs = () => (
-    <Tabs value={filter} onValueChange={setFilter}>
-      <TabsList className="w-full bg-secondary">
-        <TabsTrigger value="tutti" className="flex-1 text-xs">Tutti</TabsTrigger>
-        <TabsTrigger value="instagram" className="flex-1 text-xs">📸 IG</TabsTrigger>
-        <TabsTrigger value="whatsapp" className="flex-1 text-xs">💬 WA</TabsTrigger>
-        <TabsTrigger value="non_letti" className="flex-1 text-xs">🔴</TabsTrigger>
-        <TabsTrigger value="archiviati" className="flex-1 text-xs">📦</TabsTrigger>
-      </TabsList>
-    </Tabs>
+  const unreadTotal = conversations.filter(c => c.unreadCount > 0 && !c.archiviata).length;
+
+  const FILTER_PILLS = [
+    { id: 'tutti', label: 'Tutti' },
+    { id: 'instagram', label: '📸 Instagram' },
+    { id: 'whatsapp', label: '💬 WhatsApp' },
+    { id: 'non_letti', label: '🔴 Non letti' },
+    { id: 'archiviati', label: '📦 Archiviati' },
+  ];
+
+  const FilterPills = () => (
+    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+      {FILTER_PILLS.map(p => (
+        <button
+          key={p.id}
+          onClick={() => setFilter(p.id)}
+          className={cn(
+            "shrink-0 text-[12px] font-medium px-3 py-1.5 rounded-full transition-all whitespace-nowrap",
+            filter === p.id
+              ? "bg-primary text-white"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
   );
 
   return (
     <>
       {/* ── DESKTOP layout ── */}
       <div className="hidden md:flex flex-col h-screen">
-        <div className="h-14 px-6 flex items-center border-b border-border shrink-0 gap-3">
+        <div className="h-14 px-6 flex items-center border-b border-white/[0.06] shrink-0 gap-3">
           <MessageSquare className="w-5 h-5 text-primary" />
           <h1 className="text-lg font-bold text-foreground">Inbox</h1>
+          {unreadTotal > 0 && (
+            <span className="text-[11px] font-semibold text-muted-foreground">{unreadTotal} non letti</span>
+          )}
         </div>
         <div className="flex-1 flex overflow-hidden">
-          <div className="w-72 border-r border-border flex flex-col shrink-0">
-            <div className="p-3 border-b border-border"><FilterTabs /></div>
+          <div className="w-72 border-r border-white/[0.06] flex flex-col shrink-0">
+            <div className="px-3 py-2.5 border-b border-white/[0.06]"><FilterPills /></div>
             <div className="flex-1 overflow-y-auto p-2">
               <ConversationList
                 conversations={conversations}
@@ -167,11 +187,10 @@ export default function Inbox() {
 
       {/* ── MOBILE layout ── */}
       <div className="md:hidden flex flex-col h-[calc(100vh-7rem)]">
-        {/* If a conversation is active, show full-screen chat */}
         {activeConv ? (
           <div className="flex flex-col flex-1 overflow-hidden">
-            {/* Mobile chat header with back button */}
-            <div className="h-12 px-3 flex items-center gap-3 border-b border-border bg-background shrink-0">
+            {/* Mobile chat header */}
+            <div className="h-14 px-3 flex items-center gap-3 border-b border-white/[0.06] bg-[#0C0F1A] shrink-0">
               <button
                 onClick={() => setActiveConv(null)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary"
@@ -199,7 +218,14 @@ export default function Inbox() {
         ) : (
           /* Conversation list */
           <div className="flex flex-col flex-1 overflow-hidden">
-            <div className="p-3 border-b border-border shrink-0"><FilterTabs /></div>
+            {/* Mobile inbox header */}
+            <div className="px-4 pt-4 pb-2 shrink-0">
+              <div className="flex items-baseline gap-2 mb-3">
+                <h1 className="text-[22px] font-bold text-foreground">Inbox</h1>
+                {unreadTotal > 0 && <span className="text-[13px] text-muted-foreground">{unreadTotal} non letti</span>}
+              </div>
+              <FilterPills />
+            </div>
             <div className="flex-1 overflow-y-auto p-2">
               <ConversationList
                 conversations={conversations}
