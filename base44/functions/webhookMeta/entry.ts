@@ -166,14 +166,15 @@ REGOLE FONDAMENTALI:
 - Presentati con il tuo nome UNA SOLA VOLTA, solo se è il primissimo messaggio della conversazione. MAI ripetere "ciao sono ARIA" o simili nelle risposte successive.
 - ${isFirstMessage ? 'Questo è il PRIMO messaggio: presentati brevemente con nome e chiedi come puoi aiutare.' : 'NON presentarti di nuovo, sei già stato presentato. Vai dritto al punto.'}
 - NON menzionare prezzi, costi o tariffe a meno che il cliente non lo chieda esplicitamente.
-- GESTIONE APPUNTAMENTI: Se il cliente vuole prenotare un appuntamento, una chiamata o un incontro con un responsabile:
-  1. Chiedigli SUBITO il tipo di appuntamento (telefonata, Zoom, in persona, email) e il suo numero di telefono o email per la conferma.
-  2. SOLO DOPO chiedigli quale giorno e orario preferisce.
-  3. Informa che il responsabile è disponibile nei giorni: ${giorniAttivi}, orario ${orarioInizio}–${orarioFine}.
-  4. NON DIRE MAI "ho confermato" o "appuntamento confermato" — è l'admin che lo farà. Tu chiedi i dati e basta.
-  5. Se il cliente manca dati (telefono, email, tipo, orario), CONTINUA A CHIEDERE finché non ha tutto.
-  6. Tu (ARIA) sei disponibile a rispondere sempre, 24/7 — questi orari riguardano solo il responsabile.
+- GESTIONE APPUNTAMENTI: Se il cliente vuole prenotare:
+  1. Chiedi in UN SOLO messaggio: tipo di chiamata (WhatsApp, telefono normale o Zoom), il suo numero/email, e il giorno+orario preferito. Tutto in una volta sola.
+  2. Informa che il responsabile è disponibile nei giorni: ${giorniAttivi}, orario ${orarioInizio}–${orarioFine}.
+  3. Se il cliente propone un orario LIBERO in agenda → accettalo SEMPRE senza cambiarlo. NON proporre orari diversi da quello scelto dal cliente.
+  4. Se il cliente propone un orario OCCUPATO o fuori orario → digli che quello slot non è disponibile e proponi UNO slot libero specifico.
+  5. Non chiedere più volte le stesse cose. Se hai già tutti i dati (tipo, contatto, data, ora) → NON chiedere altro, conferma e basta.
+  6. NON DIRE MAI "ho confermato" o "appuntamento confermato" — è l'admin che lo farà.
 - Prima di rispondere, capisci cosa vuole il cliente: cosa lo ha spinto a scrivere? Cosa cerca?
+
 - Risposte brevi, naturali, umane. Massimo 2-3 frasi. Niente elenchi puntati a meno che non servano davvero.
 - Non usare frasi robotiche come "come posso assisterti?", "non esitare a contattarci", "sarò felice di aiutarti".
 - Parla come una persona reale, non come un bot.`;
@@ -218,7 +219,7 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
   "has_contact_data": true/false,
   "titolo": "titolo breve o null",
   "data_raw": "data ISO YYYY-MM-DD HH:MM o null",
-  "tipo_appuntamento": "telefonata|zoom|email|in_persona|null",
+  "tipo_appuntamento": "whatsapp|telefono|zoom|null",
   "contact_method": "numero_telefono|email|null",
   "note": "dettagli utili o null"
 }`,
@@ -277,10 +278,10 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
           titolo: appointmentDetection.titolo || `Appuntamento con ${contact.nome}`,
           data: appointmentDate,
           ora: appointmentTime || '10:00',
-          tipo: appointmentDetection.tipo_appuntamento || 'altro',
+          tipo: appointmentDetection.tipo_appuntamento === 'zoom' ? 'riunione' : 'chiamata',
           stato: 'in_attesa',
           canale_origine: 'instagram',
-          note: `${appointmentDetection.tipo_appuntamento ? 'Tipo: ' + appointmentDetection.tipo_appuntamento + '. ' : ''}${appointmentDetection.contact_method ? 'Contatto: ' + appointmentDetection.contact_method + '. ' : ''}${appointmentDetection.note || 'Richiesta via Instagram DM'}`,
+          note: `Tipo: ${appointmentDetection.tipo_appuntamento || 'non specificato'}. Contatto: ${appointmentDetection.contact_method || 'non specificato'}. ${appointmentDetection.note || 'Richiesta via Instagram DM'}`,
         });
         console.log('[webhookMeta] Appointment created with full details for:', contact.nome);
       }
