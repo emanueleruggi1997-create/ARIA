@@ -49,7 +49,6 @@ async function processMessage({ base44, entryId, senderId, text }) {
       numero: senderId, canale: 'instagram', stato: 'lead',
     });
   } else if (contact.nome === `IG_${senderId}` && senderName !== `IG_${senderId}`) {
-    // Update name if it was previously a raw ID
     await base44.asServiceRole.entities.Contact.update(contact.id, { nome: senderName });
     contact.nome = senderName;
   }
@@ -80,17 +79,15 @@ async function processMessage({ base44, entryId, senderId, text }) {
   const [endH, endM] = (business.orario_fine || '20:00').split(':').map(Number);
   const endMinutes = endH * 60 + endM;
 
-  // If start == 00:00 and end == 23:59 (or similar 24h range), always respond
-  const is24h = (startMinutes === 0 && endMinutes === 1439); // 23:59 = 1439 minutes
+  const is24h = (startMinutes === 0 && endMinutes === 1439);
   const withinHours = is24h || (currentMinutes >= startMinutes && currentMinutes < endMinutes);
 
   if (!withinHours && business.fuori_orario_attivo) {
     console.log('[webhookMeta] Outside operating hours, sending out-of-hours message');
-    // Send out-of-hours message via Instagram
     const igToken = conn.access_token;
     const igAccountId = conn.ig_account_id;
     if (igToken && igAccountId) {
-      const sendRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+      await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${igToken}` },
         body: JSON.stringify({ recipient: { id: senderId }, message: { text: business.messaggio_fuori_orario || 'Siamo fuori orario. Ti risponderemo non appena possibile!' } }),
@@ -109,75 +106,100 @@ async function processMessage({ base44, entryId, senderId, text }) {
 
   const isFirstMessage = recentMessages.filter(m => m.ruolo === 'assistant').length === 0;
 
-  // Fetch upcoming confirmed/in_attesa appointments to build availability context
-  // PRIVACY: we only expose date+time slots (no names, no titles, no notes)
+  // Fetch upcoming appointments for availability context
   let availabilityContext = '';
   try {
-    // Current date/time in Italy timezone
-    const nowItaly = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const nowDisplay = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     const todayItaly = new Date().toLocaleDateString('it-IT', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' });
-    // Convert dd/mm/yyyy → yyyy-mm-dd for comparisons
     const [dd, mm, yyyy] = todayItaly.split('/');
     const today = `${yyyy}-${mm}-${dd}`;
     const upcomingApts = await base44.asServiceRole.entities.Appointment.filter(
-      { business_id: businessId },
-      'data',
-      50
+      { business_id: businessId }, 'data', 50
     ).catch(() => []);
     const busySlots = upcomingApts
       .filter(a => a.data >= today && (a.stato === 'confermato' || a.stato === 'in_attesa'))
       .map(a => `${a.data}${a.ora ? ` ${a.ora}` : ''}${a.durata_minuti ? ` (${a.durata_minuti} min)` : ''}`)
       .join(', ');
 
-    // Usa i campi del RESPONSABILE (non di ARIA) per la disponibilità appuntamenti
-    const giorniAttivi = business?.responsabile_giorni_attivi?.length
+    const giorniAtt = business?.responsabile_giorni_attivi?.length
       ? business.responsabile_giorni_attivi.join(', ')
       : business?.giorni_attivi?.length ? business.giorni_attivi.join(', ') : 'lun, mar, mer, gio, ven';
-    const orarioInizio = business?.responsabile_orario_inizio || '09:00';
-    const orarioFine = business?.responsabile_orario_fine || '18:00';
-    const disponibilitaBase = `Giorni disponibili del responsabile: ${giorniAttivi}. Orario: ${orarioInizio}–${orarioFine}.`;
+    const orInizio = business?.responsabile_orario_inizio || '09:00';
+    const orFine = business?.responsabile_orario_fine || '18:00';
+    const disponibilitaBase = `Giorni disponibili del responsabile: ${giorniAtt}. Orario: ${orInizio}–${orFine}.`;
 
     if (busySlots) {
-      availabilityContext = `\n\nDATA E ORA ATTUALE (fuso orario Italia): ${nowItaly}\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nSlot già occupati in agenda: ${busySlots}\nRegole:\n- Usa la data e ora attuale per capire quali giorni proporre (non proporre date nel passato).\n- Se il cliente chiede un giorno/orario occupato o fuori orario lavorativo, digli che non sei disponibile e proponi SUBITO uno slot libero specifico (giorno + ora) all'interno dei tuoi orari.\n- Non dire mai perché sei occupato né cosa hai in agenda.\n- Sii proattivo e concreto: "purtroppo mercoledì non ho disponibilità, ma venerdì alle 16:00 sono libero — ti va?"`;
+      availabilityContext = `\n\nDATA E ORA ATTUALE (fuso orario Italia): ${nowDisplay}\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nSlot già occupati in agenda: ${busySlots}\nRegole:\n- Usa la data e ora attuale per capire quali giorni proporre (non proporre date nel passato).\n- Se il cliente chiede un giorno/orario occupato o fuori orario lavorativo, digli che non sei disponibile e proponi SUBITO uno slot libero specifico (giorno + ora) all'interno dei tuoi orari.\n- Non dire mai perché sei occupato né cosa hai in agenda.\n- Sii proattivo e concreto: "purtroppo mercoledì non ho disponibilità, ma venerdì alle 16:00 sono libero — ti va?"`;
     } else {
-      availabilityContext = `\n\nDATA E ORA ATTUALE (fuso orario Italia): ${nowItaly}\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nNessun appuntamento in agenda — sei completamente libero nei tuoi orari lavorativi. Usa la data attuale per proporre date future concrete (non nel passato).`;
+      availabilityContext = `\n\nDATA E ORA ATTUALE (fuso orario Italia): ${nowDisplay}\nDISPONIBILITÀ (solo uso interno):\n${disponibilitaBase}\nNessun appuntamento in agenda — sei completamente libero nei tuoi orari lavorativi. Usa la data attuale per proporre date future concrete (non nel passato).`;
     }
   } catch (e) {
     console.log('[webhookMeta] Could not fetch agenda:', e.message);
   }
 
-  // Disponibilità responsabile per mostrare nel prompt
   const giorniAttivi = business?.responsabile_giorni_attivi?.length
     ? business.responsabile_giorni_attivi.join(', ')
     : business?.giorni_attivi?.length ? business.giorni_attivi.join(', ') : 'lun, mar, mer, gio, ven';
   const orarioInizio = business?.responsabile_orario_inizio || '09:00';
   const orarioFine = business?.responsabile_orario_fine || '18:00';
 
-  const systemPrompt = `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".
-${business.ai_prompt || ''}
-Tono: ${business.tono || 'professionale'}.
-${business.servizi ? `Servizi offerti: ${business.servizi}` : ''}
-${business.prezzi ? `Prezzi (da condividere SOLO se esplicitamente richiesti): ${business.prezzi}` : ''}
-${business.cose_da_non_fare ? `Non fare mai: ${business.cose_da_non_fare}` : ''}
-${availabilityContext}
+  // ── Pre-detect cancellation BEFORE generating AI reply ──
+  let cancellationHandled = false;
+  const cancellationKeywords = /annull|cancel|non voglio|disdic|non mi interessa più|lasciar perdere|non ho più voglia/i;
+  if (cancellationKeywords.test(text)) {
+    try {
+      const existingApts = await base44.asServiceRole.entities.Appointment.filter({
+        business_id: businessId,
+        contact_id: contact.id,
+      });
+      const activeApt = existingApts.find(a => a.stato === 'in_attesa' || a.stato === 'confermato');
+      if (activeApt) {
+        await base44.asServiceRole.entities.Appointment.update(activeApt.id, {
+          stato: 'annullato',
+          note: (activeApt.note || '') + ' | ANNULLATO DAL CLIENTE via Instagram DM.',
+        });
+        cancellationHandled = true;
+        console.log('[webhookMeta] Appointment pre-cancelled for:', contact.nome);
+      }
+    } catch (e) {
+      console.log('[webhookMeta] Cancellation pre-detection error:', e.message);
+    }
+  }
 
-REGOLE FONDAMENTALI:
-- Rispondi SEMPRE, a qualsiasi ora del giorno o della notte. Non esistono orari di chiusura per te.
-- Presentati con il tuo nome UNA SOLA VOLTA, solo se è il primissimo messaggio della conversazione. MAI ripetere "ciao sono ARIA" o simili nelle risposte successive.
-- ${isFirstMessage ? 'Questo è il PRIMO messaggio: presentati brevemente con nome e chiedi come puoi aiutare.' : 'NON presentarti di nuovo, sei già stato presentato. Vai dritto al punto.'}
-- NON menzionare prezzi, costi o tariffe a meno che il cliente non lo chieda esplicitamente.
-- GESTIONE APPUNTAMENTI: Se il cliente vuole prenotare:
-  1. Chiedi in UN SOLO messaggio: tipo di chiamata (WhatsApp, telefono normale o Zoom), il suo numero/email, e il giorno+orario preferito. Tutto in una volta sola.
-  2. Informa che il responsabile è disponibile nei giorni: ${giorniAttivi}, orario ${orarioInizio}–${orarioFine}.
-  3. Se il cliente propone un orario LIBERO in agenda → accettalo SEMPRE senza cambiarlo. NON proporre orari diversi da quello scelto dal cliente.
-  4. Se il cliente propone un orario OCCUPATO o fuori orario → digli che quello slot non è disponibile e proponi UNO slot libero specifico.
-  5. Non chiedere più volte le stesse cose. Se hai già tutti i dati (tipo, contatto, data, ora) → NON chiedere altro, conferma e basta.
-  6. NON DIRE MAI "ho confermato" o "appuntamento confermato" — è l'admin che lo farà.
-- Prima di rispondere, capisci cosa vuole il cliente: cosa lo ha spinto a scrivere? Cosa cerca?
+  const cancellationNote = cancellationHandled
+    ? '\n\nAZIONE COMPLETATA: L\'appuntamento di questo cliente è stato ANNULLATO automaticamente dal sistema. Rispondi SOLO con qualcosa tipo "Ho annullato il tuo appuntamento, sei libero/a." — NON dire che stai inoltrando nulla al responsabile.'
+    : '';
 
-- Risposte brevi, naturali, umane. Massimo 2-3 frasi. Niente elenchi puntati a meno che non servano davvero.
-- Non usare frasi robotiche come "come posso assisterti?", "non esitare a contattarci", "sarò felice di aiutarti".
-- Parla come una persona reale, non come un bot.`;
+  const systemPrompt = [
+    `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".`,
+    business.ai_prompt || '',
+    `Tono: ${business.tono || 'professionale'}.`,
+    business.servizi ? `Servizi offerti: ${business.servizi}` : '',
+    business.prezzi ? `Prezzi (da condividere SOLO se esplicitamente richiesti): ${business.prezzi}` : '',
+    business.cose_da_non_fare ? `Non fare mai: ${business.cose_da_non_fare}` : '',
+    availabilityContext,
+    '',
+    'REGOLE FONDAMENTALI:',
+    '- Rispondi SEMPRE, a qualsiasi ora del giorno o della notte. Non esistono orari di chiusura per te.',
+    '- Presentati con il tuo nome UNA SOLA VOLTA, solo se è il primissimo messaggio della conversazione. MAI ripetere "ciao sono ARIA" o simili nelle risposte successive.',
+    isFirstMessage
+      ? '- Questo è il PRIMO messaggio: presentati brevemente con nome e chiedi come puoi aiutare.'
+      : '- NON presentarti di nuovo, sei già stato presentato. Vai dritto al punto.',
+    '- NON menzionare prezzi, costi o tariffe a meno che il cliente non lo chieda esplicitamente.',
+    '- GESTIONE APPUNTAMENTI: Se il cliente vuole prenotare:',
+    '  1. Chiedi in UN SOLO messaggio: tipo di chiamata (WhatsApp, telefono normale o Zoom), il suo numero/email, e il giorno+orario preferito. Tutto in una volta sola.',
+    `  2. Informa che il responsabile è disponibile nei giorni: ${giorniAttivi}, orario ${orarioInizio}–${orarioFine}.`,
+    '  3. Se il cliente propone un orario LIBERO in agenda → accettalo SEMPRE senza cambiarlo. NON proporre orari diversi da quello scelto dal cliente.',
+    '  4. Se il cliente propone un orario OCCUPATO o fuori orario → digli che quello slot non è disponibile e proponi UNO slot libero specifico.',
+    '  5. Non chiedere più volte le stesse cose. Se hai già tutti i dati (tipo, contatto, data, ora) → NON chiedere altro, conferma e basta.',
+    '  6. NON DIRE MAI "ho confermato" o "appuntamento confermato" — è l\'admin che lo farà.',
+    '- Prima di rispondere, capisci cosa vuole il cliente: cosa lo ha spinto a scrivere? Cosa cerca?',
+    '',
+    '- Risposte brevi, naturali, umane. Massimo 2-3 frasi. Niente elenchi puntati a meno che non servano davvero.',
+    '- Non usare frasi robotiche come "come posso assisterti?", "non esitare a contattarci", "sarò felice di aiutarti".',
+    '- Parla come una persona reale, non come un bot.',
+    cancellationNote,
+  ].filter(Boolean).join('\n');
 
   const fullPrompt = `${systemPrompt}\n\nStorico:\n${historyText}\n\nCliente: ${text}\nARIA:`;
 
@@ -195,7 +217,7 @@ REGOLE FONDAMENTALI:
     canale: 'instagram', ruolo: 'assistant', testo: aiReply, letto: true,
   });
 
-  // Detect appointment request in the conversation
+  // Detect new appointment creation (post-reply)
   try {
     const nowForAppointment = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     const appointmentDetection = await base44.asServiceRole.integrations.Core.InvokeLLM({
@@ -209,12 +231,11 @@ Determina se il cliente ha richiesto un appuntamento e ha fornito TUTTE le infor
 - Un tipo di appuntamento (telefonata, zoom, email, in_persona)
 - Dati di contatto (telefono o email per la conferma)
 
-IMPORTANTE: Per il campo data_raw, usa la data corrente fornita per calcolare date relative (es. "mercoledì prossimo", "venerdì", "domani") e restituisci la data nel formato ISO YYYY-MM-DD HH:MM. Se oggi è venerdì 10/04/2026 e dice "mercoledì prossimo", restituisci "2026-04-15 10:00".
+IMPORTANTE: Per il campo data_raw, usa la data corrente fornita per calcolare date relative (es. "mercoledì prossimo", "venerdì", "domani") e restituisci la data nel formato ISO YYYY-MM-DD HH:MM.
 
 Rispondi ESATTAMENTE con questo JSON (niente altro):
 {
   "is_appointment": true/false,
-  "is_cancellation": true/false,
   "has_time": true/false,
   "has_contact_method": true/false,
   "has_contact_data": true/false,
@@ -225,11 +246,9 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
   "note": "dettagli utili o null"
 }`,
       response_json_schema: {
-
         type: 'object',
         properties: {
           is_appointment: { type: 'boolean' },
-          is_cancellation: { type: 'boolean' },
           has_time: { type: 'boolean' },
           has_contact_method: { type: 'boolean' },
           has_contact_data: { type: 'boolean' },
@@ -242,9 +261,7 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
       },
     });
 
-    // Solo crea appuntamento se ha TUTTI i dati necessari
     if (appointmentDetection?.is_appointment && appointmentDetection?.has_time && appointmentDetection?.has_contact_method && appointmentDetection?.has_contact_data) {
-      // Parse date if possible
       let appointmentDate = null;
       let appointmentTime = null;
       if (appointmentDetection.data_raw) {
@@ -253,10 +270,8 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
           appointmentDate = parsed.toISOString().split('T')[0];
           appointmentTime = parsed.toTimeString().slice(0, 5);
         } else {
-          // Try to extract time pattern HH:MM
           const timeMatch = appointmentDetection.data_raw.match(/(\d{1,2})[:\.](\d{2})/);
           if (timeMatch) appointmentTime = `${timeMatch[1].padStart(2,'0')}:${timeMatch[2]}`;
-          // Use tomorrow as fallback date
           const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
           appointmentDate = tomorrow.toISOString().split('T')[0];
         }
@@ -265,7 +280,6 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
         appointmentDate = tomorrow.toISOString().split('T')[0];
       }
 
-      // Check if appointment already exists for this contact to avoid duplicates
       const existingApts = await base44.asServiceRole.entities.Appointment.filter({
         business_id: businessId,
         contact_id: contact.id,
@@ -285,25 +299,7 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
           canale_origine: 'instagram',
           note: `Tipo: ${appointmentDetection.tipo_appuntamento || 'non specificato'}. Contatto: ${appointmentDetection.contact_method || 'non specificato'}. ${appointmentDetection.note || 'Richiesta via Instagram DM'}`,
         });
-        console.log('[webhookMeta] Appointment created with full details for:', contact.nome);
-      }
-    } else if (appointmentDetection?.is_appointment && !appointmentDetection?.has_time) {
-      console.log('[webhookMeta] Appointment request but missing time - ARIA should ask for it');
-    }
-
-    // Detect cancellation request
-    if (appointmentDetection?.is_cancellation) {
-      const existingApts = await base44.asServiceRole.entities.Appointment.filter({
-        business_id: businessId,
-        contact_id: contact.id,
-      }).catch(() => []);
-      const activeApt = existingApts.find(a => a.stato === 'in_attesa' || a.stato === 'confermato');
-      if (activeApt) {
-        await base44.asServiceRole.entities.Appointment.update(activeApt.id, {
-          stato: 'annullato',
-          note: (activeApt.note || '') + ' | ANNULLATO DAL CLIENTE via Instagram DM.',
-        });
-        console.log('[webhookMeta] Appointment cancelled for:', contact.nome);
+        console.log('[webhookMeta] Appointment created for:', contact.nome);
       }
     }
   } catch (e) {
@@ -331,7 +327,6 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
 Deno.serve(async (req) => {
   const url = new URL(req.url);
 
-  // ── GET: Webhook verification ──
   if (req.method === 'GET') {
     const mode      = url.searchParams.get('hub.mode');
     const token     = url.searchParams.get('hub.verify_token');
@@ -343,17 +338,13 @@ Deno.serve(async (req) => {
     return new Response('Forbidden', { status: 403 });
   }
 
-  // ── POST: Incoming events ──
   if (req.method === 'POST') {
     const body = await req.json().catch(() => ({}));
     console.log('[webhookMeta] Event received:', JSON.stringify(body).slice(0, 400));
 
-    // Webhooks from Meta have no user auth — use service role only
     const base44 = createClientFromRequest(req);
-    // Override so all entity calls go through asServiceRole by default
     const entries = body.entry || [];
 
-    // Risposta immediata a Meta (< 20s requirement) — processa in background
     const processingPromises = [];
     for (const entry of entries) {
       for (const event of (entry.messaging || [])) {
@@ -369,7 +360,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Avvia il processing in background senza aspettare
     Promise.all(processingPromises).catch(() => {});
 
     return Response.json({ ok: true });
