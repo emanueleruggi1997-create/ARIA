@@ -214,6 +214,7 @@ IMPORTANTE: Per il campo data_raw, usa la data corrente fornita per calcolare da
 Rispondi ESATTAMENTE con questo JSON (niente altro):
 {
   "is_appointment": true/false,
+  "is_cancellation": true/false,
   "has_time": true/false,
   "has_contact_method": true/false,
   "has_contact_data": true/false,
@@ -228,6 +229,7 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
         type: 'object',
         properties: {
           is_appointment: { type: 'boolean' },
+          is_cancellation: { type: 'boolean' },
           has_time: { type: 'boolean' },
           has_contact_method: { type: 'boolean' },
           has_contact_data: { type: 'boolean' },
@@ -287,6 +289,22 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
       }
     } else if (appointmentDetection?.is_appointment && !appointmentDetection?.has_time) {
       console.log('[webhookMeta] Appointment request but missing time - ARIA should ask for it');
+    }
+
+    // Detect cancellation request
+    if (appointmentDetection?.is_cancellation) {
+      const existingApts = await base44.asServiceRole.entities.Appointment.filter({
+        business_id: businessId,
+        contact_id: contact.id,
+      }).catch(() => []);
+      const activeApt = existingApts.find(a => a.stato === 'in_attesa' || a.stato === 'confermato');
+      if (activeApt) {
+        await base44.asServiceRole.entities.Appointment.update(activeApt.id, {
+          stato: 'annullato',
+          note: (activeApt.note || '') + ' | ANNULLATO DAL CLIENTE via Instagram DM.',
+        });
+        console.log('[webhookMeta] Appointment cancelled for:', contact.nome);
+      }
     }
   } catch (e) {
     console.log('[webhookMeta] Appointment detection error:', e.message);
