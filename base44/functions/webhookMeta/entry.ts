@@ -196,8 +196,10 @@ REGOLE FONDAMENTALI:
 
   // Detect appointment request in the conversation
   try {
+    const nowForAppointment = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     const appointmentDetection = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: `Analizza questo messaggio di un cliente e rispondi SOLO con un JSON.
+DATA E ORA ATTUALE (fuso orario Italia): ${nowForAppointment}
 Messaggio cliente: "${text}"
 Risposta ARIA: "${aiReply}"
 
@@ -206,6 +208,8 @@ Determina se il cliente ha richiesto un appuntamento e ha fornito TUTTE le infor
 - Un tipo di appuntamento (telefonata, zoom, email, in_persona)
 - Dati di contatto (telefono o email per la conferma)
 
+IMPORTANTE: Per il campo data_raw, usa la data corrente fornita per calcolare date relative (es. "mercoledì prossimo", "venerdì", "domani") e restituisci la data nel formato ISO YYYY-MM-DD HH:MM. Se oggi è venerdì 10/04/2026 e dice "mercoledì prossimo", restituisci "2026-04-15 10:00".
+
 Rispondi ESATTAMENTE con questo JSON (niente altro):
 {
   "is_appointment": true/false,
@@ -213,12 +217,13 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
   "has_contact_method": true/false,
   "has_contact_data": true/false,
   "titolo": "titolo breve o null",
-  "data_raw": "data/ora menzionata o null",
+  "data_raw": "data ISO YYYY-MM-DD HH:MM o null",
   "tipo_appuntamento": "telefonata|zoom|email|in_persona|null",
   "contact_method": "numero_telefono|email|null",
   "note": "dettagli utili o null"
 }`,
       response_json_schema: {
+
         type: 'object',
         properties: {
           is_appointment: { type: 'boolean' },
