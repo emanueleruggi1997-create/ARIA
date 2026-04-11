@@ -1,0 +1,57 @@
+{
+  "name": "Contact",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string",
+      "description": "ID del business"
+    },
+    "nome": {
+      "type": "string",
+      "description": "Nome del contatto"
+    },
+    "numero": {
+      "type": "string",
+      "description": "Numero telefono"
+    },
+    "canale": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "instagram"
+      ],
+      "description": "Canale di comunicazione"
+    },
+    "stato": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "cliente",
+        "perso",
+        "inattivo"
+      ],
+      "default": "lead"
+    },
+    "valore_stimato": {
+      "type": "number",
+      "description": "Valore stimato del contatto"
+    },
+    "note": {
+      "type": "string"
+    },
+    "archiviata": {
+      "type": "boolean",
+      "default": false,
+      "description": "Conversazione archiviata"
+    },
+    "ai_disabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se true l'AI non risponde automaticamente a questo contatto"
+    }
+  },
+  "required": [
+    "nome",
+    "business_id"
+  ]
+}

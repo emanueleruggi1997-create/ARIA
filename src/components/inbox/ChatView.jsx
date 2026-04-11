@@ -47,11 +47,13 @@ export default function ChatView({ conversation, messages, onSendMessage, onRefr
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiPreview, setAiPreview] = useState('');
-  const [manualMode, setManualMode] = useState(false);
-  const [genMs, setGenMs] = useState(null);
-  const endRef = useRef(null);
-  const textareaRef = useRef(null);
+  const [manualMode, setManualMode] = useState(!!conversation?.ai_disabled);
   const { business } = useBusiness();
+
+  // Sync manualMode when conversation changes
+  useEffect(() => {
+    setManualMode(!!conversation?.ai_disabled);
+  }, [conversation?.contact_id]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -138,7 +140,12 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
           </button>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="hidden sm:inline text-[11px]">Manuale</span>
-            <Switch checked={manualMode} onCheckedChange={setManualMode} />
+            <Switch checked={manualMode} onCheckedChange={async (val) => {
+              setManualMode(val);
+              if (conversation?.contact_id) {
+                await base44.entities.Contact.update(conversation.contact_id, { ai_disabled: val });
+              }
+            }} />
           </div>
         </div>
       </div>

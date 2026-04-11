@@ -60,9 +60,14 @@ async function processMessage({ base44, entryId, senderId, text }) {
   });
   console.log('[webhookMeta] Message saved for business:', businessId);
 
+  // Check if AI is disabled for this specific contact
+  if (contact.ai_disabled) {
+    console.log('[webhookMeta] AI disabled for contact:', contact.nome, '— skipping AI reply');
+    return;
+  }
+
   // Get business config
   const business = await base44.asServiceRole.entities.Business.get(businessId);
-  console.log('[webhookMeta] Business:', business?.nome, '| auto_risposta:', business?.auto_risposta);
   if (!business || business.auto_risposta === false) {
     console.log('[webhookMeta] auto_risposta disabled — skipping AI reply');
     return;
