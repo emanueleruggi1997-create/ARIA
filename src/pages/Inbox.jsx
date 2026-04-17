@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
@@ -118,6 +118,23 @@ export default function Inbox() {
 
   const unreadTotal = conversations.filter(c => c.unreadCount > 0 && !c.archiviata).length;
 
+  // Nascondi il MobileHeader globale quando la chat è aperta (evita doppio header)
+  useEffect(() => {
+    const mobileHeader = document.querySelector('header');
+    const spacer = document.querySelector('.h-14.md\\:hidden');
+    if (activeConv) {
+      if (mobileHeader) mobileHeader.style.display = 'none';
+      if (spacer) spacer.style.display = 'none';
+    } else {
+      if (mobileHeader) mobileHeader.style.display = '';
+      if (spacer) spacer.style.display = '';
+    }
+    return () => {
+      if (mobileHeader) mobileHeader.style.display = '';
+      if (spacer) spacer.style.display = '';
+    };
+  }, [activeConv]);
+
   const ConvSkeleton = () => (
     <div className="space-y-1 p-2">
       {[1,2,3,4,5].map(i => (
@@ -208,32 +225,15 @@ export default function Inbox() {
       {/* ── MOBILE layout ── */}
       <div className="md:hidden flex flex-col h-[calc(100vh-7rem)]">
         {activeConv ? (
-          <div className="flex flex-col flex-1 overflow-hidden">
-            {/* Mobile chat header */}
-            <div className="h-14 px-3 flex items-center gap-3 border-b border-white/[0.06] bg-[#0C0F1A] shrink-0">
-              <button
-                onClick={() => setActiveConv(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary"
-              >
-                <ArrowLeft className="w-4 h-4 text-foreground" />
-              </button>
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                <span className="text-sm font-bold text-primary">{(activeConv.nome || '?')[0].toUpperCase()}</span>
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{activeConv.nome}</p>
-                <p className="text-[10px] text-muted-foreground capitalize">{activeConv.canale}</p>
-              </div>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <ChatView
-                conversation={activeConv}
-                messages={activeMessages}
-                onSendMessage={handleSendMessage}
-                onRefresh={() => queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] })}
-                mobile
-              />
-            </div>
+          <div className="flex flex-col flex-1 overflow-hidden" style={{ height: '100dvh' }}>
+            <ChatView
+              conversation={activeConv}
+              messages={activeMessages}
+              onSendMessage={handleSendMessage}
+              onRefresh={() => queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] })}
+              onBack={() => setActiveConv(null)}
+              mobile
+            />
           </div>
         ) : (
           /* Conversation list */

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Send, Bot, Sparkles, Loader2, Mail, MoreVertical, Search } from 'lucide-react';
+import { Send, Bot, Sparkles, Loader2, Mail, MoreVertical, Search, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -42,7 +42,7 @@ function groupByDay(messages) {
   return groups;
 }
 
-export default function ChatView({ conversation, messages, onSendMessage, onRefresh }) {
+export default function ChatView({ conversation, messages, onSendMessage, onRefresh, onBack, mobile }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -123,6 +123,11 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
       {/* Header */}
       <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.06] bg-[#0C0F1A] shrink-0">
         <div className="flex items-center gap-3">
+          {onBack && (
+            <button onClick={onBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary shrink-0">
+              <ArrowLeft className="w-4 h-4 text-foreground" />
+            </button>
+          )}
           <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
             <span className="text-sm font-bold text-primary">{(conversation.nome || '?')[0].toUpperCase()}</span>
           </div>
