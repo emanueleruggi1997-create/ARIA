@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { RefreshCw, Mail, Bot, BarChart2, Bell, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Mail, Bot, BarChart2, Bell, AlertTriangle, Users } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 const INFO = [
   { label: 'Versione app', value: 'v1.0.0' },
@@ -75,6 +76,23 @@ export default function AdminSistema({ businessCount }) {
       key: 'notify', icon: Bell, label: 'Invia notifica a tutti', color: '#EC4899',
       desc: `Manda messaggio a tutti i ${businessCount} business`,
       action: () => setNotifyModal(true),
+    },
+    {
+      key: 'syncleads', icon: Users, label: 'Sincronizza Lead CRM', color: '#00C6FF',
+      desc: 'Crea i Lead per tutti i contatti Instagram esistenti senza lead',
+      action: async () => {
+        setLoading(p => ({ ...p, syncleads: true }));
+        try {
+          const res = await base44.functions.invoke('syncContactsToLeads', {});
+          const { created } = res.data;
+          setStatuses(p => ({ ...p, syncleads: `✓ ${created} lead creati` }));
+          showToast(`✓ ${created} lead creati con successo`);
+        } catch (e) {
+          showToast('❌ Errore nella sincronizzazione');
+        } finally {
+          setLoading(p => ({ ...p, syncleads: false }));
+        }
+      },
     },
   ];
 
