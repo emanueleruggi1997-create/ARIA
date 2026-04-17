@@ -34,7 +34,12 @@ Deno.serve(async (req) => {
     if (conn?.access_token && conn?.ig_account_id && contact?.numero) {
       const agentName = business?.nome_agente || 'ARIA';
       const businessName = business?.nome || '';
-      const dateStr = data ? new Date(data).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }) : 'data da definire';
+      // Parse date as local Italy date (YYYY-MM-DD) without UTC shift
+      const dateStr = data ? (() => {
+        const [y, m, d] = data.split('-').map(Number);
+        const localDate = new Date(y, m - 1, d);
+        return localDate.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+      })() : 'data da definire';
       const timeStr = ora || '';
 
       const confirmText = `✅ Ottimo, il tuo appuntamento è confermato!\n\n📅 ${dateStr}${timeStr ? ` alle ${timeStr}` : ''}\n\nTi aspettiamo da ${businessName}. Se hai bisogno di cambiare o annullare, scrivici qui. A presto! 👋`;

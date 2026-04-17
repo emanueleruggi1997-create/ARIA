@@ -60,9 +60,10 @@ async function processMessage({ base44, entryId, senderId, text }) {
   });
   console.log('[webhookMeta] Message saved for business:', businessId);
 
-  // Check if AI is disabled for this specific contact
+  // Check if AI is disabled for this specific contact (modalità manuale)
+  // Message is already saved above with letto: false — admin will see it in inbox as unread
   if (contact.ai_disabled) {
-    console.log('[webhookMeta] AI disabled for contact:', contact.nome, '— skipping AI reply');
+    console.log('[webhookMeta] AI disabled for contact:', contact.nome, '— skipping AI reply (manuale mode)');
     return;
   }
 
@@ -74,10 +75,11 @@ async function processMessage({ base44, entryId, senderId, text }) {
   }
 
   // Check if current time is within ARIA's operating hours
-  const nowItaly = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' });
-  const [datePart, timePart] = nowItaly.split(', ');
-  const [hours, minutes] = timePart.split(':').map(Number);
-  const currentMinutes = hours * 60 + minutes;
+  // Use Intl to get hour/minute in Rome timezone reliably (avoids split locale issues)
+  const nowRome = new Date();
+  const romeHour = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: 'numeric', hour12: false }).format(nowRome), 10);
+  const romeMinute = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', minute: 'numeric' }).format(nowRome), 10);
+  const currentMinutes = romeHour * 60 + romeMinute;
 
   const [startH, startM] = (business.orario_inizio || '08:00').split(':').map(Number);
   const startMinutes = startH * 60 + startM;
@@ -274,19 +276,27 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
       let appointmentDate = null;
       let appointmentTime = null;
       if (appointmentDetection.data_raw) {
-        const parsed = new Date(appointmentDetection.data_raw);
-        if (!isNaN(parsed.getTime())) {
-          appointmentDate = parsed.toISOString().split('T')[0];
-          appointmentTime = parsed.toTimeString().slice(0, 5);
-        } else {
-          const timeMatch = appointmentDetection.data_raw.match(/(\d{1,2})[:\.](\d{2})/);
-          if (timeMatch) appointmentTime = `${timeMatch[1].padStart(2,'0')}:${timeMatch[2]}`;
-          const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-          appointmentDate = tomorrow.toISOString().split('T')[0];
+        // data_raw is "YYYY-MM-DD HH:MM" in Rome local time — parse manually to avoid UTC shift
+        const rawStr = appointmentDetection.data_raw.trim();
+        const dateMatch = rawStr.match(/^(\d{4}-\d{2}-\d{2})/);
+        const timeMatch = rawStr.match(/(\d{2}):(\d{2})$/);
+        if (dateMatch) appointmentDate = dateMatch[1];
+        if (timeMatch) appointmentTime = `${timeMatch[1]}:${timeMatch[2]}`;
+        // Fallback: try native parse only if no dateMatch
+        if (!dateMatch) {
+          const parsed = new Date(rawStr);
+          if (!isNaN(parsed.getTime())) {
+            // Interpret as Rome time by extracting parts
+            appointmentDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(parsed);
+            appointmentTime = new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hour12: false }).format(parsed);
+          }
         }
-      } else {
-        const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-        appointmentDate = tomorrow.toISOString().split('T')[0];
+      }
+      // Final fallback
+      if (!appointmentDate) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        appointmentDate = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(tomorrow);
       }
 
       const existingApts = await base44.asServiceRole.entities.Appointment.filter({
