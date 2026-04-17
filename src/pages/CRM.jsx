@@ -34,7 +34,7 @@ function LeadsKanban({ businessId }) {
   const [movingLeadId, setMovingLeadId] = useState(null);
   const [deletingLeadId, setDeletingLeadId] = useState(null);
 
-  const { data: leads = [] } = useQuery({
+  const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['leads', businessId],
     queryFn: () => base44.entities.Lead.filter({ business_id: businessId }),
     enabled: !!businessId,
@@ -87,6 +87,29 @@ function LeadsKanban({ businessId }) {
   const wonLeads = leads.filter(l => l.stato === 'chiuso_vinto').length;
   const convRate = leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0;
   const totalPipeline = leads.reduce((acc, l) => acc + (l.budget_max || l.budget_min || 0), 0);
+
+  if (leadsLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex gap-3">
+          {[1,2,3].map(i => <div key={i} className="h-7 w-28 bg-secondary rounded-lg animate-pulse" />)}
+        </div>
+        <div className="hidden md:flex gap-4">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="flex-1 min-w-[180px]">
+              <div className="h-5 bg-secondary rounded animate-pulse mb-3" />
+              <div className="space-y-2">
+                {[1,2].map(j => <div key={j} className="h-20 bg-secondary rounded-xl animate-pulse" />)}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="md:hidden space-y-2">
+          {[1,2,3].map(i => <div key={i} className="h-20 bg-secondary rounded-xl animate-pulse" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -229,8 +252,8 @@ export default function CRM() {
     staleTime: 60_000,
   });
 
-  const activeLeads = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato)).length;
-  const activeEmailContacts = emailContacts.filter(c => c.stato === 'attivo').length;
+  const activeLeads = (leads || []).filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato)).length;
+  const activeEmailContacts = (emailContacts || []).filter(c => c.stato === 'attivo').length;
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">

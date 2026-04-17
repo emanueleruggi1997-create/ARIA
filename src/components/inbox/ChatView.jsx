@@ -47,8 +47,11 @@ export default function ChatView({ conversation, messages, onSendMessage, onRefr
   const [sending, setSending] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [aiPreview, setAiPreview] = useState('');
+  const [genMs, setGenMs] = useState(null);
   const [manualMode, setManualMode] = useState(!!conversation?.ai_disabled);
   const { business } = useBusiness();
+  const endRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // Sync manualMode when conversation changes
   useEffect(() => {
@@ -184,16 +187,16 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
                 isConsecutive && isUser && "rounded-[4px_18px_18px_4px]",
                 isConsecutive && isRight && "rounded-[18px_4px_4px_18px]",
               )}>
-                <p>{msg.testo}</p>
+                <span className="block">{msg.testo || ''}</span>
                 <div className={cn("flex items-center gap-1 mt-1", isRight ? "justify-end" : "justify-start")}>
                   {isAI && <span className="text-[10px] opacity-70">🤖</span>}
                   {isHuman && <span className="text-[10px] opacity-70">👤</span>}
-                  <p className={cn(
+                  <span className={cn(
                     "text-[11px]",
                     isUser ? "text-muted-foreground" : "text-white/60"
                   )}>
                     {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
-                  </p>
+                  </span>
                 </div>
               </div>
             </div>
@@ -221,10 +224,10 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
       {aiPreview && (
         <div className="px-4 py-3 bg-primary/5 border-t border-primary/20">
           <div className="flex items-center justify-between mb-1.5">
-            <p className="text-[12px] text-primary font-semibold">✨ Risposta AI suggerita:</p>
+            <span className="text-[12px] text-primary font-semibold">✨ Risposta AI suggerita:</span>
             {genMs && <span className="text-[11px] text-muted-foreground">⚡ {genMs}ms</span>}
           </div>
-          <p className="text-[14px] text-foreground bg-secondary rounded-xl p-3 leading-relaxed">{aiPreview}</p>
+          <div className="text-[14px] text-foreground bg-secondary rounded-xl p-3 leading-relaxed">{aiPreview}</div>
           <div className="flex gap-2 mt-2">
             <Button size="sm" onClick={() => handleSend(aiPreview, 'assistant')}>Invia</Button>
             <Button size="sm" variant="outline" onClick={() => setText(aiPreview)}>Modifica</Button>

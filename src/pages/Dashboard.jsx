@@ -177,10 +177,10 @@ export default function Dashboard() {
                 className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 text-xs font-bold text-primary">
-                  {(lead.contact_nome || '?')[0].toUpperCase()}
+                  {(lead.contact_nome || 'L')[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{lead.contact_nome || 'Lead'}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{lead.contact_nome || 'Sconosciuto'}</p>
                   <p className="text-xs text-muted-foreground truncate">{lead.tipo_progetto || 'Non specificato'}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">

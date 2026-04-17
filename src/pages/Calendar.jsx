@@ -199,7 +199,7 @@ function AppointmentCard({ appt, onClick }) {
             <TipoIcon className="w-4 h-4 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{appt.titolo}</p>
+            <p className="text-sm font-semibold text-foreground truncate">{appt.titolo || 'Appuntamento'}</p>
             {appt.contact_nome && (
               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                 <User className="w-3 h-3" /> {appt.contact_nome}

@@ -16,7 +16,7 @@ export default function Inbox() {
   const [readIds, setReadIds] = useState(new Set());
   const [actingOnConv, setActingOnConv] = useState(null); // prevent double archive/delete
 
-  const { data: contacts = [] } = useQuery({
+  const { data: contacts = [], isLoading: loadingContacts } = useQuery({
     queryKey: ['contacts', business?.id],
     queryFn: () => base44.entities.Contact.filter({ business_id: business?.id }),
     enabled: !!business?.id,
@@ -118,6 +118,20 @@ export default function Inbox() {
 
   const unreadTotal = conversations.filter(c => c.unreadCount > 0 && !c.archiviata).length;
 
+  const ConvSkeleton = () => (
+    <div className="space-y-1 p-2">
+      {[1,2,3,4,5].map(i => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3">
+          <div className="w-11 h-11 rounded-full bg-secondary animate-pulse shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3.5 bg-secondary rounded animate-pulse w-3/4" />
+            <div className="h-3 bg-secondary rounded animate-pulse w-1/2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   const FILTER_PILLS = [
     { id: 'tutti', label: 'Tutti' },
     { id: 'instagram', label: '📸 Instagram' },
@@ -160,15 +174,17 @@ export default function Inbox() {
           <div className="w-72 border-r border-white/[0.06] flex flex-col shrink-0">
             <div className="px-3 py-2.5 border-b border-white/[0.06]"><FilterPills /></div>
             <div className="flex-1 overflow-y-auto p-2">
-              <ConversationList
-                conversations={conversations}
-                activeId={activeConv?.contact_id}
-                onSelect={handleSelect}
-                onMarkRead={handleMarkRead}
-                onArchive={handleArchive}
-                onDelete={handleDelete}
-                filter={filter}
-              />
+              {loadingContacts ? <ConvSkeleton /> : (
+                <ConversationList
+                  conversations={conversations}
+                  activeId={activeConv?.contact_id}
+                  onSelect={handleSelect}
+                  onMarkRead={handleMarkRead}
+                  onArchive={handleArchive}
+                  onDelete={handleDelete}
+                  filter={filter}
+                />
+              )}
             </div>
           </div>
           <ChatView
@@ -227,15 +243,17 @@ export default function Inbox() {
               <FilterPills />
             </div>
             <div className="flex-1 overflow-y-auto p-2">
-              <ConversationList
-                conversations={conversations}
-                activeId={null}
-                onSelect={handleSelect}
-                onMarkRead={handleMarkRead}
-                onArchive={handleArchive}
-                onDelete={handleDelete}
-                filter={filter}
-              />
+              {loadingContacts ? <ConvSkeleton /> : (
+                <ConversationList
+                  conversations={conversations}
+                  activeId={null}
+                  onSelect={handleSelect}
+                  onMarkRead={handleMarkRead}
+                  onArchive={handleArchive}
+                  onDelete={handleDelete}
+                  filter={filter}
+                />
+              )}
             </div>
           </div>
         )}

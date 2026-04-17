@@ -70,14 +70,14 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
           "w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-sm font-bold",
           isActive ? "bg-primary text-white" : "bg-secondary text-foreground"
         )}>
-          {(conv.nome || '?')[0].toUpperCase()}
+          {(conv.nome || 'S')[0].toUpperCase()}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0 pr-8">
           <div className="flex items-center justify-between gap-2 mb-0.5">
             <p className={cn("text-[15px] truncate", hasUnread ? "font-bold text-foreground" : "font-medium text-foreground/90")}>
-              {conv.nome}
+              {conv.nome || 'Sconosciuto'}
             </p>
             <span className="text-[11px] text-muted-foreground shrink-0">{formatTime(conv.lastMessageTime)}</span>
           </div>

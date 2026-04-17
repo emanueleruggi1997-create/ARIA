@@ -62,7 +62,8 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         aria_mood: updates.mood !== undefined ? updates.mood : mood,
       });
       setSaved(true);
-      setTimeout(() => setSaved(false), 1500);
+      const t = setTimeout(() => setSaved(false), 1500);
+      return () => clearTimeout(t);
     } catch (err) {
       console.error('[RobotMascot] savePrefs error:', err);
     }
@@ -71,11 +72,13 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   useEffect(() => {
     if (newMessageCount > prevMsgCount.current && prevMsgCount.current > 0) {
       setSpecialAnim('jump');
-      setTimeout(() => setSpecialAnim(null), 1000);
+      const t1 = setTimeout(() => setSpecialAnim(null), 1000);
       if (!panelOpen) {
         setProactiveBubble(`💬 Hai ${newMessageCount} nuov${newMessageCount === 1 ? 'o' : 'i'} messagg${newMessageCount === 1 ? 'io' : 'i'}!`);
-        setTimeout(() => setProactiveBubble(null), 5000);
+        const t2 = setTimeout(() => setProactiveBubble(null), 5000);
+        return () => { clearTimeout(t1); clearTimeout(t2); };
       }
+      return () => clearTimeout(t1);
     }
     prevMsgCount.current = newMessageCount;
   }, [newMessageCount, panelOpen]);
@@ -83,7 +86,9 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   useEffect(() => {
     if (aiResponseCount > prevAiCount.current) {
       setSpecialAnim('spin');
-      setTimeout(() => setSpecialAnim(null), 600);
+      const t = setTimeout(() => setSpecialAnim(null), 600);
+      prevAiCount.current = aiResponseCount;
+      return () => clearTimeout(t);
     }
     prevAiCount.current = aiResponseCount;
   }, [aiResponseCount]);

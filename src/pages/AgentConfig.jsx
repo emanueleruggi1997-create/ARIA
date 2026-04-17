@@ -77,7 +77,8 @@ export default function AgentConfig() {
       await base44.entities.Business.update(business.id, payload);
       await refreshBusiness();
       setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      const t = setTimeout(() => setSaved(false), 2500);
+      return () => clearTimeout(t);
     } catch (err) {
       console.error('[AgentConfig] handleSave error:', err);
     } finally {
@@ -123,10 +124,20 @@ export default function AgentConfig() {
 
         <TabsContent value="cosa-so" className="mt-5">
           <AriaCosaSo form={form} updateField={updateField} />
+          <div className="mt-4 flex justify-end">
+            <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
+              {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva'}
+            </button>
+          </div>
         </TabsContent>
 
         <TabsContent value="comportamento" className="mt-5">
           <AriaComportamento form={form} updateField={updateField} ariaColor={ariaColor} />
+          <div className="mt-4 flex justify-end">
+            <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
+              {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva'}
+            </button>
+          </div>
         </TabsContent>
 
         <TabsContent value="parlami" className="mt-5">
@@ -135,6 +146,11 @@ export default function AgentConfig() {
 
         <TabsContent value="avanzato" className="mt-5">
           <AriaAvanzato form={form} updateField={updateField} business={business} autoSaved={saved} />
+          <div className="mt-4 flex justify-end">
+            <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
+              {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva'}
+            </button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

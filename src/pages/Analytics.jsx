@@ -26,26 +26,28 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function Analytics() {
   const { business } = useBusiness();
 
-  const { data: messages = [] } = useQuery({
+  const { data: messages = [], isLoading: loadingMsgs } = useQuery({
     queryKey: ['analytics-messages', business?.id],
     queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 500),
     enabled: !!business?.id,
     staleTime: 120_000,
   });
 
-  const { data: leads = [] } = useQuery({
+  const { data: leads = [], isLoading: loadingLeads } = useQuery({
     queryKey: ['analytics-leads', business?.id],
     queryFn: () => base44.entities.Lead.filter({ business_id: business?.id }),
     enabled: !!business?.id,
     staleTime: 120_000,
   });
 
-  const { data: appointments = [] } = useQuery({
+  const { data: appointments = [], isLoading: loadingAppts } = useQuery({
     queryKey: ['analytics-appointments', business?.id],
     queryFn: () => base44.entities.Appointment.filter({ business_id: business?.id }),
     enabled: !!business?.id,
     staleTime: 120_000,
   });
+
+  const isLoading = loadingMsgs || loadingLeads || loadingAppts;
 
   // Messages by channel — real weekly buckets (last 4 weeks)
   const channelData = Array.from({ length: 4 }, (_, i) => {
@@ -93,6 +95,9 @@ export default function Analytics() {
   const aiRate = messages.length > 0 ? Math.round((messages.filter(m => m.ruolo === 'assistant').length / messages.length) * 100) : 0;
   const confirmedAppointments = appointments.filter(a => a.stato === 'confermato').length;
   const wonRate = leads.length > 0 ? Math.round((leads.filter(l => l.stato === 'chiuso_vinto').length / leads.length) * 100) : 0;
+  // Ensure no NaN
+  const safeAiRate = isNaN(aiRate) ? 0 : aiRate;
+  const safeWonRate = isNaN(wonRate) ? 0 : wonRate;
 
   const handleExportCSV = () => {
     const rows = [['Tipo', 'Totale'], ['Messaggi', messages.length], ['Lead', leads.length], ['AI Rate', aiRate + '%']];
@@ -102,6 +107,20 @@ export default function Analytics() {
     const a = document.createElement('a');
     a.href = url; a.download = 'analytics.csv'; a.click();
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+        <div className="h-8 w-32 bg-secondary rounded-lg animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          {[1,2,3,4].map(i => <div key={i} className="h-24 bg-secondary rounded-xl animate-pulse" />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[1,2,3].map(i => <div key={i} className="h-64 bg-secondary rounded-xl animate-pulse" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
@@ -113,9 +132,9 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <KpiCard title="AI Response Rate" value={`${aiRate}%`} icon={Zap} />
+        <KpiCard title="AI Response Rate" value={`${safeAiRate}%`} icon={Zap} />
         <KpiCard title="Tempo medio risposta" value="< 30s" icon={Clock} />
-        <KpiCard title="Lead convertiti" value={`${wonRate}%`} icon={TrendingUp} />
+        <KpiCard title="Lead convertiti" value={`${safeWonRate}%`} icon={TrendingUp} />
         <KpiCard title="Appuntamenti confermati" value={confirmedAppointments} icon={Calendar} />
       </div>
 
