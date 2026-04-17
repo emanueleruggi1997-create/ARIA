@@ -150,13 +150,14 @@ export default function Inbox() {
   );
 
   const FILTER_PILLS = [
-    { id: 'tutti', label: 'Tutti' },
-    { id: 'instagram', label: 'Instagram' },
-    { id: 'whatsapp', label: 'WhatsApp' },
-    { id: 'non_letti', label: '🔴 Non letti' },
-    { id: 'archiviati', label: '📦 Archiviati' },
+    { id: 'tutti', label: 'Tutti', icon: null },
+    { id: 'instagram', label: 'Instagram', icon: '📸' },
+    { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+    { id: 'non_letti', label: 'Non letti', icon: '🔴' },
+    { id: 'archiviati', label: 'Archiviati', icon: '📦' },
   ];
 
+  // Desktop filter pills (compact)
   const FilterPills = () => (
     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
       {FILTER_PILLS.map(p => (
@@ -170,9 +171,34 @@ export default function Inbox() {
               : "bg-card text-muted-foreground border-border hover:text-foreground"
           )}
         >
-          {p.label}
+          {p.icon && <span className="mr-1">{p.icon}</span>}{p.label}
         </button>
       ))}
+    </div>
+  );
+
+  // Mobile filter pills (styled like screenshot)
+  const MobileFilterPills = ({ filter, setFilter }) => (
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 14, scrollbarWidth: 'none' }}>
+      {FILTER_PILLS.map(p => {
+        const isActive = filter === p.id;
+        const accentColor = p.id === 'instagram' ? '#E1306C' : p.id === 'whatsapp' ? '#25D366' : p.id === 'non_letti' ? '#FF3860' : '#00C6FF';
+        return (
+          <button key={p.id} onClick={() => setFilter(p.id)} style={{
+            flexShrink: 0, padding: '9px 18px', borderRadius: 50,
+            background: isActive ? 'transparent' : '#111C30',
+            border: isActive ? `2px solid ${accentColor}` : '1px solid #1A2E4A',
+            color: isActive ? '#E8F4FF' : '#5A7A9A',
+            fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+            whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
+            boxShadow: isActive ? `0 0 12px ${accentColor}44` : 'none',
+            transition: 'all 0.2s',
+          }}>
+            {p.icon && <span style={{ fontSize: 14 }}>{p.icon}</span>}
+            {p.label}
+          </button>
+        );
+      })}
     </div>
   );
 
@@ -239,18 +265,25 @@ export default function Inbox() {
           /* Conversation list */
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* Mobile inbox header */}
-            <div className="px-4 pt-4 pb-2 shrink-0">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-baseline gap-2">
-                  <h1 className="text-[24px] font-black text-foreground tracking-tight">In<span className="text-primary">box</span></h1>
-                  {unreadTotal > 0 && <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">{unreadTotal} non letti</span>}
+            <div style={{ padding: '16px 20px 0', background: '#070B14', flexShrink: 0 }}>
+              {/* Top bar: logo + ARIA status */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #7B2FFF, #00C6FF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, boxShadow: '0 0 16px #7B2FFF66' }}>⬡</div>
+                  <span style={{ fontWeight: 900, fontSize: 14, letterSpacing: 1, color: '#5A7A9A' }}>EMARAL</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-green-400" style={{ boxShadow: '0 0 6px #00E5A0' }} />
-                  <span className="text-[11px] text-green-400 font-semibold">ARIA</span>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#00E5A0', boxShadow: '0 0 8px #00E5A0' }} />
+                  <span style={{ fontSize: 12, color: '#00E5A0', fontWeight: 800 }}>ARIA online</span>
                 </div>
               </div>
-              <FilterPills />
+              {/* Big title */}
+              <h1 style={{ fontSize: 36, fontWeight: 900, letterSpacing: -1.5, margin: '0 0 16px', color: '#E8F4FF' }}>
+                In<span style={{ background: 'linear-gradient(90deg, #00C6FF, #7B2FFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>box</span>
+                {unreadTotal > 0 && <span style={{ fontSize: 13, fontWeight: 700, marginLeft: 10, padding: '3px 10px', borderRadius: 20, background: 'rgba(255,56,96,0.15)', color: '#FF3860', verticalAlign: 'middle', WebkitTextFillColor: '#FF3860' }}>{unreadTotal}</span>}
+              </h1>
+              {/* Filter chips */}
+              <MobileFilterPills filter={filter} setFilter={setFilter} />
             </div>
             <div className="flex-1 overflow-y-auto p-2">
               {loadingContacts ? <ConvSkeleton /> : (
