@@ -20,8 +20,16 @@ export default function Admin() {
   const [logFilter, setLogFilter] = useState('Tutti');
   const { user } = useAuth();
 
+  const isAdmin = user?.role === 'admin';
+
+  const { data: businesses = [], isLoading } = useQuery({
+    queryKey: ['admin-businesses'],
+    queryFn: () => base44.entities.Business.list('-created_date'),
+    enabled: isAdmin,
+  });
+
   // Blocca accesso a non-admin
-  if (user?.role !== 'admin') {
+  if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-8">
         <Shield className="w-12 h-12 text-destructive/60" />
@@ -30,11 +38,6 @@ export default function Admin() {
       </div>
     );
   }
-
-  const { data: businesses = [], isLoading } = useQuery({
-    queryKey: ['admin-businesses'],
-    queryFn: () => base44.entities.Business.list('-created_date'),
-  });
 
   const goToLogs = (filter = 'ERROR') => {
     setLogFilter(filter);
