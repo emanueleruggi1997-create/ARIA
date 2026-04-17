@@ -53,6 +53,27 @@ async function processMessage({ base44, entryId, senderId, text }) {
     contact.nome = senderName;
   }
 
+  // Create Lead in CRM if contact is new (no existing lead)
+  try {
+    const existingLeads = await base44.asServiceRole.entities.Lead.filter({
+      business_id: businessId,
+      contact_id: contact.id,
+    });
+    if (!existingLeads.length) {
+      await base44.asServiceRole.entities.Lead.create({
+        business_id: businessId,
+        contact_id: contact.id,
+        contact_nome: contact.nome,
+        canale: 'instagram',
+        stato: 'nuovo',
+        note_ai: `Primo messaggio: "${text.slice(0, 200)}"`,
+      });
+      console.log('[webhookMeta] Lead CRM created for:', contact.nome);
+    }
+  } catch (e) {
+    console.log('[webhookMeta] Lead creation error:', e.message);
+  }
+
   // Save incoming message
   await base44.asServiceRole.entities.Message.create({
     business_id: businessId, contact_id: contact.id,
