@@ -385,22 +385,26 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const entries = body.entry || [];
 
-    const processingPromises = [];
+    // Process messages SEQUENTIALLY to avoid race conditions on lead/contact creation
+    const messages = [];
     for (const entry of entries) {
       for (const event of (entry.messaging || [])) {
         if (!event.message || event.message.is_echo) continue;
         const senderId = event.sender?.id;
         const text = event.message?.text || '';
         if (!senderId || !text) continue;
-        console.log('[webhookMeta] Queuing message from:', senderId);
-        processingPromises.push(
-          processMessage({ base44, entryId: entry.id, senderId, text })
-            .catch(err => console.error('[webhookMeta] Processing error:', err.message))
-        );
+        messages.push({ entryId: entry.id, senderId, text });
       }
     }
 
-    Promise.all(processingPromises).catch(() => {});
+    // Run sequentially — no parallel processing to avoid duplicate contact/lead creation
+    (async () => {
+      for (const msg of messages) {
+        console.log('[webhookMeta] Processing message from:', msg.senderId);
+        await processMessage({ base44, entryId: msg.entryId, senderId: msg.senderId, text: msg.text })
+          .catch(err => console.error('[webhookMeta] Processing error:', err.message));
+      }
+    })();
 
     return Response.json({ ok: true });
   }
