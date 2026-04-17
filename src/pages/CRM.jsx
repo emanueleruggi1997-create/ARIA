@@ -1,199 +1,311 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
-import MobileTabSelect from '@/components/ui/MobileTabSelect';
 import LeadCard from '@/components/crm/LeadCard';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
-import ContactsTab from '@/components/crm/ContactsTab';
 import MailingListTab from '@/components/crm/MailingListTab';
 import EmailCampaignsTab from '@/components/crm/EmailCampaignsTab';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
-const columns = [
-  { id: 'nuovo', label: 'Nuovo', color: 'bg-blue-500' },
-  { id: 'qualificato', label: 'Qualificato', color: 'bg-yellow-500' },
-  { id: 'preventivo_inviato', label: 'Preventivo', color: 'bg-purple-500' },
-  { id: 'chiuso_vinto', label: 'Convertito', color: 'bg-green-500' },
-  { id: 'chiuso_perso', label: 'Perso', color: 'bg-red-500' },
+// ─── Design tokens ───────────────────────────────────────────────
+const C = {
+  bg: '#070B14',
+  surface: '#0D1525',
+  card: '#111C30',
+  border: '#1A2E4A',
+  accent: '#00C6FF',
+  accent2: '#7B2FFF',
+  accent3: '#FF3CAC',
+  gold: '#FFD700',
+  text: '#E8F4FF',
+  muted: '#5A7A9A',
+  success: '#00E5A0',
+  warning: '#FF9500',
+  danger: '#FF3860',
+};
+
+const KANBAN_COLS = [
+  { id: 'nuovo', label: 'Nuovo', color: C.accent },
+  { id: 'qualificato', label: 'Qualificato', color: C.warning },
+  { id: 'preventivo_inviato', label: 'Preventivo', color: C.accent2 },
+  { id: 'chiuso_vinto', label: 'Convertito', color: C.success },
+  { id: 'chiuso_perso', label: 'Perso', color: C.danger },
 ];
 
-function LeadsKanban({ businessId }) {
+// ─── Atom components ─────────────────────────────────────────────
+function StatusDot({ color }) {
+  return (
+    <span style={{
+      display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+      background: color, boxShadow: `0 0 8px ${color}`, flexShrink: 0,
+    }} />
+  );
+}
+
+function Avatar({ initials, size = 36 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      background: `linear-gradient(135deg, ${C.accent2}, ${C.accent})`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.35, fontWeight: 800, color: '#fff', flexShrink: 0,
+      boxShadow: `0 0 12px ${C.accent2}55`,
+    }}>{initials}</div>
+  );
+}
+
+function GlowBtn({ children, onClick, variant = 'primary', small, disabled }) {
+  const styles = {
+    primary: { bg: `linear-gradient(135deg, ${C.accent2}, ${C.accent})`, shadow: C.accent },
+    success: { bg: `linear-gradient(135deg, ${C.success}, #00a87a)`, shadow: C.success },
+    ghost: { bg: 'transparent', border: `1px solid ${C.border}`, shadow: 'transparent' },
+    danger: { bg: `linear-gradient(135deg, ${C.danger}, #c0004e)`, shadow: C.danger },
+  };
+  const s = styles[variant] || styles.primary;
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      background: s.bg, border: s.border || 'none', color: '#fff', fontWeight: 700,
+      fontSize: small ? 12 : 13, padding: small ? '6px 14px' : '10px 20px', borderRadius: 12,
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      boxShadow: s.shadow !== 'transparent' ? `0 0 20px ${s.shadow}44` : 'none',
+      fontFamily: 'inherit', transition: 'all 0.2s', whiteSpace: 'nowrap',
+      opacity: disabled ? 0.5 : 1,
+    }}>
+      {children}
+    </button>
+  );
+}
+
+// ─── ARIA Chat Panel (usa InvokeLLM interno) ─────────────────────
+function ARIAPanel({ onClose, business, stats }) {
+  const [msg, setMsg] = useState('');
+  const [chat, setChat] = useState([
+    { role: 'aria', text: `Ciao! Sono ARIA 🤖 Gestisco i tuoi lead, campagne email e appuntamenti per ${business?.nome || 'il tuo business'}. Come posso aiutarti?` },
+  ]);
+  const [loading, setLoading] = useState(false);
+  const chatRef = useRef(null);
+
+  useEffect(() => { chatRef.current?.scrollTo(0, 9999); }, [chat]);
+
+  const sendMessage = async () => {
+    if (!msg.trim() || loading) return;
+    const userMsg = msg;
+    setMsg('');
+    setChat(c => [...c, { role: 'user', text: userMsg }]);
+    setLoading(true);
+    try {
+      const systemCtx = `Sei ARIA, l'agente AI di "${business?.nome || 'Emaral'}". Gestisci CRM, lead da Instagram e WhatsApp, campagne email e appuntamenti. Rispondi in italiano in modo conciso e professionale. Dati CRM attuali: ${stats.totalLeads} lead totali, ${stats.activeLeads} attivi, ${stats.emailContacts} contatti email, ${stats.campaigns} campagne.`;
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `${systemCtx}\n\nDomanda utente: ${userMsg}`,
+        model: 'gpt_5_mini',
+      });
+      const text = typeof result === 'string' ? result : result?.text || 'Non ho capito, riprova.';
+      setChat(c => [...c, { role: 'aria', text }]);
+    } catch {
+      setChat(c => [...c, { role: 'aria', text: 'Connessione interrotta. Riprova tra poco.' }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000000cc', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div style={{ width: '100%', maxWidth: 520, height: '82vh', background: C.surface, borderRadius: '24px 24px 0 0', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent2}, ${C.accent3})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🤖</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>ARIA — Agente AI</div>
+            <div style={{ fontSize: 11, color: C.success, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <StatusDot color={C.success} /> Online · Collegata al CRM
+            </div>
+          </div>
+          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>×</button>
+        </div>
+        {/* Messages */}
+        <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {chat.map((m, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+              <div style={{
+                maxWidth: '80%', padding: '10px 14px',
+                borderRadius: m.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                background: m.role === 'user' ? `linear-gradient(135deg, ${C.accent2}, ${C.accent})` : C.card,
+                color: C.text, fontSize: 13, lineHeight: 1.5,
+                border: m.role === 'aria' ? `1px solid ${C.border}` : 'none',
+              }}>{m.text}</div>
+            </div>
+          ))}
+          {loading && <div style={{ color: C.muted, fontSize: 12 }}>ARIA sta scrivendo…</div>}
+        </div>
+        {/* Input */}
+        <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 8 }}>
+          <input
+            value={msg}
+            onChange={e => setMsg(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && sendMessage()}
+            placeholder="Chiedi ad ARIA…"
+            style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '10px 14px', color: C.text, fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
+          />
+          <GlowBtn onClick={sendMessage} disabled={loading || !msg.trim()}>↑</GlowBtn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Leads Kanban (full real data) ───────────────────────────────
+function LeadsSection({ businessId, onOpenAria }) {
   const queryClient = useQueryClient();
   const [selectedLead, setSelectedLead] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newLead, setNewLead] = useState({ contact_nome: '', tipo_progetto: '', canale: 'instagram' });
   const [mobileFilter, setMobileFilter] = useState('tutti');
-  const [creatingLead, setCreatingLead] = useState(false);
-  const [movingLeadId, setMovingLeadId] = useState(null);
-  const [deletingLeadId, setDeletingLeadId] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [movingId, setMovingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
-  const { data: leads = [], isLoading: leadsLoading } = useQuery({
+  const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads', businessId],
     queryFn: () => base44.entities.Lead.filter({ business_id: businessId }),
     enabled: !!businessId,
     staleTime: 30_000,
   });
 
-  const invalidateLeads = () => queryClient.invalidateQueries({ queryKey: ['leads', businessId] });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['leads', businessId] });
 
-  const handleUpdateLead = async (id, data) => {
-    await base44.entities.Lead.update(id, data);
-    invalidateLeads();
-    setSelectedLead(null);
+  const handleUpdate = async (id, data) => { await base44.entities.Lead.update(id, data); invalidate(); setSelectedLead(null); };
+  const handleDelete = async (id) => { if (deletingId === id) return; setDeletingId(id); try { await base44.entities.Lead.delete(id); invalidate(); } finally { setDeletingId(null); } };
+  const handleMove = async (lead, stato) => { if (movingId === lead.id) return; setMovingId(lead.id); try { await base44.entities.Lead.update(lead.id, { stato }); invalidate(); } finally { setMovingId(null); } };
+  const handleCreate = async () => {
+    if (!newLead.contact_nome.trim() || creating) return;
+    setCreating(true);
+    try { await base44.entities.Lead.create({ ...newLead, business_id: businessId, stato: 'nuovo' }); invalidate(); setShowCreate(false); setNewLead({ contact_nome: '', tipo_progetto: '', canale: 'instagram' }); }
+    finally { setCreating(false); }
   };
 
-  const handleDeleteLead = async (id) => {
-    if (deletingLeadId === id) return;
-    setDeletingLeadId(id);
-    try {
-      await base44.entities.Lead.delete(id);
-      invalidateLeads();
-    } finally {
-      setDeletingLeadId(null);
-    }
-  };
+  const statusMap = { all: 'all', hot: 'nuovo', warm: 'qualificato', cold: 'preventivo_inviato' };
+  const filteredLeads = leads.filter(l => {
+    const matchStatus = filterStatus === 'all' || l.stato === statusMap[filterStatus] || l.stato === filterStatus;
+    const matchSearch = !search || (l.contact_nome || '').toLowerCase().includes(search.toLowerCase()) || (l.tipo_progetto || '').toLowerCase().includes(search.toLowerCase());
+    return matchStatus && matchSearch;
+  });
 
-  const handleMoveLead = async (lead, newStato) => {
-    if (movingLeadId === lead.id) return;
-    setMovingLeadId(lead.id);
-    try {
-      await base44.entities.Lead.update(lead.id, { stato: newStato });
-      invalidateLeads();
-    } finally {
-      setMovingLeadId(null);
-    }
-  };
+  // Source breakdown from canale
+  const sources = [
+    { src: 'Instagram', count: leads.filter(l => l.canale === 'instagram').length, color: '#E1306C' },
+    { src: 'WhatsApp', count: leads.filter(l => l.canale === 'whatsapp').length, color: '#25D366' },
+  ].filter(s => s.count > 0);
 
-  const handleCreateLead = async () => {
-    if (!newLead.contact_nome.trim() || creatingLead) return;
-    setCreatingLead(true);
-    try {
-      await base44.entities.Lead.create({ ...newLead, business_id: businessId, stato: 'nuovo' });
-      invalidateLeads();
-      setShowCreate(false);
-      setNewLead({ contact_nome: '', tipo_progetto: '', canale: 'instagram' });
-    } finally {
-      setCreatingLead(false);
-    }
-  };
+  if (isLoading) return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {[1,2,3].map(i => <div key={i} style={{ height: 80, background: C.card, borderRadius: 14, animation: 'pulse 1.5s infinite' }} />)}
+    </div>
+  );
 
-  const wonLeads = leads.filter(l => l.stato === 'chiuso_vinto').length;
-  const convRate = leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0;
-  const totalPipeline = leads.reduce((acc, l) => acc + (l.budget_max || l.budget_min || 0), 0);
-
-  if (leadsLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex gap-3">
-          {[1,2,3].map(i => <div key={i} className="h-7 w-28 bg-secondary rounded-lg animate-pulse" />)}
-        </div>
-        <div className="hidden md:flex gap-4">
-          {[1,2,3,4,5].map(i => (
-            <div key={i} className="flex-1 min-w-[180px]">
-              <div className="h-5 bg-secondary rounded animate-pulse mb-3" />
-              <div className="space-y-2">
-                {[1,2].map(j => <div key={j} className="h-20 bg-secondary rounded-xl animate-pulse" />)}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="md:hidden space-y-2">
-          {[1,2,3].map(i => <div key={i} className="h-20 bg-secondary rounded-xl animate-pulse" />)}
-        </div>
-      </div>
-    );
-  }
+  const getInitials = (nome) => (nome || 'NN').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const colColor = (stato) => KANBAN_COLS.find(c => c.id === stato)?.color || C.muted;
 
   return (
-    <div className="space-y-4">
-      {/* Header stats */}
-      <div className="flex flex-wrap items-center gap-4 justify-between">
-        <div className="flex flex-wrap gap-3">
-          <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-lg">{leads.length} lead totali</span>
-          {totalPipeline > 0 && (
-            <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-lg">€{totalPipeline.toLocaleString('it-IT')} pipeline</span>
-          )}
-          <span className="text-xs text-muted-foreground bg-secondary px-2.5 py-1 rounded-lg">{convRate}% conversione</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, color: C.text }}>
+          Lead & <span style={{ color: C.accent }}>Contatti</span>
+        </h2>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <GlowBtn small onClick={() => setShowCreate(true)}>+ Nuovo Lead</GlowBtn>
+          <GlowBtn variant="ghost" small onClick={onOpenAria}>🤖 ARIA import</GlowBtn>
         </div>
-        <Button onClick={() => setShowCreate(true)} size="sm" className="hidden md:flex">
-          <Plus className="w-4 h-4 mr-2" /> Nuovo Lead
-        </Button>
-        <button onClick={() => setShowCreate(true)}
-          className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-primary shadow-lg flex items-center justify-center">
-          <Plus className="w-6 h-6 text-white" />
-        </button>
       </div>
 
-      {leads.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-          <div className="text-5xl mb-4">👥</div>
-          <p className="text-base font-medium text-foreground">Nessun lead ancora</p>
-          <p className="text-sm mt-1 mb-4">I lead appaiono automaticamente quando arrivano nuovi messaggi su Instagram</p>
-          <Button onClick={() => setShowCreate(true)}>
-            <Plus className="w-4 h-4 mr-2" /> Aggiungi manualmente
-          </Button>
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍  Cerca nome o servizio..."
+          style={{ flex: 1, minWidth: 180, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 14px', color: C.text, fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
+        />
+        {['all', 'hot', 'warm', 'cold'].map(s => (
+          <button key={s} onClick={() => setFilterStatus(s)} style={{
+            background: filterStatus === s ? `${C.accent}22` : C.card,
+            border: `1px solid ${filterStatus === s ? C.accent : C.border}`,
+            borderRadius: 10, padding: '8px 14px', color: filterStatus === s ? C.accent : C.muted,
+            fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          }}>
+            {s === 'all' ? 'Tutti' : s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {leads.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
+          <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>Nessun lead ancora</div>
+          <div style={{ fontSize: 13, marginBottom: 16 }}>I lead appaiono quando arrivano messaggi da Instagram o WhatsApp</div>
+          <GlowBtn onClick={() => setShowCreate(true)}>+ Aggiungi manualmente</GlowBtn>
         </div>
-      )}
-
-      {leads.length > 0 && (
+      ) : (
         <>
-          {/* Mobile list */}
-          <div className="md:hidden space-y-3">
-            <Select value={mobileFilter} onValueChange={setMobileFilter}>
-              <SelectTrigger className="w-full bg-secondary border-border"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tutti">Tutti ({leads.length})</SelectItem>
-                {columns.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.label} ({leads.filter(l => l.stato === c.id).length})</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="space-y-2">
-              {leads.filter(l => mobileFilter === 'tutti' || l.stato === mobileFilter).map(lead => {
-                const col = columns.find(c => c.id === lead.stato);
-                return (
-                  <div key={lead.id} className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full shrink-0 ${col?.color || 'bg-muted'}`} />
-                    <div className="flex-1">
-                      <LeadCard lead={lead} onClick={setSelectedLead} onDelete={handleDeleteLead} onMove={handleMoveLead} />
-                    </div>
+          {/* Lead list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {filteredLeads.map(l => (
+              <div key={l.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <Avatar initials={getInitials(l.contact_nome)} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>{l.contact_nome || 'Sconosciuto'}</span>
+                    <StatusDot color={colColor(l.stato)} />
+                    <span style={{ fontSize: 11, color: C.muted }}>
+                      {KANBAN_COLS.find(c => c.id === l.stato)?.label || l.stato}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Desktop Kanban */}
-          <div className="hidden md:flex gap-4 overflow-x-auto pb-4">
-            {columns.map(col => {
-              const colLeads = leads.filter(l => l.stato === col.id);
-              return (
-                <div key={col.id} className="min-w-[220px] flex-1">
-                  <div className="flex items-center gap-2 mb-3 px-1">
-                    <div className={`w-2 h-2 rounded-full ${col.color}`} />
-                    <h3 className="text-sm font-semibold text-foreground">{col.label}</h3>
-                    <span className="text-xs text-muted-foreground ml-auto">{colLeads.length}</span>
-                  </div>
-                  <div className="space-y-2 bg-secondary/30 rounded-xl p-2 min-h-[200px]">
-                    {colLeads.map(lead => (
-                      <LeadCard key={lead.id} lead={lead} onClick={setSelectedLead} onDelete={handleDeleteLead} onMove={handleMoveLead} />
-                    ))}
+                  {l.tipo_progetto && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{l.tipo_progetto}</div>}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                    {l.canale && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: (l.canale === 'instagram' ? '#E1306C' : '#25D366') + '22', color: l.canale === 'instagram' ? '#E1306C' : '#25D366', border: `1px solid ${(l.canale === 'instagram' ? '#E1306C' : '#25D366')}44` }}>
+                        {l.canale === 'instagram' ? 'IG' : 'WA'}
+                      </span>
+                    )}
+                    {l.budget_max && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: C.gold + '22', color: C.gold, border: `1px solid ${C.gold}44` }}>€{l.budget_max.toLocaleString('it-IT')}</span>}
                   </div>
                 </div>
-              );
-            })}
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 11, color: C.muted }}>{l.created_date ? new Date(l.created_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                    <button onClick={() => setSelectedLead(l)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', color: C.muted, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✏</button>
+                    <button onClick={() => handleDelete(l.id)} style={{ background: C.surface, border: `1px solid ${C.danger}44`, borderRadius: 8, padding: '5px 10px', color: C.danger, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
+
+          {/* Sources */}
+          {sources.length > 0 && (
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18 }}>
+              <div style={{ fontWeight: 800, fontSize: 12, color: C.muted, marginBottom: 12, letterSpacing: 1 }}>SORGENTI LEAD</div>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {sources.map(s => (
+                  <div key={s.src} style={{ display: 'flex', alignItems: 'center', gap: 8, background: s.color + '11', borderRadius: 10, padding: '8px 14px', border: `1px solid ${s.color}33` }}>
+                    <span style={{ color: s.color, fontWeight: 800, fontSize: 12 }}>{s.src}</span>
+                    <span style={{ background: s.color, color: '#fff', fontWeight: 800, fontSize: 11, borderRadius: 20, padding: '1px 7px' }}>{s.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
-      <LeadDetailModal lead={selectedLead} open={!!selectedLead} onClose={() => setSelectedLead(null)} onUpdate={handleUpdateLead} />
+      <LeadDetailModal lead={selectedLead} open={!!selectedLead} onClose={() => setSelectedLead(null)} onUpdate={handleUpdate} />
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="bg-card border-border">
@@ -217,8 +329,8 @@ function LeadsKanban({ businessId }) {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleCreateLead} className="w-full" disabled={!newLead.contact_nome.trim() || creatingLead}>
-              {creatingLead ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 inline-block" />Creazione...</> : 'Crea Lead'}
+            <Button onClick={handleCreate} className="w-full" disabled={!newLead.contact_nome.trim() || creating}>
+              {creating ? 'Creazione...' : 'Crea Lead'}
             </Button>
           </div>
         </DialogContent>
@@ -227,9 +339,51 @@ function LeadsKanban({ businessId }) {
   );
 }
 
+// ─── Campaigns wrapper with new UI ───────────────────────────────
+function CampaignsSection({ businessId, onOpenAria }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, color: C.text }}>
+          Email <span style={{ color: C.accent2 }}>Marketing</span>
+        </h2>
+      </div>
+      <EmailCampaignsTab businessId={businessId} />
+    </div>
+  );
+}
+
+function MailingSection({ businessId }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <h2 style={{ margin: 0, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, color: C.text }}>
+        Mailing <span style={{ color: C.success }}>List</span>
+      </h2>
+      <MailingListTab businessId={businessId} />
+    </div>
+  );
+}
+
+// ─── Main CRM page ───────────────────────────────────────────────
+const ARIA_TIPS = [
+  '📊 Analizza i tuoi lead e ottimizza il funnel di conversione',
+  '📧 Usa le campagne email per nurturare i contatti warm',
+  '💡 Suggerisco una follow-up ai lead inattivi da più di 7 giorni',
+  '🔥 Prioritizza i lead "nuovo" che arrivano da Instagram',
+];
+
+const TABS = [
+  { id: 'dashboard', icon: '◈', label: 'Dashboard' },
+  { id: 'leads', icon: '◉', label: 'Lead & CRM' },
+  { id: 'email', icon: '◫', label: 'Email Mkt' },
+  { id: 'mailing', icon: '✉', label: 'Mailing' },
+];
+
 export default function CRM() {
   const { business } = useBusiness();
-  const [crmTab, setCrmTab] = useState('lead');
+  const [tab, setTab] = useState('dashboard');
+  const [ariaOpen, setAriaOpen] = useState(false);
+  const [ariaIdx, setAriaIdx] = useState(0);
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads', business?.id],
@@ -252,41 +406,186 @@ export default function CRM() {
     staleTime: 60_000,
   });
 
-  const activeLeads = (leads || []).filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato)).length;
-  const activeEmailContacts = (emailContacts || []).filter(c => c.stato === 'attivo').length;
+  useEffect(() => {
+    const t = setInterval(() => setAriaIdx(i => (i + 1) % ARIA_TIPS.length), 4000);
+    return () => clearInterval(t);
+  }, []);
+
+  const activeLeads = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato)).length;
+  const hotLeads = leads.filter(l => l.stato === 'nuovo').length;
+  const wonLeads = leads.filter(l => l.stato === 'chiuso_vinto').length;
+  const convRate = leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0;
+  const activeContacts = emailContacts.filter(c => c.stato === 'attivo').length;
+  const sentCampaigns = campaigns.filter(c => c.stato === 'inviata').length;
+  const avgOpen = sentCampaigns > 0
+    ? Math.round(campaigns.filter(c => c.stato === 'inviata').reduce((a, c) => a + (c.destinatari_count > 0 ? Math.round((c.aperture / c.destinatari_count) * 100) : 0), 0) / sentCampaigns)
+    : 0;
+
+  const stats = { totalLeads: leads.length, activeLeads, emailContacts: activeContacts, campaigns: campaigns.length };
+
+  const getInitials = (nome) => (nome || 'NN').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const colColor = (stato) => KANBAN_COLS.find(c => c.id === stato)?.color || C.muted;
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">CRM</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {activeLeads} lead attivi · {activeEmailContacts} contatti email · {campaigns.length} campagne
-        </p>
+    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Sora', 'Inter', sans-serif", color: C.text, position: 'relative', overflowX: 'hidden' }}>
+      {/* BG grid */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, backgroundImage: `linear-gradient(${C.border}22 1px, transparent 1px), linear-gradient(90deg, ${C.border}22 1px, transparent 1px)`, backgroundSize: '40px 40px' }} />
+
+      {/* Header */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 50, background: C.bg + 'ee', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.border}`, padding: '0 20px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 12, height: 56 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${C.accent2}, ${C.accent})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, boxShadow: `0 0 16px ${C.accent2}66` }}>⬡</div>
+            <span style={{ fontWeight: 900, fontSize: 15, letterSpacing: -0.5 }}>CRM</span>
+          </div>
+
+          {/* Desktop tabs */}
+          <div style={{ display: 'flex', gap: 2, marginLeft: 24, flexWrap: 'wrap' }}>
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{
+                background: tab === t.id ? `${C.accent}18` : 'none',
+                border: tab === t.id ? `1px solid ${C.accent}44` : '1px solid transparent',
+                color: tab === t.id ? C.accent : C.muted,
+                padding: '6px 14px', borderRadius: 10, fontWeight: 700, fontSize: 12,
+                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <span>{t.icon}</span><span className="hidden sm:inline">{t.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div style={{ marginLeft: 'auto' }}>
+            <button onClick={() => setAriaOpen(true)} style={{
+              background: `linear-gradient(135deg, ${C.accent2}22, ${C.accent3}22)`,
+              border: `1px solid ${C.accent2}55`, borderRadius: 12, padding: '8px 14px',
+              color: C.text, fontWeight: 800, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', gap: 6, boxShadow: `0 0 20px ${C.accent2}33`,
+            }}>
+              🤖 <span>ARIA</span>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.success, boxShadow: `0 0 8px ${C.success}` }} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <Tabs value={crmTab} onValueChange={setCrmTab}>
-        <MobileTabSelect
-          value={crmTab}
-          onValueChange={setCrmTab}
-          tabs={[
-            { value: 'lead', label: '👥 Lead & Contatti' },
-            { value: 'mailing', label: '📧 Mailing List' },
-            { value: 'campagne', label: '✉️ Campagne Email' },
-          ]}
-        />
+      {/* ARIA tip banner */}
+      <div style={{ background: `linear-gradient(90deg, ${C.accent2}11, ${C.accent}11)`, borderBottom: `1px solid ${C.border}`, padding: '8px 20px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', fontSize: 12, color: C.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: C.accent2, fontWeight: 700 }}>ARIA</span>
+          <span style={{ color: C.accent2 }}>›</span>
+          <span>{ARIA_TIPS[ariaIdx]}</span>
+        </div>
+      </div>
 
-        <TabsContent value="lead" className="mt-4">
-          <LeadsKanban businessId={business?.id} />
-        </TabsContent>
+      {/* Content */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px 96px', position: 'relative', zIndex: 1 }}>
 
-        <TabsContent value="mailing" className="mt-4">
-          <MailingListTab businessId={business?.id} />
-        </TabsContent>
+        {/* ── DASHBOARD ── */}
+        {tab === 'dashboard' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div>
+              <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: -1, margin: 0 }}>
+                Command <span style={{ background: `linear-gradient(90deg, ${C.accent}, ${C.accent2})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Center</span>
+              </h1>
+              <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
+                {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · {business?.nome || ''}
+              </p>
+            </div>
 
-        <TabsContent value="campagne" className="mt-4">
-          <EmailCampaignsTab businessId={business?.id} />
-        </TabsContent>
-      </Tabs>
+            {/* KPIs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
+              {[
+                { label: 'Lead Totali', value: leads.length, delta: `${activeLeads} attivi`, color: C.accent, icon: '◉' },
+                { label: 'Lead Caldi', value: hotLeads, delta: hotLeads > 0 ? '🔥 urgenti' : 'nessuno', color: C.danger, icon: '🔥' },
+                { label: 'Contatti Email', value: activeContacts, delta: `${emailContacts.length} totali`, color: C.success, icon: '✉' },
+                { label: 'Open Rate', value: avgOpen > 0 ? `${avgOpen}%` : '—', delta: `${sentCampaigns} camp. inviate`, color: C.gold, icon: '◈' },
+                { label: 'Conversione', value: `${convRate}%`, delta: `${wonLeads} vinti`, color: C.accent2, icon: '◫' },
+              ].map((k, i) => (
+                <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 20, opacity: 0.15, color: k.color }}>{k.icon}</div>
+                  <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>{k.label.toUpperCase()}</div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: k.color, letterSpacing: -1 }}>{k.value}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{k.delta}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Recent leads + Quick actions */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+                <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: C.accent }}>◉</span> Ultimi Lead
+                </div>
+                {leads.length === 0 && <div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Nessun lead ancora</div>}
+                {leads.slice(0, 4).map(l => (
+                  <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                    <Avatar initials={getInitials(l.contact_nome)} size={30} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.contact_nome || 'Sconosciuto'}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{l.canale || '—'} · {l.created_date ? new Date(l.created_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                    </div>
+                    <StatusDot color={colColor(l.stato)} />
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+                <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: C.accent2 }}>⚡</span> Azioni Rapide
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[
+                    { label: '➕ Vai ai Lead', action: () => setTab('leads'), color: C.accent },
+                    { label: '✉ Email Marketing', action: () => setTab('email'), color: C.accent2 },
+                    { label: '📋 Mailing List', action: () => setTab('mailing'), color: C.success },
+                    { label: '🤖 Chiedi ad ARIA', action: () => setAriaOpen(true), color: C.accent3 },
+                  ].map((a, i) => (
+                    <button key={i} onClick={a.action} style={{
+                      background: a.color + '14', border: `1px solid ${a.color}33`, borderRadius: 10,
+                      padding: '10px 14px', color: a.color, fontSize: 13, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', transition: 'all 0.2s',
+                    }}>{a.label}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === 'leads' && <LeadsSection businessId={business?.id} onOpenAria={() => setAriaOpen(true)} />}
+        {tab === 'email' && <CampaignsSection businessId={business?.id} onOpenAria={() => setAriaOpen(true)} />}
+        {tab === 'mailing' && <MailingSection businessId={business?.id} />}
+      </div>
+
+      {/* Mobile bottom nav */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: C.surface + 'f0', backdropFilter: 'blur(16px)', borderTop: `1px solid ${C.border}`, display: 'flex', padding: '8px 0 12px' }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            flex: 1, background: 'none', border: 'none', color: tab === t.id ? C.accent : C.muted,
+            fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 0',
+          }}>
+            <span style={{ fontSize: 18 }}>{t.icon}</span>
+            <span>{t.label}</span>
+          </button>
+        ))}
+        <button onClick={() => setAriaOpen(true)} style={{
+          flex: 1, background: 'none', border: 'none', color: C.accent3,
+          fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 0',
+        }}>
+          <span style={{ fontSize: 18 }}>🤖</span><span>ARIA</span>
+        </button>
+      </div>
+
+      {/* Modals */}
+      {ariaOpen && <ARIAPanel onClose={() => setAriaOpen(false)} business={business} stats={stats} />}
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800;900&display=swap');
+        * { box-sizing: border-box; }
+      `}</style>
     </div>
   );
 }
