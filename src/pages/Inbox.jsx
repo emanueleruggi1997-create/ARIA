@@ -134,8 +134,8 @@ export default function Inbox() {
 
   const FILTER_PILLS = [
     { id: 'tutti', label: 'Tutti' },
-    { id: 'instagram', label: '📸 Instagram' },
-    { id: 'whatsapp', label: '💬 WhatsApp' },
+    { id: 'instagram', label: 'Instagram' },
+    { id: 'whatsapp', label: 'WhatsApp' },
     { id: 'non_letti', label: '🔴 Non letti' },
     { id: 'archiviati', label: '📦 Archiviati' },
   ];
@@ -147,10 +147,10 @@ export default function Inbox() {
           key={p.id}
           onClick={() => setFilter(p.id)}
           className={cn(
-            "shrink-0 text-[12px] font-medium px-3 py-1.5 rounded-full transition-all whitespace-nowrap",
+            "shrink-0 text-[12px] font-semibold px-3 py-1.5 rounded-full transition-all whitespace-nowrap border",
             filter === p.id
-              ? "bg-primary text-white"
-              : "bg-secondary text-muted-foreground hover:text-foreground"
+              ? "bg-primary/20 text-primary border-primary/40"
+              : "bg-card text-muted-foreground border-border hover:text-foreground"
           )}
         >
           {p.label}
@@ -167,8 +167,12 @@ export default function Inbox() {
           <MessageSquare className="w-5 h-5 text-primary" />
           <h1 className="text-lg font-bold text-foreground">Inbox</h1>
           {unreadTotal > 0 && (
-            <span className="text-[11px] font-semibold text-muted-foreground">{unreadTotal} non letti</span>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">{unreadTotal} non letti</span>
           )}
+          <div className="ml-auto flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-400" style={{ boxShadow: '0 0 6px #00E5A0' }} />
+            <span className="text-[11px] text-green-400 font-semibold">ARIA online</span>
+          </div>
         </div>
         <div className="flex-1 flex overflow-hidden">
           <div className="w-72 border-r border-white/[0.06] flex flex-col shrink-0">
@@ -236,9 +240,15 @@ export default function Inbox() {
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* Mobile inbox header */}
             <div className="px-4 pt-4 pb-2 shrink-0">
-              <div className="flex items-baseline gap-2 mb-3">
-                <h1 className="text-[22px] font-bold text-foreground">Inbox</h1>
-                {unreadTotal > 0 && <span className="text-[13px] text-muted-foreground">{unreadTotal} non letti</span>}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-baseline gap-2">
+                  <h1 className="text-[24px] font-black text-foreground tracking-tight">In<span className="text-primary">box</span></h1>
+                  {unreadTotal > 0 && <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">{unreadTotal} non letti</span>}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-green-400" style={{ boxShadow: '0 0 6px #00E5A0' }} />
+                  <span className="text-[11px] text-green-400 font-semibold">ARIA</span>
+                </div>
               </div>
               <FilterPills />
             </div>

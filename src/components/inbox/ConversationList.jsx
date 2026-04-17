@@ -4,26 +4,29 @@ import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
 import { it } from 'date-fns/locale';
 
-const IgIcon = ({ size = 14 }) => (
+const C = {
+  ig: "#E1306C",
+  wa: "#25D366",
+  accent2: "#7B2FFF",
+  accent: "#00C6FF",
+  border: "#1A2E4A",
+  card: "#111C30",
+  text: "#E8F4FF",
+  muted: "#5A7A9A",
+  danger: "#FF3860",
+};
+
+const IgIcon = ({ size = 10, color = "#fff" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <defs>
-      <radialGradient id="ig-grad2" cx="30%" cy="107%" r="150%">
-        <stop offset="0%" stopColor="#fdf497" />
-        <stop offset="45%" stopColor="#fd5949" />
-        <stop offset="60%" stopColor="#d6249f" />
-        <stop offset="90%" stopColor="#285AEB" />
-      </radialGradient>
-    </defs>
-    <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#ig-grad2)" />
-    <circle cx="12" cy="12" r="4.5" stroke="white" strokeWidth="1.8" fill="none" />
-    <circle cx="17.5" cy="6.5" r="1.2" fill="white" />
+    <rect x="2" y="2" width="20" height="20" rx="5.5" stroke={color} strokeWidth="2"/>
+    <circle cx="12" cy="12" r="4.5" stroke={color} strokeWidth="2"/>
+    <circle cx="17.5" cy="6.5" r="1.2" fill={color}/>
   </svg>
 );
 
-const WaIcon = ({ size = 14 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <rect width="24" height="24" rx="6" fill="#25D366" />
-    <path d="M12 4C7.58 4 4 7.58 4 12c0 1.49.41 2.88 1.13 4.07L4 20l4.1-1.08A7.94 7.94 0 0 0 12 20c4.42 0 8-3.58 8-8s-3.58-8-8-8zm3.9 11.1c-.17.47-1 .9-1.37.93-.37.04-.72.17-2.44-.51-2.05-.82-3.36-2.9-3.46-3.03-.1-.13-.8-1.07-.8-2.04 0-.97.5-1.44.68-1.64.18-.2.38-.25.51-.25.13 0 .26 0 .37.01.12 0 .28-.05.44.34.17.4.57 1.38.62 1.48.05.1.08.22.02.35-.07.13-.1.21-.2.32-.1.1-.2.23-.29.31-.1.09-.2.19-.09.37.11.18.5.82 1.07 1.33.73.65 1.35.85 1.54.94.19.09.3.08.41-.05.11-.13.47-.55.6-.73.12-.18.25-.15.42-.09.17.06 1.09.52 1.28.61.19.09.32.13.37.2.05.08.05.47-.12.94z" fill="white" />
+const WaIcon = ({ size = 10, color = "#fff" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.978-1.413A9.953 9.953 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.93 13.643c-.207.583-1.215 1.114-1.664 1.176-.45.063-.863.088-2.776-.579-2.34-.82-3.83-3.22-3.945-3.368-.113-.147-.927-1.232-.927-2.35s.586-1.666.794-1.895c.208-.229.454-.286.605-.286.152 0 .303.001.436.008.14.007.327-.053.512.39.19.454.644 1.572.7 1.686.057.114.095.247.019.397-.076.15-.114.243-.227.374-.113.132-.238.294-.34.395-.113.113-.23.235-.099.46.132.227.585.965 1.257 1.563.863.767 1.59 1.004 1.817 1.117.227.113.36.094.492-.057.133-.15.569-.664.72-.893.152-.228.303-.19.511-.114.208.076 1.32.623 1.547.737.227.113.378.17.434.265.057.094.057.54-.15 1.124z"/>
   </svg>
 );
 
@@ -35,6 +38,33 @@ function formatTime(dateStr) {
   return format(d, 'd MMM', { locale: it });
 }
 
+function Avatar({ nome, canale, size = 44 }) {
+  const letter = (nome || 'S').replace('@', '').replace('IG_', '')[0]?.toUpperCase() || '?';
+  const isIg = canale === 'instagram';
+  const bgColor = isIg ? `${C.ig}33` : `${C.wa}33`;
+  const borderColor = isIg ? `${C.ig}55` : `${C.wa}55`;
+  const badgeBg = isIg ? C.ig : C.wa;
+  const Icon = isIg ? IgIcon : WaIcon;
+  return (
+    <div style={{ position: 'relative', flexShrink: 0, width: size, height: size }}>
+      <div style={{
+        width: size, height: size, borderRadius: '50%',
+        background: bgColor, border: `2px solid ${borderColor}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontWeight: 900, fontSize: size * 0.38, color: C.text,
+      }}>{letter}</div>
+      <div style={{
+        position: 'absolute', bottom: -2, right: -2,
+        background: badgeBg, borderRadius: '50%',
+        width: 17, height: 17, display: 'flex', alignItems: 'center',
+        justifyContent: 'center', border: `2px solid #070B14`,
+      }}>
+        <Icon size={9} color="#fff" />
+      </div>
+    </div>
+  );
+}
+
 function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -43,9 +73,7 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpen(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
     };
     document.addEventListener('mousedown', handler);
     document.addEventListener('touchstart', handler);
@@ -56,53 +84,48 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
   }, [menuOpen]);
 
   return (
-    <div className="relative">
+    <div className="relative" style={{ borderBottom: `1px solid ${C.border}` }}>
       {/* Row */}
       <div
-        className={cn(
-          "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors",
-          isActive ? "bg-primary/10" : hasUnread ? "bg-secondary/40 hover:bg-secondary/60" : "hover:bg-secondary/30"
-        )}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 13, padding: '13px 48px 13px 16px',
+          cursor: 'pointer', background: isActive ? `${C.accent2}12` : hasUnread ? `${C.accent}08` : 'transparent',
+          transition: 'background 0.15s',
+        }}
         onClick={() => { setMenuOpen(false); onSelect(conv); }}
       >
-        {/* Avatar */}
-        <div className={cn(
-          "w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-sm font-bold",
-          isActive ? "bg-primary text-white" : "bg-secondary text-foreground"
-        )}>
-          {(conv.nome || 'S')[0].toUpperCase()}
-        </div>
+        <Avatar nome={conv.nome} canale={conv.canale} />
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 pr-8">
-          <div className="flex items-center justify-between gap-2 mb-0.5">
-            <p className={cn("text-[15px] truncate", hasUnread ? "font-bold text-foreground" : "font-medium text-foreground/90")}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 3 }}>
+            <p style={{ fontSize: 14, fontWeight: hasUnread ? 800 : 600, color: C.text, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: -0.3 }}>
               {conv.nome || 'Sconosciuto'}
             </p>
-            <span className="text-[11px] text-muted-foreground shrink-0">{formatTime(conv.lastMessageTime)}</span>
+            <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{formatTime(conv.lastMessageTime)}</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            {conv.canale === 'instagram' ? <IgIcon size={13} /> : <WaIcon size={13} />}
-            <p className={cn("text-[13px] truncate", hasUnread ? "text-foreground/80" : "text-muted-foreground")}>
-              {conv.lastMessage || 'Nessun messaggio'}
-            </p>
-          </div>
+          <p style={{
+            fontSize: 12, color: hasUnread ? `${C.text}cc` : C.muted,
+            margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            fontWeight: hasUnread ? 500 : 400,
+          }}>
+            {conv.lastMessage || 'Nessun messaggio'}
+          </p>
         </div>
 
         {hasUnread && (
-          <div className="absolute right-10 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.danger, boxShadow: `0 0 6px ${C.danger}`, flexShrink: 0 }} />
         )}
       </div>
 
-      {/* Menu button — always visible */}
+      {/* Menu button */}
       <div ref={menuRef} className="absolute right-2 top-1/2 -translate-y-1/2 z-20">
         <button
-          className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
+          style={{ width: 32, height: 32, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           onMouseDown={e => e.stopPropagation()}
           onTouchStart={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); setMenuOpen(v => !v); }}
         >
-          <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+          <MoreHorizontal style={{ width: 14, height: 14, color: C.muted }} />
         </button>
 
         {menuOpen && (
@@ -111,22 +134,16 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
             onMouseDown={e => e.stopPropagation()}
             onTouchStart={e => e.stopPropagation()}
           >
-            <button
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
-              onClick={e => { e.stopPropagation(); onMarkRead?.(conv); setMenuOpen(false); }}
-            >
+            <button className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+              onClick={e => { e.stopPropagation(); onMarkRead?.(conv); setMenuOpen(false); }}>
               <CheckCheck className="w-4 h-4" /> Segna come letto
             </button>
-            <button
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
-              onClick={e => { e.stopPropagation(); onArchive?.(conv); setMenuOpen(false); }}
-            >
+            <button className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
+              onClick={e => { e.stopPropagation(); onArchive?.(conv); setMenuOpen(false); }}>
               <Archive className="w-4 h-4" /> Archivia
             </button>
-            <button
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors border-t border-border"
-              onClick={e => { e.stopPropagation(); onDelete?.(conv); setMenuOpen(false); }}
-            >
+            <button className="w-full flex items-center gap-2 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors border-t border-border"
+              onClick={e => { e.stopPropagation(); onDelete?.(conv); setMenuOpen(false); }}>
               <Trash2 className="w-4 h-4" /> Elimina
             </button>
           </div>
