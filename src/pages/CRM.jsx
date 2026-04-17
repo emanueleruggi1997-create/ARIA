@@ -558,24 +558,24 @@ export default function CRM() {
         {tab === 'mailing' && <MailingSection businessId={business?.id} />}
       </div>
 
-      {/* Mobile bottom nav */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: C.surface + 'f0', backdropFilter: 'blur(16px)', borderTop: `1px solid ${C.border}`, display: 'flex', padding: '8px 0 12px' }}>
+      {/* Mobile tab nav (only visible on small screens, sits above app bottom nav) */}
+      <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, zIndex: 40, background: C.surface + 'f0', backdropFilter: 'blur(16px)', borderTop: `1px solid ${C.border}`, display: 'flex', padding: '6px 0 8px' }} className="md:hidden">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             flex: 1, background: 'none', border: 'none', color: tab === t.id ? C.accent : C.muted,
-            fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 0',
+            fontSize: 9, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '3px 0',
           }}>
-            <span style={{ fontSize: 18 }}>{t.icon}</span>
+            <span style={{ fontSize: 16 }}>{t.icon}</span>
             <span>{t.label}</span>
           </button>
         ))}
         <button onClick={() => setAriaOpen(true)} style={{
           flex: 1, background: 'none', border: 'none', color: C.accent3,
-          fontSize: 10, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 0',
+          fontSize: 9, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '3px 0',
         }}>
-          <span style={{ fontSize: 18 }}>🤖</span><span>ARIA</span>
+          <span style={{ fontSize: 16 }}>🤖</span><span>ARIA</span>
         </button>
       </div>
 
