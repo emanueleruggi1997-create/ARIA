@@ -5,6 +5,8 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { it } from 'date-fns/locale';
 
 const C = {
+  bg: "#070B14",
+  surface: "#0D1525",
   ig: "#E1306C",
   wa: "#25D366",
   accent2: "#7B2FFF",
@@ -14,6 +16,8 @@ const C = {
   text: "#E8F4FF",
   muted: "#5A7A9A",
   danger: "#FF3860",
+  success: "#00E5A0",
+  warning: "#FF9500",
 };
 
 const IgIcon = ({ size = 10, color = "#fff" }) => (
@@ -41,23 +45,24 @@ function formatTime(dateStr) {
 function Avatar({ nome, canale, size = 44 }) {
   const letter = (nome || 'S').replace('@', '').replace('IG_', '')[0]?.toUpperCase() || '?';
   const isIg = canale === 'instagram';
-  const bgColor = isIg ? `${C.ig}33` : `${C.wa}33`;
-  const borderColor = isIg ? `${C.ig}55` : `${C.wa}55`;
-  const badgeBg = isIg ? C.ig : C.wa;
   const Icon = isIg ? IgIcon : WaIcon;
+  const srcColor = isIg ? C.ig : C.wa;
   return (
     <div style={{ position: 'relative', flexShrink: 0, width: size, height: size }}>
       <div style={{
         width: size, height: size, borderRadius: '50%',
-        background: bgColor, border: `2px solid ${borderColor}`,
+        background: isIg
+          ? `linear-gradient(135deg, ${C.ig}44, ${C.accent2}44)`
+          : `linear-gradient(135deg, ${C.wa}44, #00a85444)`,
+        border: `2px solid ${srcColor}55`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontWeight: 900, fontSize: size * 0.38, color: C.text,
       }}>{letter}</div>
       <div style={{
         position: 'absolute', bottom: -2, right: -2,
-        background: badgeBg, borderRadius: '50%',
+        background: srcColor, borderRadius: '50%',
         width: 17, height: 17, display: 'flex', alignItems: 'center',
-        justifyContent: 'center', border: `2px solid #070B14`,
+        justifyContent: 'center', border: `2px solid ${C.bg}`,
       }}>
         <Icon size={9} color="#fff" />
       </div>
@@ -89,8 +94,10 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
       <div
         style={{
           display: 'flex', alignItems: 'center', gap: 13, padding: '13px 48px 13px 16px',
-          cursor: 'pointer', background: isActive ? `${C.accent2}12` : hasUnread ? `${C.accent}08` : 'transparent',
+          cursor: 'pointer',
+          background: isActive ? `${C.accent2}14` : hasUnread ? `${C.accent}08` : 'transparent',
           transition: 'background 0.15s',
+          animation: 'fadeInConv 0.3s ease both',
         }}
         onClick={() => { setMenuOpen(false); onSelect(conv); }}
       >
@@ -98,7 +105,7 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 3 }}>
-            <p style={{ fontSize: 14, fontWeight: hasUnread ? 800 : 600, color: C.text, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: -0.3 }}>
+            <p style={{ fontSize: 14, fontWeight: hasUnread ? 900 : 700, color: C.text, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: -0.3 }}>
               {conv.nome || 'Sconosciuto'}
             </p>
             <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{formatTime(conv.lastMessageTime)}</span>
@@ -106,14 +113,14 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
           <p style={{
             fontSize: 12, color: hasUnread ? `${C.text}cc` : C.muted,
             margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            fontWeight: hasUnread ? 500 : 400,
+            fontWeight: hasUnread ? 600 : 400,
           }}>
             {conv.lastMessage || 'Nessun messaggio'}
           </p>
         </div>
 
         {hasUnread && (
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.danger, boxShadow: `0 0 6px ${C.danger}`, flexShrink: 0 }} />
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.danger, boxShadow: `0 0 8px ${C.danger}`, flexShrink: 0 }} />
         )}
       </div>
 
@@ -164,27 +171,30 @@ export default function ConversationList({ conversations, activeId, onSelect, on
 
   if (filtered.length === 0) {
     return (
-      <div className="text-center py-16 text-muted-foreground px-4">
-        <div className="text-4xl mb-3">💬</div>
-        <p className="text-sm font-medium text-foreground">Nessuna conversazione ancora</p>
-        <p className="text-xs mt-1">I messaggi WhatsApp e Instagram appariranno qui</p>
+      <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
+        <div style={{ fontSize: 40, marginBottom: 10 }}>💬</div>
+        <p style={{ fontWeight: 700, color: C.text, marginBottom: 4, fontSize: 14 }}>Nessuna conversazione ancora</p>
+        <p style={{ fontSize: 12 }}>I messaggi WhatsApp e Instagram appariranno qui</p>
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-white/[0.04]">
-      {filtered.map(conv => (
-        <ConvRow
-          key={conv.contact_id}
-          conv={conv}
-          isActive={activeId === conv.contact_id}
-          onSelect={onSelect}
-          onMarkRead={onMarkRead}
-          onArchive={onArchive}
-          onDelete={onDelete}
-        />
-      ))}
-    </div>
+    <>
+      <style>{`@keyframes fadeInConv { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }`}</style>
+      <div>
+        {filtered.map(conv => (
+          <ConvRow
+            key={conv.contact_id}
+            conv={conv}
+            isActive={activeId === conv.contact_id}
+            onSelect={onSelect}
+            onMarkRead={onMarkRead}
+            onArchive={onArchive}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
+    </>
   );
 }
