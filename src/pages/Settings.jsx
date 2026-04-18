@@ -13,19 +13,28 @@ import TabAspetto from '@/components/settings/TabAspetto';
 import ConnectionsErrorBoundary from '@/components/settings/ConnectionsErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
-const TABS = [
+const TABS_IT = [
   { value: 'generale', label: '⚙️ Generale' },
   { value: 'connessioni', label: '🔗 Connessioni' },
   { value: 'piano', label: '💳 Piano' },
   { value: 'notifiche', label: '🔔 Notifiche' },
   { value: 'aspetto', label: '🎨 Aspetto' },
 ];
+const TABS_EN = [
+  { value: 'generale', label: '⚙️ General' },
+  { value: 'connessioni', label: '🔗 Connections' },
+  { value: 'piano', label: '💳 Plan' },
+  { value: 'notifiche', label: '🔔 Notifications' },
+  { value: 'aspetto', label: '🎨 Appearance' },
+];
 
 export default function Settings() {
   const navigate = useNavigate();
   const { isLoadingAuth, isAuthenticated } = useAuth();
   const { business, loading: businessLoading, refreshBusiness } = useBusiness();
+  const { t, lang } = useLang();
   const [metaNotice, setMetaNotice] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('generale');
@@ -133,32 +142,34 @@ export default function Settings() {
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm text-muted-foreground mt-3">Caricamento impostazioni...</p>
+          <p className="text-sm text-muted-foreground mt-3">{t.loading}</p>
         </div>
       </div>
     );
   }
 
+  const TABS = lang === 'en' ? TABS_EN : TABS_IT;
+
   return (
     <div className="px-5 py-5 md:p-6 lg:p-8 space-y-4 md:space-y-6 max-w-2xl">
       {mounted && metaNotice === 'success' && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-sm font-medium">
-          ✓ Account Meta collegato con successo!
+          {t.metaSuccess}
         </div>
       )}
       {mounted && metaNotice === 'error' && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium">
-          ✗ Collegamento Meta non riuscito. Riprova.
+          {t.metaError}
         </div>
       )}
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Impostazioni</h1>
-          {saved && <p className="text-xs text-green-400 mt-0.5">✓ Salvato</p>}
+          <h1 className="text-2xl font-bold text-foreground">{t.settingsTitle}</h1>
+          {saved && <p className="text-xs text-green-400 mt-0.5">{t.saved}</p>}
         </div>
         <Button variant="ghost" className="text-muted-foreground hover:text-destructive text-sm" onClick={() => base44.auth.logout('/')}>
-          <LogOut className="w-4 h-4 mr-2" /> Esci
+          <LogOut className="w-4 h-4 mr-2" /> {t.signOut}
         </Button>
       </div>
 

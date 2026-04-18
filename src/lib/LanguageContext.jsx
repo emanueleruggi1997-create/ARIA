@@ -88,6 +88,13 @@ export const T = {
       { emoji: '👥', title: 'Dimmi dei lead', sub: 'Chi devo seguire adesso?' },
       { emoji: '💡', title: 'Dammi un consiglio', sub: 'Business, marketing, strategia' },
     ],
+    // Settings
+    settingsTitle: 'Impostazioni', saved: '✓ Salvato', loading: 'Caricamento impostazioni...',
+    signOut: 'Esci',
+    tabGenerale: '⚙️ Generale', tabConnessioni: '🔗 Connessioni', tabPiano: '💳 Piano',
+    tabNotifiche: '🔔 Notifiche', tabAspetto: '🎨 Aspetto',
+    metaSuccess: '✓ Account Meta collegato con successo!',
+    metaError: '✗ Collegamento Meta non riuscito. Riprova.',
   },
   en: {
     // Nav
@@ -173,6 +180,13 @@ export const T = {
       { emoji: '👥', title: 'Tell me about leads', sub: 'Who should I follow up with?' },
       { emoji: '💡', title: 'Give me advice', sub: 'Business, marketing, strategy' },
     ],
+    // Settings
+    settingsTitle: 'Settings', saved: '✓ Saved', loading: 'Loading settings...',
+    signOut: 'Sign Out',
+    tabGenerale: '⚙️ General', tabConnessioni: '🔗 Connections', tabPiano: '💳 Plan',
+    tabNotifiche: '🔔 Notifications', tabAspetto: '🎨 Appearance',
+    metaSuccess: '✓ Meta account connected successfully!',
+    metaError: '✗ Meta connection failed. Please try again.',
   },
 };
 
