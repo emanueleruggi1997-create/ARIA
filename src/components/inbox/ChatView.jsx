@@ -4,9 +4,10 @@ import { Switch } from '@/components/ui/switch';
 import { Send, Bot, Sparkles, Loader2, Mail, MoreVertical, Search, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { it, enUS } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 const QUICK_MESSAGES = [
   'Ciao, quanto costa un sito web?',
@@ -15,12 +16,13 @@ const QUICK_MESSAGES = [
   'Siete aperti domani?',
 ];
 
-function DateSeparator({ date }) {
+function DateSeparator({ date, lang }) {
   const d = new Date(date);
+  const locale = lang === 'en' ? enUS : it;
   let label;
-  if (isToday(d)) label = 'Oggi';
-  else if (isYesterday(d)) label = 'Ieri';
-  else label = format(d, 'd MMMM', { locale: it });
+  if (isToday(d)) label = lang === 'en' ? 'Today' : 'Oggi';
+  else if (isYesterday(d)) label = lang === 'en' ? 'Yesterday' : 'Ieri';
+  else label = format(d, 'd MMMM', { locale });
   return (
     <div className="flex items-center justify-center my-4">
       <span className="text-[11px] text-muted-foreground bg-white/[0.06] px-3 py-1 rounded-full">{label}</span>
@@ -50,6 +52,7 @@ export default function ChatView({ conversation, messages, onSendMessage, onRefr
   const [genMs, setGenMs] = useState(null);
   const [manualMode, setManualMode] = useState(!!conversation?.ai_disabled);
   const { business } = useBusiness();
+  const { t, lang } = useLang();
   const endRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -110,7 +113,7 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
         <div className="text-center">
           <Bot className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p className="text-sm">Seleziona una conversazione</p>
+          <p className="text-sm">{t.selectConversation}</p>
         </div>
       </div>
     );
@@ -168,7 +171,7 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
             className="hidden sm:flex"
           >✉ Mailing</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: C.muted }}>
-            <span className="hidden sm:inline">Manuale</span>
+            <span className="hidden sm:inline">{t.manual}</span>
             <Switch checked={manualMode} onCheckedChange={async (val) => {
               setManualMode(val);
               if (conversation?.contact_id) {
@@ -182,12 +185,12 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
       {/* Messages area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10, background: `linear-gradient(180deg, ${C.bg} 0%, ${C.surface} 100%)` }}>
         {messages.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: C.muted, fontSize: 13 }}>Nessun messaggio in questa conversazione</div>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: C.muted, fontSize: 13 }}>{lang === 'en' ? 'No messages in this conversation' : 'Nessun messaggio in questa conversazione'}</div>
         )}
 
         {grouped.map((item, idx) => {
           if (item.type === 'separator') {
-            return <DateSeparator key={item.key} date={item.date} />;
+            return <DateSeparator key={item.key} date={item.date} lang={lang} />;
           }
           const msg = item.msg;
           const isUser = msg.ruolo === 'user';
@@ -220,7 +223,7 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
               )}
               <div style={{ maxWidth: '72%', padding: '10px 14px', fontSize: 13, lineHeight: 1.5, borderRadius: bubbleRadius, background: bubbleBg, color: C.text, border: bubbleBorder }}>
                 {isAI && <div style={{ fontSize: 10, color: C.accent2, fontWeight: 700, marginBottom: 3 }}>ARIA ·</div>}
-                {isHuman && <div style={{ fontSize: 10, color: '#60a5fa', fontWeight: 700, marginBottom: 3 }}>👤 Tu ·</div>}
+                {isHuman && <div style={{ fontSize: 10, color: '#60a5fa', fontWeight: 700, marginBottom: 3 }}>👤 {lang === 'en' ? 'You' : 'Tu'} ·</div>}
                 <span>{msg.testo || ''}</span>
                 <div style={{ fontSize: 10, color: isRight ? 'rgba(255,255,255,0.5)' : C.muted, marginTop: 4, textAlign: isRight ? 'right' : 'left' }}>
                   {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
@@ -235,7 +238,7 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
       {/* Quick messages */}
       {messages.length === 0 && !manualMode && (
         <div style={{ padding: '8px 14px 0', borderTop: `1px solid ${C.border}` }}>
-          <p style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Esempi messaggi cliente:</p>
+          <p style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>{lang === 'en' ? 'Example client messages:' : 'Esempi messaggi cliente:'}</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {QUICK_MESSAGES.map(q => (
               <button key={q} onClick={() => handleSend(q, 'user')}
@@ -256,9 +259,9 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
           </div>
           <div style={{ fontSize: 13, color: C.text, background: C.card, borderRadius: 10, padding: '10px 12px', marginBottom: 8, border: `1px solid ${C.border}` }}>{aiPreview}</div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <Button size="sm" onClick={() => handleSend(aiPreview, 'assistant')}>Invia</Button>
-            <Button size="sm" variant="outline" onClick={() => setText(aiPreview)}>Modifica</Button>
-            <Button size="sm" variant="ghost" onClick={() => setAiPreview('')}>Annulla</Button>
+            <Button size="sm" onClick={() => handleSend(aiPreview, 'assistant')}>{t.send}</Button>
+            <Button size="sm" variant="outline" onClick={() => setText(aiPreview)}>{t.edit}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setAiPreview('')}>{t.cancel}</Button>
           </div>
         </div>
       )}
@@ -271,7 +274,7 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
       }}>
         {manualMode && (
           <div style={{ fontSize: 12, color: '#facc15', background: 'rgba(234,179,8,0.1)', borderRadius: 8, padding: '6px 10px', marginBottom: 8 }}>
-            👤 Modalità manuale attiva — l'AI non risponde automaticamente
+            👤 {t.manualModeActive}
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -296,7 +299,7 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
               value={text}
               onChange={handleTextareaChange}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend(text, 'human'))}
-              placeholder="Rispondi come ARIA..."
+              placeholder={t.replyAsAria}
               rows={1}
               style={{
                 flex: 1, background: 'none', border: 'none', color: C.text, fontSize: 13,

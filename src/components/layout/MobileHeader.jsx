@@ -7,7 +7,7 @@ const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cf
 
 export default function MobileHeader() {
   const { user } = useAuth();
-  const { lang, setLang } = useLang();
+  const { lang, toggleLang } = useLang();
   const initial = (user?.full_name || 'U')[0].toUpperCase();
 
   return (
@@ -18,7 +18,7 @@ export default function MobileHeader() {
       </div>
       <div className="flex items-center gap-2">
         <button
-          onClick={() => setLang(lang === 'it' ? 'en' : 'it')}
+          onClick={toggleLang}
           style={{
             background: 'transparent', border: '1px solid #1A2E4A', color: '#5A7A9A',
             fontSize: 11, fontWeight: 700, padding: '4px 8px', borderRadius: 20,

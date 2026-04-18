@@ -22,8 +22,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
     { path: '/dashboard', icon: LayoutDashboard, label: t.dashboard },
     { path: '/inbox', icon: MessageSquare, label: t.inbox },
     { path: '/crm', icon: Users, label: t.crm },
-    { path: '/calendar', icon: CalendarDays, label: t.agenda },
-    { path: '/agent', icon: null, label: t.aria },
+    { path: '/calendar', icon: CalendarDays, label: t.calendar },
+    { path: '/agent', icon: null, label: t.agent },
     { path: '/analytics', icon: BarChart3, label: t.analytics },
     { path: '/settings', icon: Settings, label: t.settings },
   ];
@@ -107,7 +107,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       {!collapsed && (
         <div className="px-4 pt-2 pb-1">
           <Link to="/legal" className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-            {t.termsPrivacy}
+            {t.termsPrivacy || 'Termini & Privacy'}
           </Link>
         </div>
       )}
@@ -122,7 +122,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               business.stato_agente === 'pausa' ? 'bg-yellow-500' : 'bg-red-500'
             )} />
             <span className="text-xs text-muted-foreground">
-              {business.stato_agente === 'attivo' ? (lang === 'en' ? 'Active' : 'Attivo') : business.stato_agente === 'pausa' ? (lang === 'en' ? 'Paused' : 'In pausa') : 'Off'}
+              {business.stato_agente === 'attivo' ? t.agentActive : business.stato_agente === 'pausa' ? t.agentPaused : t.agentOff}
             </span>
           </div>
         </div>

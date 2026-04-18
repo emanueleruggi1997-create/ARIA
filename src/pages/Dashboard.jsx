@@ -120,16 +120,16 @@ export default function Dashboard() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Link to="/inbox">
-          <KpiCard title={lang === 'en' ? 'Messages today' : 'Messaggi oggi'} value={todayMessages.length} icon={MessageSquare} trend={12} trendLabel={lang === 'en' ? 'vs yesterday' : 'vs ieri'} accent="blue" />
+          <KpiCard title={t.messagesToday} value={todayMessages.length} icon={MessageSquare} trend={12} trendLabel={t.vsYesterday} accent="blue" />
         </Link>
         <Link to="/crm">
-          <KpiCard title={lang === 'en' ? 'Active leads' : 'Lead attivi'} value={activeLeads.length} icon={Users} trend={8} trendLabel={lang === 'en' ? 'this week' : 'questa settimana'} accent="green" />
+          <KpiCard title={t.activeLeads} value={activeLeads.length} icon={Users} trend={8} trendLabel={t.thisWeek} accent="green" />
         </Link>
         <Link to="/calendar">
-          <KpiCard title={lang === 'en' ? 'Appointments' : 'Appuntamenti'} value={upcomingAppointments.length} icon={CalendarDays} accent="purple" />
+          <KpiCard title={t.appointments} value={upcomingAppointments.length} icon={CalendarDays} accent="purple" />
         </Link>
         <Link to="/analytics">
-          <KpiCard title={lang === 'en' ? 'AI Response' : 'Risposta AI'} value={`${aiRate}%`} icon={Zap} trend={5} trendLabel={lang === 'en' ? 'vs last week' : 'vs sett. scorsa'} accent="cyan" />
+          <KpiCard title={t.aiResponse} value={`${aiRate}%`} icon={Zap} trend={5} trendLabel={t.vsLastWeek} accent="cyan" />
         </Link>
       </div>
 
@@ -153,12 +153,12 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <span className="text-xl">📸</span>
             <div>
-              <p className="text-sm font-semibold text-foreground">{lang === 'en' ? 'Instagram not connected' : 'Instagram non connesso'}</p>
-              <p className="text-xs text-muted-foreground">{lang === 'en' ? 'Connect your account to receive DMs' : 'Collega il tuo account per ricevere i DM'}</p>
+              <p className="text-sm font-semibold text-foreground">{t.igNotConnected}</p>
+              <p className="text-xs text-muted-foreground">{t.igNotConnectedDesc}</p>
             </div>
           </div>
           <Link to="/settings?tab=connections" className="shrink-0 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors">
-            {lang === 'en' ? 'Connect →' : 'Connetti →'}
+            {t.connect}
           </Link>
         </div>
       )}
@@ -172,7 +172,7 @@ export default function Dashboard() {
         <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-foreground">{t.latestLeads}</h3>
-            <Link to="/crm" className="text-xs text-primary hover:underline">{lang === 'en' ? 'See all →' : 'Vedi tutti →'}</Link>
+            <Link to="/crm" className="text-xs text-primary hover:underline">{t.seeAll}</Link>
           </div>
           <div className="space-y-2">
             {leads.slice(0, 5).length > 0 ? leads.slice(0, 5).map(lead => (
@@ -200,7 +200,7 @@ export default function Dashboard() {
                 </div>
               </Link>
             )) : (
-              <p className="text-sm text-muted-foreground text-center py-6">{lang === 'en' ? 'No leads yet' : 'Nessun lead ancora'}</p>
+              <p className="text-sm text-muted-foreground text-center py-6">{t.noLeadsYet}</p>
             )}
           </div>
         </div>
@@ -208,8 +208,8 @@ export default function Dashboard() {
         {/* Messaggi non letti */}
         <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-foreground">{lang === 'en' ? 'Unread messages' : 'Messaggi non letti'}</h3>
-            <Link to="/inbox" className="text-xs text-primary hover:underline">{lang === 'en' ? 'Go to inbox →' : 'Vai all\'inbox →'}</Link>
+            <h3 className="text-sm font-semibold text-foreground">{t.unreadMessages}</h3>
+            <Link to="/inbox" className="text-xs text-primary hover:underline">{t.goToInbox}</Link>
           </div>
           <div className="space-y-2">
             {unreadMessages.slice(0, 3).length > 0 ? unreadMessages.slice(0, 3).map(msg => (
@@ -230,7 +230,7 @@ export default function Dashboard() {
                 </span>
               </Link>
             )) : (
-              <p className="text-sm text-muted-foreground text-center py-6">{lang === 'en' ? 'No unread messages 🎉' : 'Nessun messaggio non letto 🎉'}</p>
+              <p className="text-sm text-muted-foreground text-center py-6">{t.noUnread}</p>
             )}
           </div>
         </div>

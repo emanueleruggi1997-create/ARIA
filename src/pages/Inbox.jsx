@@ -7,9 +7,11 @@ import ChatView from '@/components/inbox/ChatView';
 import ContactSidebar from '@/components/inbox/ContactSidebar';
 import { MessageSquare, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 export default function Inbox() {
   const { business } = useBusiness();
+  const { t, lang } = useLang();
   const queryClient = useQueryClient();
   const [activeConv, setActiveConv] = useState(null);
   const [filter, setFilter] = useState('tutti');
@@ -150,11 +152,11 @@ export default function Inbox() {
   );
 
   const FILTER_PILLS = [
-    { id: 'tutti', label: 'Tutti', icon: null },
+    { id: 'tutti', label: lang === 'en' ? 'All' : 'Tutti', icon: null },
     { id: 'instagram', label: 'Instagram', icon: '📸' },
     { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
-    { id: 'non_letti', label: 'Non letti', icon: '🔴' },
-    { id: 'archiviati', label: 'Archiviati', icon: '📦' },
+    { id: 'non_letti', label: lang === 'en' ? 'Unread' : 'Non letti', icon: '🔴' },
+    { id: 'archiviati', label: lang === 'en' ? 'Archived' : 'Archiviati', icon: '📦' },
   ];
 
   // Desktop filter pills (horizontal row)
@@ -211,13 +213,13 @@ export default function Inbox() {
         <div className="h-16 px-6 flex items-center border-b border-white/[0.06] shrink-0 gap-3">
           <MessageSquare className="w-5 h-5 text-primary" />
           <h1 className="text-lg font-bold text-foreground">Inbox</h1>
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-muted-foreground">{conversations.filter(c => !c.archiviata).length} conversazioni</span>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-muted-foreground">{conversations.filter(c => !c.archiviata).length} {t.conversations}</span>
           {unreadTotal > 0 && (
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">{unreadTotal} non letti</span>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">{unreadTotal} {t.unread}</span>
           )}
           <div className="ml-auto flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-400" style={{ boxShadow: '0 0 6px #00E5A0' }} />
-            <span className="text-[11px] text-green-400 font-semibold">ARIA online</span>
+            <span className="text-[11px] text-green-400 font-semibold">{t.ariaOnline}</span>
           </div>
         </div>
         <div className="flex-1 flex overflow-hidden">
@@ -279,7 +281,7 @@ export default function Inbox() {
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#00E5A0', boxShadow: '0 0 8px #00E5A0' }} />
-                  <span style={{ fontSize: 12, color: '#00E5A0', fontWeight: 800 }}>ARIA online</span>
+                  <span style={{ fontSize: 12, color: '#00E5A0', fontWeight: 800 }}>{t.ariaOnline}</span>
                 </div>
               </div>
               {/* Big title */}

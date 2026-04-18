@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { CheckCheck, Archive, Trash2, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { it, enUS } from 'date-fns/locale';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 const C = {
   bg: "#070B14",
@@ -34,12 +35,13 @@ const WaIcon = ({ size = 10, color = "#fff" }) => (
   </svg>
 );
 
-function formatTime(dateStr) {
+function formatTime(dateStr, lang) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
+  const locale = lang === 'en' ? enUS : it;
   if (isToday(d)) return format(d, 'HH:mm');
-  if (isYesterday(d)) return 'Ieri';
-  return format(d, 'd MMM', { locale: it });
+  if (isYesterday(d)) return lang === 'en' ? 'Yesterday' : 'Ieri';
+  return format(d, 'd MMM', { locale });
 }
 
 function Avatar({ nome, canale, size = 44 }) {
@@ -74,6 +76,7 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const hasUnread = conv.unreadCount > 0;
+  const { lang } = useLang();
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -108,7 +111,7 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
             <p style={{ fontSize: 14, fontWeight: hasUnread ? 900 : 700, color: C.text, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: -0.3 }}>
               {conv.nome || 'Sconosciuto'}
             </p>
-            <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{formatTime(conv.lastMessageTime)}</span>
+            <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{formatTime(conv.lastMessageTime, lang)}</span>
           </div>
           <p style={{
             fontSize: 12, color: hasUnread ? `${C.text}cc` : C.muted,
@@ -143,15 +146,15 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
           >
             <button className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
               onClick={e => { e.stopPropagation(); onMarkRead?.(conv); setMenuOpen(false); }}>
-              <CheckCheck className="w-4 h-4" /> Segna come letto
+              <CheckCheck className="w-4 h-4" /> {lang === 'en' ? 'Mark as read' : 'Segna come letto'}
             </button>
             <button className="w-full flex items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-secondary transition-colors"
               onClick={e => { e.stopPropagation(); onArchive?.(conv); setMenuOpen(false); }}>
-              <Archive className="w-4 h-4" /> Archivia
+              <Archive className="w-4 h-4" /> {lang === 'en' ? 'Archive' : 'Archivia'}
             </button>
             <button className="w-full flex items-center gap-2 px-4 py-3 text-sm text-destructive hover:bg-destructive/10 transition-colors border-t border-border"
               onClick={e => { e.stopPropagation(); onDelete?.(conv); setMenuOpen(false); }}>
-              <Trash2 className="w-4 h-4" /> Elimina
+              <Trash2 className="w-4 h-4" /> {lang === 'en' ? 'Delete' : 'Elimina'}
             </button>
           </div>
         )}
@@ -161,6 +164,7 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
 }
 
 export default function ConversationList({ conversations, activeId, onSelect, onMarkRead, onArchive, onDelete, filter }) {
+  const { t } = useLang();
   const filtered = conversations.filter(c => {
     if (filter === 'archiviati') return c.archiviata;
     if (filter === 'whatsapp') return c.canale === 'whatsapp' && !c.archiviata;
@@ -173,8 +177,8 @@ export default function ConversationList({ conversations, activeId, onSelect, on
     return (
       <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
         <div style={{ fontSize: 40, marginBottom: 10 }}>💬</div>
-        <p style={{ fontWeight: 700, color: C.text, marginBottom: 4, fontSize: 14 }}>Nessuna conversazione ancora</p>
-        <p style={{ fontSize: 12 }}>I messaggi WhatsApp e Instagram appariranno qui</p>
+        <p style={{ fontWeight: 700, color: C.text, marginBottom: 4, fontSize: 14 }}>{t.noConversations}</p>
+        <p style={{ fontSize: 12 }}>{t.noConversationsDesc}</p>
       </div>
     );
   }

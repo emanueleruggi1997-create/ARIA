@@ -10,10 +10,10 @@ import DashboardBgPreview from '@/components/settings/DashboardBgPreview';
 import { useLang } from '@/lib/LanguageContext.jsx';
 
 function LangToggle() {
-  const { lang, setLang } = useLang();
+  const { lang, toggleLang } = useLang();
   return (
     <button
-      onClick={() => setLang(lang === 'it' ? 'en' : 'it')}
+      onClick={toggleLang}
       style={{
         background: 'transparent', border: '1px solid #1A2E4A', color: '#5A7A9A',
         fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 20,

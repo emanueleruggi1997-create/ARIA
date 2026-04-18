@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { useLang } from '@/lib/LanguageContext.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,22 +10,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, CalendarDays, Clock, User, CheckCircle2, XCircle, Circle, Phone, Video, Briefcase } from 'lucide-react';
 import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { it, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import AvailabilityPanel from '@/components/calendar/AvailabilityPanel';
 
-const STATI = {
-  in_attesa: { label: 'In attesa', color: 'text-yellow-400', bg: 'bg-yellow-400/10', icon: Circle },
-  confermato: { label: 'Confermato', color: 'text-green-400', bg: 'bg-green-400/10', icon: CheckCircle2 },
-  completato: { label: 'Completato', color: 'text-blue-400', bg: 'bg-blue-400/10', icon: CheckCircle2 },
-  annullato: { label: 'Annullato', color: 'text-red-400', bg: 'bg-red-400/10', icon: XCircle },
+const STATI_CONFIG = {
+  in_attesa: { color: 'text-yellow-400', bg: 'bg-yellow-400/10', icon: Circle },
+  confermato: { color: 'text-green-400', bg: 'bg-green-400/10', icon: CheckCircle2 },
+  completato: { color: 'text-blue-400', bg: 'bg-blue-400/10', icon: CheckCircle2 },
+  annullato: { color: 'text-red-400', bg: 'bg-red-400/10', icon: XCircle },
 };
 
-const TIPI = {
-  chiamata: { label: 'Chiamata', icon: Phone },
-  riunione: { label: 'Riunione', icon: Video },
-  servizio: { label: 'Servizio', icon: Briefcase },
-  altro: { label: 'Altro', icon: CalendarDays },
+const TIPI_ICONS = {
+  chiamata: Phone, riunione: Video, servizio: Briefcase, altro: CalendarDays,
 };
 
 const EMPTY_FORM = {
@@ -42,6 +40,7 @@ function AppointmentModal({ open, onClose, appointment, businessId, contacts, on
   const isEdit = !!appointment?.id;
   const [form, setForm] = useState(appointment || EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const { t } = useLang();
 
   // Reset when appointment changes
   React.useEffect(() => {
@@ -76,63 +75,63 @@ function AppointmentModal({ open, onClose, appointment, businessId, contacts, on
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-card border-border max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Modifica Appuntamento' : 'Nuovo Appuntamento'}</DialogTitle>
+          <DialogTitle>{isEdit ? t.editAppointment : t.newAppointment}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label className="text-xs text-muted-foreground">Titolo *</Label>
+            <Label className="text-xs text-muted-foreground">{t.titleField}</Label>
             <Input value={form.titolo} onChange={e => set('titolo', e.target.value)} placeholder="Es: Consulenza Instagram" className="mt-1 bg-secondary border-border" />
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">Cliente</Label>
+            <Label className="text-xs text-muted-foreground">{t.clientField}</Label>
             {contacts.length > 0 ? (
               <Select value={form.contact_nome || ''} onValueChange={v => set('contact_nome', v)}>
                 <SelectTrigger className="mt-1 bg-secondary border-border">
-                  <SelectValue placeholder="Seleziona contatto (opzionale)" />
+                  <SelectValue placeholder={t.selectContact} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>Nessun contatto</SelectItem>
+                  <SelectItem value={null}>{t.noContact}</SelectItem>
                   {contacts.map(c => (
                     <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             ) : (
-              <Input value={form.contact_nome} onChange={e => set('contact_nome', e.target.value)} placeholder="Nome cliente" className="mt-1 bg-secondary border-border" />
+              <Input value={form.contact_nome} onChange={e => set('contact_nome', e.target.value)} placeholder={t.clientField} className="mt-1 bg-secondary border-border" />
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-muted-foreground">Data *</Label>
+              <Label className="text-xs text-muted-foreground">{t.dateField}</Label>
               <Input type="date" value={form.data} onChange={e => set('data', e.target.value)} className="mt-1 bg-secondary border-border" />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Ora</Label>
+              <Label className="text-xs text-muted-foreground">{t.timeField}</Label>
               <Input type="time" value={form.ora} onChange={e => set('ora', e.target.value)} className="mt-1 bg-secondary border-border" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-muted-foreground">Tipo</Label>
+              <Label className="text-xs text-muted-foreground">{t.typeField}</Label>
               <Select value={form.tipo} onValueChange={v => set('tipo', v)}>
                 <SelectTrigger className="mt-1 bg-secondary border-border"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(TIPI).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  {['chiamata','riunione','servizio','altro'].map(k => (
+                    <SelectItem key={k} value={k}>{t[k]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Stato</Label>
+              <Label className="text-xs text-muted-foreground">{t.statusField}</Label>
               <Select value={form.stato} onValueChange={v => set('stato', v)}>
                 <SelectTrigger className="mt-1 bg-secondary border-border"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(STATI).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  {['in_attesa','confermato','completato','annullato'].map(k => (
+                    <SelectItem key={k} value={k}>{t[k === 'in_attesa' ? 'inAttesa' : k]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -140,8 +139,8 @@ function AppointmentModal({ open, onClose, appointment, businessId, contacts, on
           </div>
 
           <div>
-            <Label className="text-xs text-muted-foreground">Note</Label>
-            <Input value={form.note} onChange={e => set('note', e.target.value)} placeholder="Note aggiuntive..." className="mt-1 bg-secondary border-border" />
+            <Label className="text-xs text-muted-foreground">{t.notesField}</Label>
+            <Input value={form.note} onChange={e => set('note', e.target.value)} placeholder={t.notesPlaceholder} className="mt-1 bg-secondary border-border" />
           </div>
 
           <div className="flex gap-2">
@@ -158,11 +157,11 @@ function AppointmentModal({ open, onClose, appointment, businessId, contacts, on
                 disabled={saving}
                 className="flex-1"
               >
-                🗑️ Elimina definitivamente
+                {t.deleteForever}
               </Button>
             )}
             <Button onClick={handleSave} disabled={!form.titolo.trim() || !form.data || saving} className="flex-1">
-              {saving ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 inline-block" />Salvataggio...</> : (isEdit ? 'Salva modifiche' : 'Crea appuntamento')}
+              {saving ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2 inline-block" />{t.saving}</> : (isEdit ? t.saveChanges : t.createAppointment)}
             </Button>
           </div>
         </div>
@@ -172,17 +171,19 @@ function AppointmentModal({ open, onClose, appointment, businessId, contacts, on
 }
 
 function AppointmentCard({ appt, onClick }) {
-  const stato = STATI[appt.stato] || STATI.in_attesa;
-  const tipo = TIPI[appt.tipo] || TIPI.altro;
-  const TipoIcon = tipo.icon;
-  const StatoIcon = stato.icon;
+  const { t, lang } = useLang();
+  const statoConfig = STATI_CONFIG[appt.stato] || STATI_CONFIG.in_attesa;
+  const TipoIcon = TIPI_ICONS[appt.tipo] || TIPI_ICONS.altro;
+  const StatoIcon = statoConfig.icon;
+  const statoLabel = t[appt.stato === 'in_attesa' ? 'inAttesa' : appt.stato] || appt.stato;
+  const dateLocale = lang === 'en' ? enUS : it;
 
   const dateLabel = () => {
     if (!appt.data) return '';
     const d = parseISO(appt.data);
-    if (isToday(d)) return 'Oggi';
-    if (isTomorrow(d)) return 'Domani';
-    return format(d, 'd MMM', { locale: it });
+    if (isToday(d)) return t.todayLabel;
+    if (isTomorrow(d)) return t.tomorrowLabel;
+    return format(d, 'd MMM', { locale: dateLocale });
   };
 
   return (
@@ -217,9 +218,9 @@ function AppointmentCard({ appt, onClick }) {
             </div>
           </div>
         </div>
-        <span className={cn('flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full shrink-0', stato.color, stato.bg)}>
+        <span className={cn('flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full shrink-0', statoConfig.color, statoConfig.bg)}>
           <StatoIcon className="w-3 h-3" />
-          {stato.label}
+          {statoLabel}
         </span>
       </div>
       {appt.note && <p className="text-xs text-muted-foreground mt-2 truncate">{appt.note}</p>}
@@ -229,6 +230,8 @@ function AppointmentCard({ appt, onClick }) {
 
 export default function Calendar() {
   const { business } = useBusiness();
+  const { t, lang } = useLang();
+  const dateLocale = lang === 'en' ? enUS : it;
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState(null);
@@ -287,13 +290,13 @@ export default function Calendar() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t.agenda}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {today.length} oggi · {upcoming.length} in programma
+            {today.length} {t.todayLabel.toLowerCase()} · {upcoming.length} {lang === 'en' ? 'scheduled' : 'in programma'}
           </p>
         </div>
         <Button onClick={handleNew} className="hidden md:flex">
-          <Plus className="w-4 h-4 mr-2" /> Nuovo Appuntamento
+          <Plus className="w-4 h-4 mr-2" /> {t.newAppointment}
         </Button>
         <button
           onClick={handleNew}
@@ -305,7 +308,7 @@ export default function Calendar() {
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap">
-        {[['tutti', 'Tutti'], ['in_attesa', 'In attesa'], ['confermato', 'Confermati'], ['completato', 'Completati'], ['annullato', 'Annullati']].map(([val, label]) => (
+        {[['tutti', t.filterAll], ['in_attesa', t.filterPending], ['confermato', t.filterConfirmed], ['completato', t.filterCompleted], ['annullato', t.filterCancelled]].map(([val, label]) => (
           <button
             key={val}
             onClick={() => setFilterStato(val)}
@@ -327,17 +330,17 @@ export default function Calendar() {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
           <CalendarDays className="w-12 h-12 mb-4 opacity-20" />
-          <p className="text-base font-medium text-foreground">Nessun appuntamento</p>
-          <p className="text-sm mt-1 mb-4">Aggiungi il primo appuntamento per iniziare</p>
-          <Button onClick={handleNew}><Plus className="w-4 h-4 mr-2" /> Crea appuntamento</Button>
+          <p className="text-base font-medium text-foreground">{t.noAppointments}</p>
+          <p className="text-sm mt-1 mb-4">{t.addFirstAppointment}</p>
+          <Button onClick={handleNew}><Plus className="w-4 h-4 mr-2" /> {t.createAppointment}</Button>
         </div>
       ) : (
         <div className="space-y-6">
           {sortedDates.map(dateKey => {
             const d = dateKey !== 'senza_data' ? parseISO(dateKey) : null;
             const label = d
-              ? isToday(d) ? '📅 Oggi' : isTomorrow(d) ? '📅 Domani' : `📅 ${format(d, 'EEEE d MMMM', { locale: it })}`
-              : 'Senza data';
+              ? isToday(d) ? `📅 ${t.todayLabel}` : isTomorrow(d) ? `📅 ${t.tomorrowLabel}` : `📅 ${format(d, 'EEEE d MMMM', { locale: dateLocale })}`
+              : (lang === 'en' ? 'No date' : 'Senza data');
             return (
               <div key={dateKey}>
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{label}</h3>

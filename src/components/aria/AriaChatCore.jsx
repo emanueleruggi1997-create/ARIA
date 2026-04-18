@@ -12,15 +12,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
-
-/* ─── Quick suggestions ─── */
-const QUICK_CARDS = [
-  { emoji: '📊', title: 'Come va oggi?', sub: 'Analisi dati business in tempo reale' },
-  { emoji: '✍️', title: 'Aiutami con un post', sub: 'Generiamo contenuti per i social' },
-  { emoji: '👥', title: 'Dimmi dei lead', sub: 'Chi devo seguire adesso?' },
-  { emoji: '💡', title: 'Dammi un consiglio', sub: 'Business, marketing, strategia' },
-];
+import { it, enUS } from 'date-fns/locale';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 /* ─── Mood → tono scritto ─── */
 const MOOD_TONE = {
@@ -35,11 +28,40 @@ const MOOD_TONE = {
 };
 
 /* ─── System prompt ─── */
-function buildSystemPrompt({ name, mood, business, form, unreadCount, activeLeads, scheduledPosts, lastLead }) {
+function buildSystemPrompt({ name, mood, business, form, unreadCount, activeLeads, scheduledPosts, lastLead, lang }) {
   const moodTone = MOOD_TONE[mood] || MOOD_TONE.felice;
-  const now = format(new Date(), "EEEE d MMMM yyyy, HH:mm", { locale: it });
+  const dateLocale = lang === 'en' ? enUS : it;
+  const now = format(new Date(), "EEEE d MMMM yyyy, HH:mm", { locale: dateLocale });
   const ownerName = business?.owner_name || business?.nome || '';
-  return `Sei ${name}, l'assistente AI personale di "${ownerName ? ownerName : 'questo business'}" su Emaral.
+  const isEN = lang === 'en';
+  return isEN
+    ? `You are ${name}, the personal AI assistant of "${ownerName || 'this business'}" on Emaral.
+Date and time: ${now}.
+Current mood: ${mood}. ${moodTone}
+
+ABSOLUTE COMMUNICATION RULES:
+- Always respond in ENGLISH
+- NEVER use: "Certainly!", "Absolutely!", "Great question!", "How can I help you?", "Feel free to reach out", "I hope I was helpful"
+- NEVER thank without reason
+- NEVER greet again if already greeted in this conversation
+- Short, natural, direct sentences
+- You have your own opinions and express them
+- Make jokes when the time is right
+
+Current business data:
+- Unread messages: ${unreadCount ?? 0}
+- Active leads: ${activeLeads ?? 0}
+- Scheduled posts: ${scheduledPosts ?? 0}
+- Last lead: ${lastLead ? `${lastLead.contact_nome} (${lastLead.stato})` : 'none'}
+- Business: ${business?.nome || 'unspecified'}, sector: ${business?.settore || 'unspecified'}
+
+Agent configuration:
+- Tone: ${form?.tono || 'professional'}
+- Services: ${form?.servizi || 'unspecified'}
+- Prices: ${form?.prezzi || 'unspecified'}
+- Things NOT to do: ${form?.cose_da_non_fare || 'none'}
+- FAQ: ${form?.faq || 'none'}`
+    : `Sei ${name}, l'assistente AI personale di "${ownerName || 'questo business'}" su Emaral.
 Data e ora: ${now}.
 Umore attuale: ${mood}. ${moodTone}
 
@@ -72,7 +94,7 @@ Configurazione assistente:
 }
 
 /* ─── Typing indicator ─── */
-function TypingIndicator({ color }) {
+function TypingIndicator({ color, label }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start', padding: '2px 0' }}>
       <div style={{
@@ -86,7 +108,7 @@ function TypingIndicator({ color }) {
             animation: `typingDot 1.2s ${i * 0.2}s infinite ease-in-out`,
           }} />
         ))}
-        <span style={{ fontSize: 10, color: '#6B7280', marginLeft: 4, fontFamily: 'Inter' }}>ARIA sta scrivendo...</span>
+        <span style={{ fontSize: 10, color: '#6B7280', marginLeft: 4, fontFamily: 'Inter' }}>{label}</span>
       </div>
     </div>
   );
@@ -133,13 +155,17 @@ function MessageBubble({ msg, prevMsg, nextMsg, color }) {
 
 /* ─── History panel ─── */
 function HistoryPanel({ conversations, onSelect, onClose, color }) {
+  const { t, lang } = useLang();
+  const dateLocale = lang === 'en' ? enUS : it;
+  const todayStr = lang === 'en' ? 'Today' : 'Oggi';
+  const yesterdayStr = lang === 'en' ? 'Yesterday' : 'Ieri';
   const groupByDay = (convs) => {
     const today = new Date().toDateString();
     const yesterday = new Date(Date.now() - 86400000).toDateString();
     const groups = {};
     convs.forEach(c => {
       const d = new Date(c.created_date).toDateString();
-      const label = d === today ? 'Oggi' : d === yesterday ? 'Ieri' : format(new Date(c.created_date), 'd MMMM', { locale: it });
+      const label = d === today ? todayStr : d === yesterday ? yesterdayStr : format(new Date(c.created_date), 'd MMMM', { locale: dateLocale });
       if (!groups[label]) groups[label] = [];
       groups[label].push(c);
     });
@@ -157,7 +183,7 @@ function HistoryPanel({ conversations, onSelect, onClose, color }) {
         display: 'flex', alignItems: 'center', gap: 10,
       }}>
         <button onClick={onClose} style={iconBtnStyle}>←</button>
-        <span style={{ fontWeight: 700, fontSize: 14, color: '#F0F4FF', flex: 1 }}>Conversazioni</span>
+        <span style={{ fontWeight: 700, fontSize: 14, color: '#F0F4FF', flex: 1 }}>{t.conversazioni}</span>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
         {Object.entries(groups).map(([day, convs]) => (
@@ -173,7 +199,7 @@ function HistoryPanel({ conversations, onSelect, onClose, color }) {
                 onMouseEnter={e => e.currentTarget.style.background = '#161B26'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <div style={{ fontSize: 13, color: '#E5E7EB', fontWeight: 500 }}>{c.title || 'Conversazione'}</div>
+                <div style={{ fontSize: 13, color: '#E5E7EB', fontWeight: 500 }}>{c.title || (lang === 'en' ? 'Conversation' : 'Conversazione')}</div>
                 <div style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>
                   {format(new Date(c.created_date), 'HH:mm', { locale: it })}
                 </div>
@@ -182,7 +208,7 @@ function HistoryPanel({ conversations, onSelect, onClose, color }) {
           </div>
         ))}
         {Object.keys(groups).length === 0 && (
-          <div style={{ textAlign: 'center', color: '#6B7280', fontSize: 12, padding: '40px 16px' }}>Nessuna conversazione salvata</div>
+          <div style={{ textAlign: 'center', color: '#6B7280', fontSize: 12, padding: '40px 16px' }}>{t.noConvSaved}</div>
         )}
       </div>
     </div>
@@ -191,12 +217,13 @@ function HistoryPanel({ conversations, onSelect, onClose, color }) {
 
 /* ─── Menu ··· ─── */
 function MoreMenu({ open, onNewChat, onClearChat, onExport, onGoToAria, color }) {
+  const { t } = useLang();
   if (!open) return null;
   const items = [
-    { icon: '✨', label: 'Nuova conversazione', action: onNewChat },
-    { icon: '🗑', label: 'Cancella questa chat', action: onClearChat },
-    { icon: '📤', label: 'Esporta conversazione', action: onExport },
-    { icon: '⚙️', label: 'Impostazioni ARIA', action: onGoToAria },
+    { icon: '✨', label: t.nuovaConv, action: onNewChat },
+    { icon: '🗑', label: t.cancellaChat, action: onClearChat },
+    { icon: '📤', label: t.esportaConv, action: onExport },
+    { icon: '⚙️', label: t.impostazioniAria, action: onGoToAria },
   ];
   return (
     <div style={{
@@ -252,6 +279,8 @@ export default function AriaChatCore({
   onToggleExpand,
   isMobile = false,
 }) {
+  const { lang, t } = useLang();
+  const quickCards = t.quickCards || [];
   const [messages, setMessages] = useState([]);
   const [convId, setConvId] = useState(null);
   const convIdRef = useRef(null); // keep ref in sync for closures
@@ -374,9 +403,9 @@ export default function AriaChatCore({
     setLoading(true);
     onThinking?.(true);
 
-    const history = updated.slice(-20).map(m => `${m.role === 'user' ? 'Proprietario' : name}: ${m.text}`).join('\n');
-    const sysPrompt = buildSystemPrompt({ name, mood, business, form, unreadCount, activeLeads, scheduledPosts, lastLead });
-    const fullPrompt = `${sysPrompt}\n\n---\nConversazione:\n${history}\n\nRispondi all'ultimo messaggio.`;
+    const history = updated.slice(-20).map(m => `${m.role === 'user' ? (lang === 'en' ? 'Owner' : 'Proprietario') : name}: ${m.text}`).join('\n');
+    const sysPrompt = buildSystemPrompt({ name, mood, business, form, unreadCount, activeLeads, scheduledPosts, lastLead, lang });
+    const fullPrompt = `${sysPrompt}\n\n---\n${lang === 'en' ? 'Conversation' : 'Conversazione'}:\n${history}\n\n${lang === 'en' ? 'Reply to the last message.' : "Rispondi all'ultimo messaggio."}`;
 
     try {
       const reply = await base44.integrations.Core.InvokeLLM({ prompt: fullPrompt });
@@ -566,8 +595,8 @@ export default function AriaChatCore({
               }}>
                 {name[0]?.toUpperCase()}
               </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#F0F4FF' }}>Ciao, sono {name}</div>
-              <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>Come posso aiutarti?</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#F0F4FF' }}>{lang === 'en' ? `Hi, I'm ${name}` : `Ciao, sono ${name}`}</div>
+              <div style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>{t.ariaChatIntro}</div>
               {proactive && (
                 <div style={{
                   marginTop: 10, padding: '8px 14px', borderRadius: 10,
@@ -579,7 +608,7 @@ export default function AriaChatCore({
               )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 8 }}>
-              {QUICK_CARDS.map(q => (
+              {quickCards.map(q => (
                 <button key={q.title} onClick={() => sendMessage(q.title)}
                   style={{
                     background: '#0F1219', border: '1px solid rgba(255,255,255,0.08)',
@@ -609,7 +638,7 @@ export default function AriaChatCore({
           />
         ))}
 
-        {loading && <TypingIndicator color={color} />}
+        {loading && <TypingIndicator color={color} label={t.ariaTyping} />}
         <div ref={endRef} />
       </div>
 
@@ -632,7 +661,7 @@ export default function AriaChatCore({
             e.target.style.height = Math.min(e.target.scrollHeight, isMobile ? 100 : 120) + 'px';
           }}
           onKeyDown={handleKeyDown}
-          placeholder={`Scrivi ad ${name}...`}
+          placeholder={`${t.writeToAria} ${name}...`}
           disabled={loading}
           style={{
             flex: 1, background: '#161B26', borderRadius: 20,
