@@ -132,7 +132,7 @@ export default function LeadScoring({ leads = [], lang = 'en' }) {
                 display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 12,
               }}>
                 <div>
-                  <div style({
+                  <div style={{
                     fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4,
                     display: 'flex', alignItems: 'center', gap: 8,
                   }}>
