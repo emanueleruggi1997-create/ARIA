@@ -116,6 +116,13 @@ export default function Onboarding() {
           <Button size="lg" className="w-full text-lg h-12" onClick={() => setStep(0)}>
             Inizia configurazione <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
+          <Button
+            variant="ghost"
+            className="w-full text-sm text-muted-foreground hover:text-foreground"
+            onClick={() => base44.auth.logout('/')}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" /> Torna alla home (account sbagliato?)
+          </Button>
           <p className="text-xs text-muted-foreground">Powered by Emaral Group</p>
         </div>
       </div>
