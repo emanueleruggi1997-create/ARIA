@@ -312,21 +312,38 @@ ${cancellationHandled ? '\nATTENZIONE: L\'appuntamento è stato già annullato a
   const agentName = business.nome_agente || 'ARIA';
   const fullPrompt = `${systemPrompt}\n\nStorico conversazione:\n${historyText}\n\nCliente: ${text}\n${agentName}:`;
 
-  const aiRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
-    prompt: fullPrompt,
-    model: 'gpt_5_mini',
-  });
+  // Run AI reply + appointment detection in parallel for speed
+  const [aiRes] = await Promise.all([
+    base44.asServiceRole.integrations.Core.InvokeLLM({
+      prompt: fullPrompt,
+      model: 'gpt_5_mini',
+    }),
+  ]);
   const aiReply = typeof aiRes === 'string' ? aiRes : aiRes?.text || aiRes?.content || '';
   console.log('[webhookMeta] AI reply:', aiReply ? aiReply.slice(0, 120) : 'EMPTY');
   if (!aiReply) { console.error('[webhookMeta] Empty AI reply'); return; }
 
-  // Save AI reply to DB
-  await base44.asServiceRole.entities.Message.create({
-    business_id: businessId, contact_id: contact.id,
-    canale: 'instagram', ruolo: 'assistant', testo: aiReply, letto: true,
-  });
+  // Save AI reply to DB and send IG message in parallel
+  const igToken2 = conn.access_token;
+  const igAccountId2 = conn.ig_account_id;
+  await Promise.all([
+    base44.asServiceRole.entities.Message.create({
+      business_id: businessId, contact_id: contact.id,
+      canale: 'instagram', ruolo: 'assistant', testo: aiReply, letto: true,
+    }),
+    igToken2 && igAccountId2
+      ? fetch(`https://graph.instagram.com/v21.0/${igAccountId2}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${igToken2}` },
+          body: JSON.stringify({ recipient: { id: senderId }, message: { text: aiReply } }),
+        }).then(r => r.json()).then(d => {
+          if (d.error) console.error('[webhookMeta] IG API error:', JSON.stringify(d.error));
+          else console.log('[webhookMeta] Reply sent! message_id:', d.message_id);
+        })
+      : Promise.resolve(),
+  ]);
 
-  // Detect new appointment creation (post-reply)
+  // Detect new appointment creation (post-reply, async — does not block response)
   try {
     const nowForAppointment = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     const appointmentDetection = await base44.asServiceRole.integrations.Core.InvokeLLM({
@@ -423,22 +440,6 @@ Rispondi ESATTAMENTE con questo JSON (niente altro):
     console.log('[webhookMeta] Appointment detection error:', e.message);
   }
 
-  // Send via Instagram API
-  const igToken = conn.access_token;
-  const igAccountId = conn.ig_account_id;
-  if (!igToken || !igAccountId) { console.error('[webhookMeta] Missing token or account ID'); return; }
-
-  const sendRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${igToken}` },
-    body: JSON.stringify({ recipient: { id: senderId }, message: { text: aiReply } }),
-  });
-  const sendData = await sendRes.json();
-  if (sendData.error) {
-    console.error('[webhookMeta] IG API error:', JSON.stringify(sendData.error));
-  } else {
-    console.log('[webhookMeta] Reply sent! message_id:', sendData.message_id);
-  }
 }
 
 Deno.serve(async (req) => {
