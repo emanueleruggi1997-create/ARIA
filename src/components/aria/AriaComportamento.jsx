@@ -56,10 +56,18 @@ export default function AriaComportamento({ form, updateField, ariaColor }) {
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-foreground">ARIA risponde automaticamente</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Attiva per far rispondere ARIA da sola</p>
+            <p className="text-sm font-medium text-foreground">ARIA risponde automaticamente ai messaggi</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Attiva per far rispondere ARIA da sola ai DM</p>
           </div>
           <Switch checked={form.auto_risposta} onCheckedChange={v => updateField('auto_risposta', v)} />
+        </div>
+
+        <div className="flex items-center justify-between pt-1 border-t border-border/50">
+          <div>
+            <p className="text-sm font-medium text-foreground">💬 ARIA risponde ai commenti Instagram</p>
+            <p className="text-xs text-muted-foreground mt-0.5">ARIA risponderà automaticamente ai commenti sui tuoi post</p>
+          </div>
+          <Switch checked={!!form.auto_commenti} onCheckedChange={v => updateField('auto_commenti', v)} />
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-3">

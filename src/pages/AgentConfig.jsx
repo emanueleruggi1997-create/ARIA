@@ -20,7 +20,7 @@ export default function AgentConfig() {
   const [form, setForm] = useState({
     nome_agente: 'ARIA', ruolo_agente: '', tono: 'professionale', lingua: 'Italiano',
     avatar_agente: '#3B6EF8', servizi: '', prezzi: '', cose_da_non_fare: '', faq: '',
-    auto_risposta: true, orario_inizio: '08:00', orario_fine: '20:00',
+    auto_risposta: true, auto_commenti: false, orario_inizio: '08:00', orario_fine: '20:00',
     giorni_attivi: ['lun','mar','mer','gio','ven'], fuori_orario_attivo: true,
     messaggio_fuori_orario: '', escalation_rules: [], email_notifica: '', ai_prompt: '',
     stato_agente: 'attivo',
@@ -43,6 +43,7 @@ export default function AgentConfig() {
         cose_da_non_fare: business.cose_da_non_fare || '',
         faq: business.faq || '',
         auto_risposta: business.auto_risposta !== false,
+        auto_commenti: business.auto_commenti === true,
         orario_inizio: business.orario_inizio || '08:00',
         orario_fine: business.orario_fine || '20:00',
         giorni_attivi: business.giorni_attivi || ['lun','mar','mer','gio','ven'],

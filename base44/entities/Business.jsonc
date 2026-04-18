@@ -126,6 +126,11 @@
       "type": "boolean",
       "default": true
     },
+    "auto_commenti": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se true ARIA risponde automaticamente ai commenti Instagram"
+    },
     "orario_inizio": {
       "type": "string",
       "default": "08:00",
