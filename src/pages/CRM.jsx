@@ -564,7 +564,7 @@ export default function CRM() {
                     <Avatar initials={getInitials(l.contact_nome)} size={30} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.contact_nome || 'Sconosciuto'}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{l.canale || '—'} · {l.created_date ? new Date(l.created_date).toLocaleDateString(en ? 'en-GB' : 'it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{l.canale || '—'} · {l.created_date ? new Date(l.created_date).toLocaleDateString(lang === 'en' ? 'en-GB' : 'it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
                     </div>
                     <StatusDot color={colColor(l.stato)} />
                   </div>
