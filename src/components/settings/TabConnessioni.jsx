@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Copy, Loader2 } from 'lucide-react';
 import MetaConnectionCard from '@/components/settings/MetaConnectionCard';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 /* ── WhatsApp Icon ── */
 const WaIcon = () => (
@@ -14,12 +15,12 @@ const WaIcon = () => (
   </svg>
 );
 
-const ConnessoBadge = ({ connected }) => connected ? (
+const ConnessoBadge = ({ label }) => (
   <span className="flex items-center gap-1 text-xs font-semibold text-green-400 bg-green-400/10 px-2.5 py-1 rounded-full">
     <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-    Connesso
+    {label}
   </span>
-) : null;
+);
 
 function ChannelCard({ borderColor, children, opacity = 1 }) {
   return (
@@ -38,6 +39,7 @@ function ChannelCard({ borderColor, children, opacity = 1 }) {
 
 /* ── WhatsApp Card ── */
 function CardWhatsApp({ form, setForm, onSave, onUpgrade }) {
+  const { lang } = useLang();
   const isPro = ['pro', 'agency'].includes(form.piano);
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -77,16 +79,18 @@ function CardWhatsApp({ form, setForm, onSave, onUpgrade }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-foreground">WhatsApp Business</span>
-            {isPro ? <ConnessoBadge connected={connected} /> : (
-              <span className="text-xs font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Solo Piano Pro</span>
+            {isPro ? <ConnessoBadge label={lang === 'en' ? 'Connected' : 'Connesso'} /> : (
+              <span className="text-xs font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                {lang === 'en' ? 'Pro Plan only' : 'Solo Piano Pro'}
+              </span>
             )}
           </div>
 
           {!isPro ? (
             <div className="mt-2">
-              <p className="text-sm text-muted-foreground">Disponibile dal piano Pro</p>
+              <p className="text-sm text-muted-foreground">{lang === 'en' ? 'Available from Pro plan' : 'Disponibile dal piano Pro'}</p>
               <Button onClick={onUpgrade} size="sm" className="mt-3" style={{ background: '#3B6EF8', minHeight: 44, borderRadius: 10, fontWeight: 600 }}>
-                Upgrade a Pro →
+                {lang === 'en' ? 'Upgrade to Pro →' : 'Upgrade a Pro →'}
               </Button>
             </div>
           ) : connected ? (
@@ -94,13 +98,15 @@ function CardWhatsApp({ form, setForm, onSave, onUpgrade }) {
               <p className="text-sm text-muted-foreground">{form.wa_number}</p>
               <Button variant="ghost" size="sm" onClick={disconnect}
                 className="text-red-400 hover:text-red-300 hover:bg-red-400/10 font-semibold px-0 mt-2" style={{ minHeight: 44 }}>
-                Disconnetti
+                {lang === 'en' ? 'Disconnect' : 'Disconnetti'}
               </Button>
             </div>
           ) : (
             <div className="mt-3 space-y-3">
               <div>
-                <Label className="text-xs text-muted-foreground">Numero WhatsApp Business</Label>
+                <Label className="text-xs text-muted-foreground">
+                  {lang === 'en' ? 'WhatsApp Business Number' : 'Numero WhatsApp Business'}
+                </Label>
                 <Input value={form.wa_number || ''} onChange={e => setForm(p => ({ ...p, wa_number: e.target.value }))}
                   placeholder="+39 333 123 4567" className="mt-1 bg-secondary border-border" />
               </div>
@@ -109,14 +115,15 @@ function CardWhatsApp({ form, setForm, onSave, onUpgrade }) {
                 <div className="relative mt-1">
                   <Input type={showKey ? 'text' : 'password'}
                     value={form.wa_api_key || ''} onChange={e => setForm(p => ({ ...p, wa_api_key: e.target.value }))}
-                    placeholder="Inserisci la tua API Key" className="bg-secondary border-border pr-10" />
+                    placeholder={lang === 'en' ? 'Enter your API Key' : 'Inserisci la tua API Key'}
+                    className="bg-secondary border-border pr-10" />
                   <button onClick={() => setShowKey(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 <a href="https://360dialog.com" target="_blank" rel="noopener noreferrer"
                   className="text-xs text-primary/70 hover:text-primary mt-1 inline-flex items-center gap-1">
-                  Non hai 360dialog? Creala su 360dialog.com →
+                  {lang === 'en' ? "Don't have 360dialog? Get it at 360dialog.com →" : 'Non hai 360dialog? Creala su 360dialog.com →'}
                 </a>
               </div>
               <div>
@@ -131,7 +138,7 @@ function CardWhatsApp({ form, setForm, onSave, onUpgrade }) {
               <Button onClick={connect} disabled={loading || !form.wa_number || !form.wa_api_key}
                 className="w-full font-semibold" style={{ background: '#25D366', minHeight: 44, borderRadius: 10 }}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Collega WhatsApp
+                {lang === 'en' ? 'Connect WhatsApp' : 'Collega WhatsApp'}
               </Button>
             </div>
           )}
@@ -143,6 +150,7 @@ function CardWhatsApp({ form, setForm, onSave, onUpgrade }) {
 
 /* ── Main Export ── */
 export default function TabConnessioni({ form, setForm, onSave, business, metaNotice }) {
+  const { lang } = useLang();
   const [metaConnection, setMetaConnection] = useState(null);
   const [metaLoading, setMetaLoading] = useState(true);
 
@@ -170,13 +178,17 @@ export default function TabConnessioni({ form, setForm, onSave, business, metaNo
   return (
     <div className="space-y-3">
       <div className="mb-4">
-        <h2 className="text-base font-semibold text-foreground">Collega i tuoi canali</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">Connetti i tuoi account per far lavorare ARIA</p>
+        <h2 className="text-base font-semibold text-foreground">
+          {lang === 'en' ? 'Connect your channels' : 'Collega i tuoi canali'}
+        </h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {lang === 'en' ? 'Connect your accounts so ARIA can work' : 'Connetti i tuoi account per far lavorare ARIA'}
+        </p>
       </div>
 
       {metaLoading ? (
         <div className="flex items-center justify-center gap-2 py-5 text-muted-foreground text-sm">
-          <Loader2 className="w-4 h-4 animate-spin" /> Caricamento...
+          <Loader2 className="w-4 h-4 animate-spin" /> {lang === 'en' ? 'Loading...' : 'Caricamento...'}
         </div>
       ) : (
         <MetaConnectionCard connection={metaConnection} businessId={business?.id} onRefresh={loadMetaConnection} />

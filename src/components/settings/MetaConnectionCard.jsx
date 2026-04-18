@@ -1,21 +1,23 @@
 import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 const IG_COLOR = '#E1306C';
 
-function formatTokenExpiry(connectedAt) {
+function formatTokenExpiry(connectedAt, lang) {
   if (!connectedAt) return null;
   const expiry = new Date(connectedAt);
   expiry.setDate(expiry.getDate() + 60);
   const now = new Date();
   const daysLeft = Math.round((expiry - now) / (1000 * 60 * 60 * 24));
-  if (daysLeft < 0) return { label: 'Token scaduto', color: '#EF4444' };
-  if (daysLeft < 7) return { label: `Token scade tra ${daysLeft} giorni`, color: '#F59E0B' };
-  return { label: `Token valido fino al ${expiry.toLocaleDateString('it-IT')}`, color: '#10B981' };
+  if (daysLeft < 0) return { label: lang === 'en' ? 'Token expired' : 'Token scaduto', color: '#EF4444' };
+  if (daysLeft < 7) return { label: lang === 'en' ? `Token expires in ${daysLeft} days` : `Token scade tra ${daysLeft} giorni`, color: '#F59E0B' };
+  return { label: lang === 'en' ? `Token valid until ${expiry.toLocaleDateString('en-GB')}` : `Token valido fino al ${expiry.toLocaleDateString('it-IT')}`, color: '#10B981' };
 }
 
 export default function MetaConnectionCard({ connection, businessId, onRefresh }) {
+  const { lang } = useLang();
   const [loading, setLoading] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState(null);
@@ -23,7 +25,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
   const pollRef = useRef(null);
 
   const igConnected = connection?.ig_connected && !!connection?.ig_account_id;
-  const tokenInfo = formatTokenExpiry(connection?.connected_at);
+  const tokenInfo = formatTokenExpiry(connection?.connected_at, lang);
 
   const startOAuth = async () => {
     if (loading) return;
@@ -32,7 +34,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
     try {
       const res = await base44.functions.invoke('startMetaOAuth', { type: 'instagram' });
       if (!res.data?.url) {
-        setError('Impossibile avviare la connessione. Riprova.');
+        setError(lang === 'en' ? 'Unable to start connection. Please try again.' : 'Impossibile avviare la connessione. Riprova.');
         setLoading(false);
         return;
       }
@@ -44,7 +46,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
       setLoading(false);
 
       if (!popup) {
-        setError('Il popup è stato bloccato. Consenti i popup per questo sito e riprova.');
+        setError(lang === 'en' ? 'Popup was blocked. Allow popups for this site and try again.' : 'Il popup è stato bloccato. Consenti i popup per questo sito e riprova.');
         return;
       }
       pollRef.current = setInterval(async () => {
@@ -55,7 +57,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
       }, 800);
     } catch (err) {
       console.error('[MetaConnectionCard] startOAuth error:', err);
-      setError('Errore durante la connessione. Riprova.');
+      setError(lang === 'en' ? 'Connection error. Please try again.' : 'Errore durante la connessione. Riprova.');
       setLoading(false);
     }
   };
@@ -67,7 +69,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
       await base44.entities.MetaConnection.update(connection.id, { ig_connected: false });
       await onRefresh();
     } catch (err) {
-      setError('Errore durante la disconnessione.');
+      setError(lang === 'en' ? 'Disconnection error.' : 'Errore durante la disconnessione.');
     } finally {
       setDisconnecting(false);
     }
@@ -96,14 +98,14 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
             {igConnected && (
               <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#10B98120', color: '#10B981', border: '1px solid #10B98140', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
-                Connesso
+                {lang === 'en' ? 'Connected' : 'Connesso'}
               </span>
             )}
           </div>
           {igConnected ? (
             <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>@{connection.ig_account_name}</div>
           ) : (
-            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>Nessun account collegato</div>
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{lang === 'en' ? 'No account connected' : 'Nessun account collegato'}</div>
           )}
         </div>
       </div>
@@ -124,15 +126,18 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         {igConnected ? (
           <>
             <button onClick={startOAuth} disabled={loading} style={btnStyle('rgba(255,255,255,0.08)', '#9CA3AF', loading)}>
-              {loading ? '⏳ Apertura...' : '🔄 Riconnetti'}
+              {loading ? `⏳ ${lang === 'en' ? 'Opening...' : 'Apertura...'}` : `🔄 ${lang === 'en' ? 'Reconnect' : 'Riconnetti'}`}
             </button>
             <button onClick={disconnect} disabled={disconnecting} style={btnStyle('#EF444420', '#EF4444', disconnecting)}>
-              {disconnecting ? '...' : 'Disconnetti'}
+              {disconnecting ? '...' : (lang === 'en' ? 'Disconnect' : 'Disconnetti')}
             </button>
           </>
         ) : (
           <button onClick={startOAuth} disabled={loading} style={btnStyle(`${IG_COLOR}20`, '#F0F4FF', loading, IG_COLOR)}>
-            {loading ? <span>⏳ Apertura...</span> : <span>📸 Collega Instagram Business</span>}
+            {loading
+              ? <span>⏳ {lang === 'en' ? 'Opening...' : 'Apertura...'}</span>
+              : <span>📸 {lang === 'en' ? 'Connect Instagram Business' : 'Collega Instagram Business'}</span>
+            }
           </button>
         )}
       </div>
