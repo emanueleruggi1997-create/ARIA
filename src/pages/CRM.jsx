@@ -13,6 +13,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import CRMDashboardKPIs from '@/components/crm/CRMDashboardKPIs';
+import LeadsKanban from '@/components/crm/LeadsKanban';
+import EmailTemplateLibrary from '@/components/email/EmailTemplateLibrary';
 
 // ─── Design tokens ───────────────────────────────────────────────
 const C = {
@@ -189,6 +192,7 @@ function LeadsSection({ businessId, onOpenAria }) {
   const [deletingId, setDeletingId] = useState(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'kanban'
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ['leads', businessId],
@@ -234,15 +238,22 @@ function LeadsSection({ businessId, onOpenAria }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, color: C.text }}>
-          {en ? 'Leads & ' : 'Lead & '}<span style={{ color: C.accent }}>{en ? 'Contacts' : 'Contatti'}</span>
-        </h2>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <GlowBtn small onClick={() => setShowCreate(true)}>+ {en ? 'New Lead' : 'Nuovo Lead'}</GlowBtn>
-          <GlowBtn variant="ghost" small onClick={onOpenAria}>🤖 ARIA</GlowBtn>
-        </div>
-      </div>
+       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+         <h2 style={{ margin: 0, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, color: C.text }}>
+           {en ? 'Leads & ' : 'Lead & '}<span style={{ color: C.accent }}>{en ? 'Contacts' : 'Contatti'}</span>
+         </h2>
+         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+           <GlowBtn small onClick={() => setShowCreate(true)}>+ {en ? 'New Lead' : 'Nuovo Lead'}</GlowBtn>
+           <button onClick={() => setViewMode(viewMode === 'list' ? 'kanban' : 'list')} style={{
+             background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8,
+             padding: '6px 12px', color: C.muted, fontSize: 12, fontWeight: 700,
+             cursor: 'pointer', fontFamily: 'inherit',
+           }}>
+             {viewMode === 'list' ? '⊞ Kanban' : '≡ List'}
+           </button>
+           <GlowBtn variant="ghost" small onClick={onOpenAria}>🤖 ARIA</GlowBtn>
+         </div>
+       </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -273,39 +284,44 @@ function LeadsSection({ businessId, onOpenAria }) {
         </div>
       ) : (
         <>
-          {/* Lead list */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {filteredLeads.map(l => (
-              <div key={l.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <Avatar initials={getInitials(l.contact_nome)} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>{l.contact_nome || 'Sconosciuto'}</span>
-                    <StatusDot color={colColor(l.stato)} />
-                    <span style={{ fontSize: 11, color: C.muted }}>
-                      {KANBAN_COLS.find(c => c.id === l.stato)?.label || l.stato}
-                    </span>
-                  </div>
-                  {l.tipo_progetto && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{l.tipo_progetto}</div>}
-                  <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                    {l.canale && (
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: (l.canale === 'instagram' ? '#E1306C' : '#25D366') + '22', color: l.canale === 'instagram' ? '#E1306C' : '#25D366', border: `1px solid ${(l.canale === 'instagram' ? '#E1306C' : '#25D366')}44` }}>
-                        {l.canale === 'instagram' ? 'IG' : 'WA'}
+          {viewMode === 'list' ? (
+            /* Lead list */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {filteredLeads.map(l => (
+                <div key={l.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <Avatar initials={getInitials(l.contact_nome)} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>{l.contact_nome || 'Sconosciuto'}</span>
+                      <StatusDot color={colColor(l.stato)} />
+                      <span style={{ fontSize: 11, color: C.muted }}>
+                        {KANBAN_COLS.find(c => c.id === l.stato)?.label || l.stato}
                       </span>
-                    )}
-                    {l.budget_max && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: C.gold + '22', color: C.gold, border: `1px solid ${C.gold}44` }}>€{l.budget_max.toLocaleString('it-IT')}</span>}
+                    </div>
+                    {l.tipo_progetto && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{l.tipo_progetto}</div>}
+                    <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                      {l.canale && (
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: (l.canale === 'instagram' ? '#E1306C' : '#25D366') + '22', color: l.canale === 'instagram' ? '#E1306C' : '#25D366', border: `1px solid ${(l.canale === 'instagram' ? '#E1306C' : '#25D366')}44` }}>
+                          {l.canale === 'instagram' ? 'IG' : 'WA'}
+                        </span>
+                      )}
+                      {l.budget_max && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: C.gold + '22', color: C.gold, border: `1px solid ${C.gold}44` }}>€{l.budget_max.toLocaleString('it-IT')}</span>}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 11, color: C.muted }}>{l.created_date ? new Date(l.created_date).toLocaleDateString(en ? 'en-GB' : 'it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                      <button onClick={() => setSelectedLead(l)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', color: C.muted, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✏</button>
+                      <button onClick={() => handleDelete(l.id)} style={{ background: C.surface, border: `1px solid ${C.danger}44`, borderRadius: 8, padding: '5px 10px', color: C.danger, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                    </div>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 11, color: C.muted }}>{l.created_date ? new Date(l.created_date).toLocaleDateString(en ? 'en-GB' : 'it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                    <button onClick={() => setSelectedLead(l)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', color: C.muted, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✏</button>
-                    <button onClick={() => handleDelete(l.id)} style={{ background: C.surface, border: `1px solid ${C.danger}44`, borderRadius: 8, padding: '5px 10px', color: C.danger, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            /* Kanban view */
+            <LeadsKanban leads={leads} onMove={handleMove} onEdit={setSelectedLead} lang={en ? 'en' : 'it'} />
+          )}
 
           {/* Sources */}
           {sources.length > 0 && (
@@ -534,23 +550,8 @@ export default function CRM() {
               </p>
             </div>
 
-            {/* KPIs */}
-            <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(5, 1fr)' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
-              {[
-                { label: t.totalLeads, value: leads.length, delta: `${activeLeads} ${t.active}`, color: C.accent, icon: '◉' },
-                { label: t.hotLeads, value: hotLeads, delta: hotLeads > 0 ? `🔥 ${t.urgent}` : (lang === 'en' ? 'none' : 'nessuno'), color: C.danger, icon: '🔥' }, // already uses t
-                { label: t.emailContacts, value: activeContacts, delta: `${emailContacts.length} ${t.total}`, color: C.success, icon: '✉' },
-                { label: t.openRate, value: avgOpen > 0 ? `${avgOpen}%` : '—', delta: `${sentCampaigns} ${lang === 'en' ? 'sent camp.' : 'camp. inviate'}`, color: C.gold, icon: '◈' },
-                { label: t.conversion, value: `${convRate}%`, delta: `${wonLeads} ${lang === 'en' ? 'won' : 'vinti'}`, color: C.accent2, icon: '◫' },
-              ].map((k, i) => (
-                <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 20, opacity: 0.15, color: k.color }}>{k.icon}</div>
-                  <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>{k.label.toUpperCase()}</div>
-                  <div style={{ fontSize: 28, fontWeight: 900, color: k.color, letterSpacing: -1 }}>{k.value}</div>
-                  <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{k.delta}</div>
-                </div>
-              ))}
-            </div>
+            {/* KPIs — Upgraded 8-card dashboard */}
+            <CRMDashboardKPIs leads={leads} campaigns={campaigns} emailContacts={emailContacts} isDesktop={isDesktop} />
 
             {/* Recent leads + Quick actions */}
             <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr', gap: 16 }}>
