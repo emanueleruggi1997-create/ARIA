@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { useLang } from '@/lib/LanguageContext';
 import KpiCard from '@/components/dashboard/KpiCard';
 import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
 import RobotMascot from '@/components/dashboard/RobotMascot';
@@ -14,11 +15,13 @@ import { MessageSquare, Users, CalendarDays, Zap, ChevronRight } from 'lucide-re
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { it as itLocale, enUS } from 'date-fns/locale';
 
-function getGreeting(name) {
+function getGreeting(name, lang) {
   const h = new Date().getHours();
-  const saluto = h >= 6 && h < 12 ? 'Buongiorno' : h >= 12 && h < 18 ? 'Buon pomeriggio' : 'Buonasera';
+  const saluto = lang === 'en'
+    ? (h >= 6 && h < 12 ? 'Good morning' : h >= 12 && h < 18 ? 'Good afternoon' : 'Good evening')
+    : (h >= 6 && h < 12 ? 'Buongiorno' : h >= 12 && h < 18 ? 'Buon pomeriggio' : 'Buonasera');
   const firstName = name?.split(' ')[0] || '';
   return `${saluto}${firstName ? `, ${firstName}` : ''} 👋`;
 }
@@ -47,6 +50,8 @@ const CANALE_COLORS = {
 export default function Dashboard() {
   const { business } = useBusiness();
   const { user } = useAuth();
+  const { lang, t } = useLang();
+  const dateLocale = lang === 'en' ? enUS : itLocale;
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', business?.id],
@@ -98,10 +103,10 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            {getGreeting(user?.full_name)}
+            {getGreeting(user?.full_name, lang)}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5 capitalize">
-            {format(new Date(), 'EEEE d MMMM yyyy', { locale: it })}
+            {format(new Date(), 'EEEE d MMMM yyyy', { locale: dateLocale })}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -115,16 +120,16 @@ export default function Dashboard() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Link to="/inbox">
-          <KpiCard title="Messaggi oggi" value={todayMessages.length} icon={MessageSquare} trend={12} trendLabel="vs ieri" accent="blue" />
+          <KpiCard title={lang === 'en' ? 'Messages today' : 'Messaggi oggi'} value={todayMessages.length} icon={MessageSquare} trend={12} trendLabel={lang === 'en' ? 'vs yesterday' : 'vs ieri'} accent="blue" />
         </Link>
         <Link to="/crm">
-          <KpiCard title="Lead attivi" value={activeLeads.length} icon={Users} trend={8} trendLabel="questa settimana" accent="green" />
+          <KpiCard title={lang === 'en' ? 'Active leads' : 'Lead attivi'} value={activeLeads.length} icon={Users} trend={8} trendLabel={lang === 'en' ? 'this week' : 'questa settimana'} accent="green" />
         </Link>
         <Link to="/calendar">
-          <KpiCard title="Appuntamenti" value={upcomingAppointments.length} icon={CalendarDays} accent="purple" />
+          <KpiCard title={lang === 'en' ? 'Appointments' : 'Appuntamenti'} value={upcomingAppointments.length} icon={CalendarDays} accent="purple" />
         </Link>
         <Link to="/analytics">
-          <KpiCard title="Risposta AI" value={`${aiRate}%`} icon={Zap} trend={5} trendLabel="vs sett. scorsa" accent="cyan" />
+          <KpiCard title={lang === 'en' ? 'AI Response' : 'Risposta AI'} value={`${aiRate}%`} icon={Zap} trend={5} trendLabel={lang === 'en' ? 'vs last week' : 'vs sett. scorsa'} accent="cyan" />
         </Link>
       </div>
 
@@ -148,12 +153,12 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <span className="text-xl">📸</span>
             <div>
-              <p className="text-sm font-semibold text-foreground">Instagram non connesso</p>
-              <p className="text-xs text-muted-foreground">Collega il tuo account per ricevere i DM</p>
+              <p className="text-sm font-semibold text-foreground">{lang === 'en' ? 'Instagram not connected' : 'Instagram non connesso'}</p>
+              <p className="text-xs text-muted-foreground">{lang === 'en' ? 'Connect your account to receive DMs' : 'Collega il tuo account per ricevere i DM'}</p>
             </div>
           </div>
           <Link to="/settings?tab=connections" className="shrink-0 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors">
-            Connetti →
+            {lang === 'en' ? 'Connect →' : 'Connetti →'}
           </Link>
         </div>
       )}
@@ -166,8 +171,8 @@ export default function Dashboard() {
         {/* Ultimi 5 Lead */}
         <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-foreground">Ultimi Lead</h3>
-            <Link to="/crm" className="text-xs text-primary hover:underline">Vedi tutti →</Link>
+            <h3 className="text-sm font-semibold text-foreground">{t.latestLeads}</h3>
+            <Link to="/crm" className="text-xs text-primary hover:underline">{lang === 'en' ? 'See all →' : 'Vedi tutti →'}</Link>
           </div>
           <div className="space-y-2">
             {leads.slice(0, 5).length > 0 ? leads.slice(0, 5).map(lead => (
@@ -195,7 +200,7 @@ export default function Dashboard() {
                 </div>
               </Link>
             )) : (
-              <p className="text-sm text-muted-foreground text-center py-6">Nessun lead ancora</p>
+              <p className="text-sm text-muted-foreground text-center py-6">{lang === 'en' ? 'No leads yet' : 'Nessun lead ancora'}</p>
             )}
           </div>
         </div>
@@ -203,8 +208,8 @@ export default function Dashboard() {
         {/* Messaggi non letti */}
         <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-foreground">Messaggi non letti</h3>
-            <Link to="/inbox" className="text-xs text-primary hover:underline">Vai all'inbox →</Link>
+            <h3 className="text-sm font-semibold text-foreground">{lang === 'en' ? 'Unread messages' : 'Messaggi non letti'}</h3>
+            <Link to="/inbox" className="text-xs text-primary hover:underline">{lang === 'en' ? 'Go to inbox →' : 'Vai all\'inbox →'}</Link>
           </div>
           <div className="space-y-2">
             {unreadMessages.slice(0, 3).length > 0 ? unreadMessages.slice(0, 3).map(msg => (
@@ -225,7 +230,7 @@ export default function Dashboard() {
                 </span>
               </Link>
             )) : (
-              <p className="text-sm text-muted-foreground text-center py-6">Nessun messaggio non letto 🎉</p>
+              <p className="text-sm text-muted-foreground text-center py-6">{lang === 'en' ? 'No unread messages 🎉' : 'Nessun messaggio non letto 🎉'}</p>
             )}
           </div>
         </div>

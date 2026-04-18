@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { useLang } from '@/lib/LanguageContext';
 import LeadCard from '@/components/crm/LeadCard';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
 import MailingListTab from '@/components/crm/MailingListTab';
@@ -373,15 +374,22 @@ const ARIA_TIPS = [
   '🔥 Prioritizza i lead "nuovo" che arrivano da Instagram',
 ];
 
-const TABS = [
+const TABS_IT = [
   { id: 'dashboard', icon: '◈', label: 'Dashboard' },
   { id: 'leads', icon: '◉', label: 'Lead & CRM' },
+  { id: 'email', icon: '◫', label: 'Email Mkt' },
+  { id: 'mailing', icon: '✉', label: 'Mailing' },
+];
+const TABS_EN = [
+  { id: 'dashboard', icon: '◈', label: 'Dashboard' },
+  { id: 'leads', icon: '◉', label: 'Leads & CRM' },
   { id: 'email', icon: '◫', label: 'Email Mkt' },
   { id: 'mailing', icon: '✉', label: 'Mailing' },
 ];
 
 export default function CRM() {
   const { business } = useBusiness();
+  const { lang, t } = useLang();
   const [tab, setTab] = useState('dashboard');
   const [ariaOpen, setAriaOpen] = useState(false);
   const [ariaIdx, setAriaIdx] = useState(0);
@@ -430,6 +438,7 @@ export default function CRM() {
 
   const stats = { totalLeads: leads.length, activeLeads, emailContacts: activeContacts, campaigns: campaigns.length };
 
+  const TABS = lang === 'en' ? TABS_EN : TABS_IT;
   const getInitials = (nome) => (nome || 'NN').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   const colColor = (stato) => KANBAN_COLS.find(c => c.id === stato)?.color || C.muted;
 
@@ -503,11 +512,11 @@ export default function CRM() {
             {/* KPIs */}
             <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(5, 1fr)' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
               {[
-                { label: 'Lead Totali', value: leads.length, delta: `${activeLeads} attivi`, color: C.accent, icon: '◉' },
-                { label: 'Lead Caldi', value: hotLeads, delta: hotLeads > 0 ? '🔥 urgenti' : 'nessuno', color: C.danger, icon: '🔥' },
-                { label: 'Contatti Email', value: activeContacts, delta: `${emailContacts.length} totali`, color: C.success, icon: '✉' },
-                { label: 'Open Rate', value: avgOpen > 0 ? `${avgOpen}%` : '—', delta: `${sentCampaigns} camp. inviate`, color: C.gold, icon: '◈' },
-                { label: 'Conversione', value: `${convRate}%`, delta: `${wonLeads} vinti`, color: C.accent2, icon: '◫' },
+                { label: t.totalLeads, value: leads.length, delta: `${activeLeads} ${t.active}`, color: C.accent, icon: '◉' },
+                { label: t.hotLeads, value: hotLeads, delta: hotLeads > 0 ? `🔥 ${t.urgent}` : (lang === 'en' ? 'none' : 'nessuno'), color: C.danger, icon: '🔥' },
+                { label: t.emailContacts, value: activeContacts, delta: `${emailContacts.length} ${t.total}`, color: C.success, icon: '✉' },
+                { label: t.openRate, value: avgOpen > 0 ? `${avgOpen}%` : '—', delta: `${sentCampaigns} ${lang === 'en' ? 'sent camp.' : 'camp. inviate'}`, color: C.gold, icon: '◈' },
+                { label: t.conversion, value: `${convRate}%`, delta: `${wonLeads} ${lang === 'en' ? 'won' : 'vinti'}`, color: C.accent2, icon: '◫' },
               ].map((k, i) => (
                 <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '16px 18px', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', top: 12, right: 12, fontSize: 20, opacity: 0.15, color: k.color }}>{k.icon}</div>
@@ -522,7 +531,7 @@ export default function CRM() {
             <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr', gap: 16 }}>
               <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
                 <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ color: C.accent }}>◉</span> Ultimi Lead
+                  <span style={{ color: C.accent }}>◉</span> {t.latestLeads}
                 </div>
                 {leads.length === 0 && <div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Nessun lead ancora</div>}
                 {leads.slice(0, 4).map(l => (
@@ -539,14 +548,14 @@ export default function CRM() {
 
               <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
                 <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ color: C.accent2 }}>⚡</span> Azioni Rapide
+                  <span style={{ color: C.accent2 }}>⚡</span> {t.quickActions}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {[
-                    { label: '➕ Vai ai Lead', action: () => setTab('leads'), color: C.accent },
-                    { label: '✉ Email Marketing', action: () => setTab('email'), color: C.accent2 },
-                    { label: '📋 Mailing List', action: () => setTab('mailing'), color: C.success },
-                    { label: '🤖 Chiedi ad ARIA', action: () => setAriaOpen(true), color: C.accent3 },
+                    { label: `➕ ${t.goToLeads}`, action: () => setTab('leads'), color: C.accent },
+                    { label: `✉ ${t.emailMarketing}`, action: () => setTab('email'), color: C.accent2 },
+                    { label: `📋 ${lang === 'en' ? 'Mailing List' : 'Mailing List'}`, action: () => setTab('mailing'), color: C.success },
+                    { label: `🤖 ${t.askAria}`, action: () => setAriaOpen(true), color: C.accent3 },
                   ].map((a, i) => (
                     <button key={i} onClick={a.action} style={{
                       background: a.color + '14', border: `1px solid ${a.color}33`, borderRadius: 10,
