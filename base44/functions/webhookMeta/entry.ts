@@ -2,6 +2,79 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const VERIFY_TOKEN = 'emaral2026';
 
+async function processComment({ base44, entryId, commentId, senderId, text, senderName }) {
+  // Find MetaConnection
+  let connections = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entryId });
+  if (!connections.length) {
+    connections = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: entryId });
+  }
+  const conn = connections[0];
+  if (!conn) { console.log('[webhookMeta] No MetaConnection for comment entry.id:', entryId); return; }
+
+  // Resolve business_id
+  let businessId = conn.business_id || '';
+  if (!businessId && conn.user_id) {
+    const allBiz = await base44.asServiceRole.entities.Business.filter({});
+    const match = allBiz.find(b => b.created_by === conn.user_id);
+    if (match) {
+      businessId = match.id;
+      await base44.asServiceRole.entities.MetaConnection.update(conn.id, { business_id: businessId });
+    }
+  }
+  if (!businessId) { console.error('[webhookMeta] Could not resolve business_id for comment'); return; }
+
+  // Get business config and check auto_commenti flag
+  const business = await base44.asServiceRole.entities.Business.get(businessId);
+  if (!business || !business.auto_commenti) {
+    console.log('[webhookMeta] auto_commenti disabled — skipping comment reply');
+    return;
+  }
+
+  console.log('[webhookMeta] Processing comment:', commentId, 'from:', senderName, 'text:', text);
+
+  // Build AI reply prompt for comment
+  const systemPrompt = [
+    `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".`,
+    business.ai_prompt || '',
+    `Tono: ${business.tono || 'professionale'}.`,
+    business.servizi ? `Servizi offerti: ${business.servizi}` : '',
+    '',
+    'REGOLE PER I COMMENTI:',
+    '- Stai rispondendo a un COMMENTO su un post Instagram, NON a un DM.',
+    '- La risposta sarà PUBBLICA e visibile a tutti.',
+    '- Sii cordiale, breve e professionale. Massimo 1-2 frasi.',
+    '- Non rivelare informazioni private o prezzi dettagliati — invita a scrivere in DM per dettagli.',
+    '- Non usare frasi robotiche. Parla come una persona reale.',
+    '- Se il commento è negativo o offensivo, rispondi con calma e professionalità.',
+  ].filter(Boolean).join('\n');
+
+  const fullPrompt = `${systemPrompt}\n\nCommento di @${senderName}: ${text}\n${business.nome_agente || 'ARIA'}:`;
+
+  const aiRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
+    prompt: fullPrompt,
+    model: 'gpt_5_mini',
+  });
+  const aiReply = typeof aiRes === 'string' ? aiRes : aiRes?.text || aiRes?.content || '';
+  if (!aiReply) { console.error('[webhookMeta] Empty AI reply for comment'); return; }
+  console.log('[webhookMeta] Comment AI reply:', aiReply.slice(0, 120));
+
+  // Reply to the comment via Instagram API
+  const igToken = conn.access_token;
+  if (!igToken) { console.error('[webhookMeta] Missing token for comment reply'); return; }
+
+  const replyRes = await fetch(`https://graph.instagram.com/v21.0/${commentId}/replies`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${igToken}` },
+    body: JSON.stringify({ message: `@${senderName} ${aiReply}` }),
+  });
+  const replyData = await replyRes.json();
+  if (replyData.error) {
+    console.error('[webhookMeta] IG comment reply error:', JSON.stringify(replyData.error));
+  } else {
+    console.log('[webhookMeta] Comment reply sent! id:', replyData.id);
+  }
+}
+
 async function processMessage({ base44, entryId, senderId, text }) {
   // Find MetaConnection
   let connections = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entryId });
@@ -385,15 +458,32 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const entries = body.entry || [];
 
-    // Process messages SEQUENTIALLY to avoid race conditions on lead/contact creation
+    // Collect DMs and comments separately
     const messages = [];
+    const comments = [];
+
     for (const entry of entries) {
+      // DMs — entry.messaging
       for (const event of (entry.messaging || [])) {
         if (!event.message || event.message.is_echo) continue;
         const senderId = event.sender?.id;
         const text = event.message?.text || '';
         if (!senderId || !text) continue;
         messages.push({ entryId: entry.id, senderId, text });
+      }
+
+      // Comments — entry.changes
+      for (const change of (entry.changes || [])) {
+        if (change.field !== 'comments') continue;
+        const val = change.value || {};
+        // Only process top-level comments (not replies by the page itself)
+        if (val.parent_id) continue; // skip replies
+        const commentId = val.id;
+        const text = val.text || '';
+        const senderId = val.from?.id || '';
+        const senderName = val.from?.name || val.from?.username || senderId;
+        if (!commentId || !text) continue;
+        comments.push({ entryId: entry.id, commentId, senderId, senderName, text });
       }
     }
 
@@ -403,6 +493,11 @@ Deno.serve(async (req) => {
         console.log('[webhookMeta] Processing message from:', msg.senderId);
         await processMessage({ base44, entryId: msg.entryId, senderId: msg.senderId, text: msg.text })
           .catch(err => console.error('[webhookMeta] Processing error:', err.message));
+      }
+      for (const c of comments) {
+        console.log('[webhookMeta] Processing comment:', c.commentId, 'from:', c.senderName);
+        await processComment({ base44, entryId: c.entryId, commentId: c.commentId, senderId: c.senderId, text: c.text, senderName: c.senderName })
+          .catch(err => console.error('[webhookMeta] Comment processing error:', err.message));
       }
     })();
 
