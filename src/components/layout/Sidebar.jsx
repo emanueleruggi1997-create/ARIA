@@ -15,7 +15,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const location = useLocation();
   const { business } = useBusiness();
   const { user } = useAuth();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const isAdmin = user?.role === 'admin';
 
   const navItems = [
@@ -122,7 +122,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               business.stato_agente === 'pausa' ? 'bg-yellow-500' : 'bg-red-500'
             )} />
             <span className="text-xs text-muted-foreground">
-              {t.agentStatus(business.stato_agente)}
+              {business.stato_agente === 'attivo' ? (lang === 'en' ? 'Active' : 'Attivo') : business.stato_agente === 'pausa' ? (lang === 'en' ? 'Paused' : 'In pausa') : 'Off'}
             </span>
           </div>
         </div>
