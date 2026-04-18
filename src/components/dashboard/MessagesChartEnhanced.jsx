@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload?.length) {
@@ -18,28 +19,43 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function MessagesChartEnhanced({ messages }) {
-  const [range, setRange] = useState('settimana');
+  const { lang } = useLang();
+  const en = lang === 'en';
+
+  const DAYS_IT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const DAYS_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS_IT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  const RANGES = en
+    ? [['week', '7D'], ['month', '30D'], ['3months', '3M']]
+    : [['settimana', '7G'], ['mese', '30G'], ['3mesi', '3M']];
+
+  const [range, setRange] = useState(RANGES[0][0]);
 
   const data = useMemo(() => {
     const now = new Date();
-    if (range === 'settimana') {
+    const isWeek = range === 'settimana' || range === 'week';
+    const isMonth = range === 'mese' || range === 'month';
+
+    if (isWeek) {
       return Array.from({ length: 7 }, (_, i) => {
         const d = new Date(now);
         d.setDate(d.getDate() - (6 - i));
         const ds = d.toDateString();
-        const giorni = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+        const days = en ? DAYS_EN : DAYS_IT;
         return {
-          label: giorni[d.getDay()],
+          label: days[d.getDay()],
           instagram: messages.filter(m => m.canale === 'instagram' && new Date(m.created_date).toDateString() === ds).length,
           whatsapp: messages.filter(m => m.canale === 'whatsapp' && new Date(m.created_date).toDateString() === ds).length,
         };
       });
-    } else if (range === 'mese') {
+    } else if (isMonth) {
       return Array.from({ length: 4 }, (_, i) => {
         const wStart = new Date(now); wStart.setDate(wStart.getDate() - (3 - i) * 7 - 6);
         const wEnd = new Date(now); wEnd.setDate(wEnd.getDate() - (3 - i) * 7 + 1);
         return {
-          label: `Sett. ${i + 1}`,
+          label: en ? `Wk ${i + 1}` : `Sett. ${i + 1}`,
           instagram: messages.filter(m => m.canale === 'instagram' && new Date(m.created_date) >= wStart && new Date(m.created_date) <= wEnd).length,
           whatsapp: messages.filter(m => m.canale === 'whatsapp' && new Date(m.created_date) >= wStart && new Date(m.created_date) <= wEnd).length,
         };
@@ -48,22 +64,24 @@ export default function MessagesChartEnhanced({ messages }) {
       return Array.from({ length: 3 }, (_, i) => {
         const mDate = new Date(now.getFullYear(), now.getMonth() - (2 - i), 1);
         const mEnd = new Date(now.getFullYear(), now.getMonth() - (2 - i) + 1, 0);
-        const mesi = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+        const months = en ? MONTHS_EN : MONTHS_IT;
         return {
-          label: mesi[mDate.getMonth()],
+          label: months[mDate.getMonth()],
           instagram: messages.filter(m => m.canale === 'instagram' && new Date(m.created_date) >= mDate && new Date(m.created_date) <= mEnd).length,
           whatsapp: messages.filter(m => m.canale === 'whatsapp' && new Date(m.created_date) >= mDate && new Date(m.created_date) <= mEnd).length,
         };
       });
     }
-  }, [messages, range]);
+  }, [messages, range, lang]);
 
   return (
     <div className="bg-card border border-border rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-foreground">Messaggi per canale</h3>
+        <h3 className="text-sm font-semibold text-foreground">
+          {en ? 'Messages by channel' : 'Messaggi per canale'}
+        </h3>
         <div className="flex gap-1 bg-secondary rounded-lg p-1">
-          {[['settimana', '7G'], ['mese', '30G'], ['3mesi', '3M']].map(([val, label]) => (
+          {RANGES.map(([val, label]) => (
             <button
               key={val}
               onClick={() => setRange(val)}
@@ -83,9 +101,7 @@ export default function MessagesChartEnhanced({ messages }) {
             <XAxis dataKey="label" tick={{ fill: 'hsl(220,10%,50%)', fontSize: 11 }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: 'hsl(220,10%,50%)', fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend
-              formatter={(value) => <span style={{ color: 'hsl(220,10%,60%)', fontSize: 11 }}>{value}</span>}
-            />
+            <Legend formatter={(value) => <span style={{ color: 'hsl(220,10%,60%)', fontSize: 11 }}>{value}</span>} />
             <Line type="monotone" dataKey="instagram" stroke="hsl(340,75%,65%)" strokeWidth={2.5} name="Instagram" dot={{ fill: 'hsl(340,75%,65%)', r: 3 }} activeDot={{ r: 5 }} />
             <Line type="monotone" dataKey="whatsapp" stroke="hsl(142,60%,50%)" strokeWidth={2.5} name="WhatsApp" dot={{ fill: 'hsl(142,60%,50%)', r: 3 }} activeDot={{ r: 5 }} />
           </LineChart>

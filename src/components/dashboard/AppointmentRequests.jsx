@@ -3,13 +3,16 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Check, X, Clock } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { it } from 'date-fns/locale';
+import { it, enUS } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 function ConfirmModal({ apt, onConfirm, onClose }) {
+  const { lang } = useLang();
+  const en = lang === 'en';
   const suggestedDate = apt?.data || format(new Date(), 'yyyy-MM-dd');
   const suggestedTime = apt?.ora || '10:00';
   const [data, setData] = useState(suggestedDate);
@@ -26,19 +29,22 @@ function ConfirmModal({ apt, onConfirm, onClose }) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="bg-card border-border max-w-sm">
         <DialogHeader>
-          <DialogTitle>Conferma Appuntamento</DialogTitle>
+          <DialogTitle>{en ? 'Confirm Appointment' : 'Conferma Appuntamento'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Scegli data e ora per <strong className="text-foreground">{apt?.contact_nome}</strong>. ARIA invierà automaticamente la conferma su Instagram.
+            {en
+              ? <>Choose date and time for <strong className="text-foreground">{apt?.contact_nome}</strong>. ARIA will automatically send confirmation on Instagram.</>
+              : <>Scegli data e ora per <strong className="text-foreground">{apt?.contact_nome}</strong>. ARIA invierà automaticamente la conferma su Instagram.</>
+            }
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-muted-foreground">Data</Label>
+              <Label className="text-xs text-muted-foreground">{en ? 'Date' : 'Data'}</Label>
               <Input type="date" value={data} onChange={e => setData(e.target.value)} className="mt-1 bg-secondary border-border" />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Ora</Label>
+              <Label className="text-xs text-muted-foreground">{en ? 'Time' : 'Ora'}</Label>
               <Input type="time" value={ora} onChange={e => setOra(e.target.value)} className="mt-1 bg-secondary border-border" />
             </div>
           </div>
@@ -46,9 +52,9 @@ function ConfirmModal({ apt, onConfirm, onClose }) {
             <p className="text-xs text-muted-foreground italic bg-secondary/50 rounded-lg px-3 py-2">{apt.note}</p>
           )}
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="flex-1">Annulla</Button>
+            <Button variant="outline" onClick={onClose} className="flex-1">{en ? 'Cancel' : 'Annulla'}</Button>
             <Button onClick={handleConfirm} disabled={!data || loading} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
-              {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" /> : '✅ Conferma & Invia'}
+              {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" /> : `✅ ${en ? 'Confirm & Send' : 'Conferma & Invia'}`}
             </Button>
           </div>
         </div>
@@ -58,9 +64,12 @@ function ConfirmModal({ apt, onConfirm, onClose }) {
 }
 
 export default function AppointmentRequests({ businessId }) {
+  const { lang } = useLang();
+  const en = lang === 'en';
   const queryClient = useQueryClient();
   const [confirmingApt, setConfirmingApt] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const dateLocale = en ? enUS : it;
 
   const { data: pendingAppointments = [] } = useQuery({
     queryKey: ['pending-appointments', businessId],
@@ -82,12 +91,7 @@ export default function AppointmentRequests({ businessId }) {
 
   const handleConfirm = async (apt, data, ora) => {
     setActionLoading(apt.id);
-    await base44.functions.invoke('confirmAppointment', {
-      appointmentId: apt.id,
-      action: 'confirm',
-      data,
-      ora,
-    });
+    await base44.functions.invoke('confirmAppointment', { appointmentId: apt.id, action: 'confirm', data, ora });
     setConfirmingApt(null);
     setActionLoading(null);
     invalidate();
@@ -95,10 +99,7 @@ export default function AppointmentRequests({ businessId }) {
 
   const handleReject = async (apt) => {
     setActionLoading(apt.id);
-    await base44.functions.invoke('confirmAppointment', {
-      appointmentId: apt.id,
-      action: 'reject',
-    });
+    await base44.functions.invoke('confirmAppointment', { appointmentId: apt.id, action: 'reject' });
     setActionLoading(null);
     invalidate();
   };
@@ -108,11 +109,7 @@ export default function AppointmentRequests({ businessId }) {
   return (
     <>
       {confirmingApt && (
-        <ConfirmModal
-          apt={confirmingApt}
-          onConfirm={handleConfirm}
-          onClose={() => setConfirmingApt(null)}
-        />
+        <ConfirmModal apt={confirmingApt} onConfirm={handleConfirm} onClose={() => setConfirmingApt(null)} />
       )}
 
       <div className="bg-card border border-primary/20 rounded-xl p-5">
@@ -120,7 +117,9 @@ export default function AppointmentRequests({ businessId }) {
           <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
             <CalendarDays className="w-4 h-4 text-primary" />
           </div>
-          <h3 className="text-sm font-semibold text-foreground">Richieste Appuntamento</h3>
+          <h3 className="text-sm font-semibold text-foreground">
+            {en ? 'Appointment Requests' : 'Richieste Appuntamento'}
+          </h3>
           <span className="ml-auto text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
             {pendingAppointments.length}
           </span>
@@ -137,8 +136,8 @@ export default function AppointmentRequests({ businessId }) {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   👤 {apt.contact_nome}
                   {apt.data && (
-                    <> · 📅 {format(parseISO(apt.data), 'd MMM', { locale: it })}
-                    {apt.ora && ` ore ${apt.ora}`}</>
+                    <> · 📅 {format(parseISO(apt.data), 'd MMM', { locale: dateLocale })}
+                    {apt.ora && ` ${en ? 'at' : 'ore'} ${apt.ora}`}</>
                   )}
                 </p>
                 {apt.note && (
@@ -154,14 +153,14 @@ export default function AppointmentRequests({ businessId }) {
                   disabled={actionLoading === apt.id}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 transition-colors text-xs font-semibold disabled:opacity-50"
                 >
-                  <Check className="w-3 h-3" /> Accetta
+                  <Check className="w-3 h-3" /> {en ? 'Accept' : 'Accetta'}
                 </button>
                 <button
                   onClick={() => handleReject(apt)}
                   disabled={actionLoading === apt.id}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors text-xs font-semibold disabled:opacity-50"
                 >
-                  {actionLoading === apt.id ? <span className="w-3 h-3 border border-red-400/30 border-t-red-400 rounded-full animate-spin" /> : <X className="w-3 h-3" />} Rifiuta
+                  {actionLoading === apt.id ? <span className="w-3 h-3 border border-red-400/30 border-t-red-400 rounded-full animate-spin" /> : <X className="w-3 h-3" />} {en ? 'Reject' : 'Rifiuta'}
                 </button>
               </div>
             </div>

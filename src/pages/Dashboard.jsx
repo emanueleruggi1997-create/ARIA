@@ -26,12 +26,13 @@ function getGreeting(name, lang) {
   return `${saluto}${firstName ? `, ${firstName}` : ''} 👋`;
 }
 
-const STATO_LABELS = {
-  nuovo: 'Nuovo',
-  qualificato: 'Qualificato',
-  preventivo_inviato: 'Preventivo',
-  chiuso_vinto: 'Vinto',
-  chiuso_perso: 'Perso',
+const STATO_LABELS_IT = {
+  nuovo: 'Nuovo', qualificato: 'Qualificato',
+  preventivo_inviato: 'Preventivo', chiuso_vinto: 'Vinto', chiuso_perso: 'Perso',
+};
+const STATO_LABELS_EN = {
+  nuovo: 'New', qualificato: 'Qualified',
+  preventivo_inviato: 'Proposal', chiuso_vinto: 'Won', chiuso_perso: 'Lost',
 };
 
 const STATO_COLORS = {
@@ -185,12 +186,12 @@ export default function Dashboard() {
                   {(lead.contact_nome || 'L')[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{lead.contact_nome || 'Sconosciuto'}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{lead.contact_nome || (lang === 'en' ? 'Unknown' : 'Sconosciuto')}</p>
                   <p className="text-xs text-muted-foreground truncate">{lead.tipo_progetto || (lang === 'en' ? 'Not specified' : 'Non specificato')}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${STATO_COLORS[lead.stato] || 'text-muted-foreground bg-secondary'}`}>
-                    {STATO_LABELS[lead.stato] || lead.stato}
+                    {(lang === 'en' ? STATO_LABELS_EN : STATO_LABELS_IT)[lead.stato] || lead.stato}
                   </span>
                   {lead.canale && (
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${CANALE_COLORS[lead.canale] || 'text-muted-foreground bg-secondary'}`}>

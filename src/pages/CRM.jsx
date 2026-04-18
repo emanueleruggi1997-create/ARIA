@@ -31,12 +31,19 @@ const C = {
   danger: '#FF3860',
 };
 
-const KANBAN_COLS = [
+const KANBAN_COLS_IT = [
   { id: 'nuovo', label: 'Nuovo', color: C.accent },
   { id: 'qualificato', label: 'Qualificato', color: C.warning },
   { id: 'preventivo_inviato', label: 'Preventivo', color: C.accent2 },
   { id: 'chiuso_vinto', label: 'Convertito', color: C.success },
   { id: 'chiuso_perso', label: 'Perso', color: C.danger },
+];
+const KANBAN_COLS_EN = [
+  { id: 'nuovo', label: 'New', color: C.accent },
+  { id: 'qualificato', label: 'Qualified', color: C.warning },
+  { id: 'preventivo_inviato', label: 'Proposal', color: C.accent2 },
+  { id: 'chiuso_vinto', label: 'Converted', color: C.success },
+  { id: 'chiuso_perso', label: 'Lost', color: C.danger },
 ];
 
 // ─── Atom components ─────────────────────────────────────────────
@@ -85,9 +92,14 @@ function GlowBtn({ children, onClick, variant = 'primary', small, disabled }) {
 
 // ─── ARIA Chat Panel (usa InvokeLLM interno) ─────────────────────
 function ARIAPanel({ onClose, business, stats }) {
+  const { lang } = useLang();
+  const en = lang === 'en';
   const [msg, setMsg] = useState('');
   const [chat, setChat] = useState([
-    { role: 'aria', text: `Ciao! Sono ARIA 🤖 Gestisco i tuoi lead, campagne email e appuntamenti per ${business?.nome || 'il tuo business'}. Come posso aiutarti?` },
+    { role: 'aria', text: en
+      ? `Hi! I'm ARIA 🤖 I manage your leads, email campaigns and appointments for ${business?.nome || 'your business'}. How can I help you?`
+      : `Ciao! Sono ARIA 🤖 Gestisco i tuoi lead, campagne email e appuntamenti per ${business?.nome || 'il tuo business'}. Come posso aiutarti?`
+    },
   ]);
   const [loading, setLoading] = useState(false);
   const chatRef = useRef(null);
@@ -101,15 +113,17 @@ function ARIAPanel({ onClose, business, stats }) {
     setChat(c => [...c, { role: 'user', text: userMsg }]);
     setLoading(true);
     try {
-      const systemCtx = `Sei ARIA, l'agente AI di "${business?.nome || 'Emaral'}". Gestisci CRM, lead da Instagram e WhatsApp, campagne email e appuntamenti. Rispondi in italiano in modo conciso e professionale. Dati CRM attuali: ${stats.totalLeads} lead totali, ${stats.activeLeads} attivi, ${stats.emailContacts} contatti email, ${stats.campaigns} campagne.`;
+      const systemCtx = en
+        ? `You are ARIA, the AI agent of "${business?.nome || 'Emaral'}". You manage CRM, leads from Instagram and WhatsApp, email campaigns and appointments. Reply in English concisely and professionally. Current CRM data: ${stats.totalLeads} total leads, ${stats.activeLeads} active, ${stats.emailContacts} email contacts, ${stats.campaigns} campaigns.`
+        : `Sei ARIA, l'agente AI di "${business?.nome || 'Emaral'}". Gestisci CRM, lead da Instagram e WhatsApp, campagne email e appuntamenti. Rispondi in italiano in modo conciso e professionale. Dati CRM attuali: ${stats.totalLeads} lead totali, ${stats.activeLeads} attivi, ${stats.emailContacts} contatti email, ${stats.campaigns} campagne.`;
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `${systemCtx}\n\nDomanda utente: ${userMsg}`,
+        prompt: `${systemCtx}\n\n${en ? 'User question' : 'Domanda utente'}: ${userMsg}`,
         model: 'gpt_5_mini',
       });
-      const text = typeof result === 'string' ? result : result?.text || 'Non ho capito, riprova.';
+      const text = typeof result === 'string' ? result : result?.text || (en ? "I didn't understand, try again." : 'Non ho capito, riprova.');
       setChat(c => [...c, { role: 'aria', text }]);
     } catch {
-      setChat(c => [...c, { role: 'aria', text: 'Connessione interrotta. Riprova tra poco.' }]);
+      setChat(c => [...c, { role: 'aria', text: en ? 'Connection lost. Try again shortly.' : 'Connessione interrotta. Riprova tra poco.' }]);
     }
     setLoading(false);
   };
@@ -122,9 +136,9 @@ function ARIAPanel({ onClose, business, stats }) {
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent2}, ${C.accent3})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🤖</div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>ARIA — Agente AI</div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: C.text }}>ARIA — {en ? 'AI Agent' : 'Agente AI'}</div>
             <div style={{ fontSize: 11, color: C.success, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <StatusDot color={C.success} /> Online · Collegata al CRM
+              <StatusDot color={C.success} /> Online · {en ? 'Connected to CRM' : 'Collegata al CRM'}
             </div>
           </div>
           <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>×</button>
@@ -142,7 +156,7 @@ function ARIAPanel({ onClose, business, stats }) {
               }}>{m.text}</div>
             </div>
           ))}
-          {loading && <div style={{ color: C.muted, fontSize: 12 }}>ARIA sta scrivendo…</div>}
+          {loading && <div style={{ color: C.muted, fontSize: 12 }}>{en ? 'ARIA is typing…' : 'ARIA sta scrivendo…'}</div>}
         </div>
         {/* Input */}
         <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: 8 }}>
@@ -150,7 +164,7 @@ function ARIAPanel({ onClose, business, stats }) {
             value={msg}
             onChange={e => setMsg(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && sendMessage()}
-            placeholder="Chiedi ad ARIA…"
+            placeholder={en ? 'Ask ARIA…' : 'Chiedi ad ARIA…'}
             style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '10px 14px', color: C.text, fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
           />
           <GlowBtn onClick={sendMessage} disabled={loading || !msg.trim()}>↑</GlowBtn>
@@ -162,6 +176,9 @@ function ARIAPanel({ onClose, business, stats }) {
 
 // ─── Leads Kanban (full real data) ───────────────────────────────
 function LeadsSection({ businessId, onOpenAria }) {
+  const { lang } = useLang();
+  const en = lang === 'en';
+  const KANBAN_COLS = en ? KANBAN_COLS_EN : KANBAN_COLS_IT;
   const queryClient = useQueryClient();
   const [selectedLead, setSelectedLead] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -219,11 +236,11 @@ function LeadsSection({ businessId, onOpenAria }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, color: C.text }}>
-          Lead & <span style={{ color: C.accent }}>Contatti</span>
+          {en ? 'Leads & ' : 'Lead & '}<span style={{ color: C.accent }}>{en ? 'Contacts' : 'Contatti'}</span>
         </h2>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <GlowBtn small onClick={() => setShowCreate(true)}>+ Nuovo Lead</GlowBtn>
-          <GlowBtn variant="ghost" small onClick={onOpenAria}>🤖 ARIA import</GlowBtn>
+          <GlowBtn small onClick={() => setShowCreate(true)}>+ {en ? 'New Lead' : 'Nuovo Lead'}</GlowBtn>
+          <GlowBtn variant="ghost" small onClick={onOpenAria}>🤖 ARIA</GlowBtn>
         </div>
       </div>
 
@@ -232,7 +249,7 @@ function LeadsSection({ businessId, onOpenAria }) {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="🔍  Cerca nome o servizio..."
+          placeholder={en ? '🔍  Search name or service...' : '🔍  Cerca nome o servizio...'}
           style={{ flex: 1, minWidth: 180, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: '9px 14px', color: C.text, fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
         />
         {['all', 'hot', 'warm', 'cold'].map(s => (
@@ -242,7 +259,7 @@ function LeadsSection({ businessId, onOpenAria }) {
             borderRadius: 10, padding: '8px 14px', color: filterStatus === s ? C.accent : C.muted,
             fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
           }}>
-            {s === 'all' ? 'Tutti' : s.charAt(0).toUpperCase() + s.slice(1)}
+            {s === 'all' ? (en ? 'All' : 'Tutti') : s.charAt(0).toUpperCase() + s.slice(1)}
           </button>
         ))}
       </div>
@@ -250,9 +267,9 @@ function LeadsSection({ businessId, onOpenAria }) {
       {leads.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
-          <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>Nessun lead ancora</div>
-          <div style={{ fontSize: 13, marginBottom: 16 }}>I lead appaiono quando arrivano messaggi da Instagram o WhatsApp</div>
-          <GlowBtn onClick={() => setShowCreate(true)}>+ Aggiungi manualmente</GlowBtn>
+          <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>{en ? 'No leads yet' : 'Nessun lead ancora'}</div>
+          <div style={{ fontSize: 13, marginBottom: 16 }}>{en ? 'Leads appear when messages arrive from Instagram or WhatsApp' : 'I lead appaiono quando arrivano messaggi da Instagram o WhatsApp'}</div>
+          <GlowBtn onClick={() => setShowCreate(true)}>+ {en ? 'Add manually' : 'Aggiungi manualmente'}</GlowBtn>
         </div>
       ) : (
         <>
@@ -280,7 +297,7 @@ function LeadsSection({ businessId, onOpenAria }) {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: 11, color: C.muted }}>{l.created_date ? new Date(l.created_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{l.created_date ? new Date(l.created_date).toLocaleDateString(en ? 'en-GB' : 'it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                     <button onClick={() => setSelectedLead(l)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', color: C.muted, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✏</button>
                     <button onClick={() => handleDelete(l.id)} style={{ background: C.surface, border: `1px solid ${C.danger}44`, borderRadius: 8, padding: '5px 10px', color: C.danger, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
@@ -293,7 +310,7 @@ function LeadsSection({ businessId, onOpenAria }) {
           {/* Sources */}
           {sources.length > 0 && (
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 18 }}>
-              <div style={{ fontWeight: 800, fontSize: 12, color: C.muted, marginBottom: 12, letterSpacing: 1 }}>SORGENTI LEAD</div>
+              <div style={{ fontWeight: 800, fontSize: 12, color: C.muted, marginBottom: 12, letterSpacing: 1 }}>{en ? 'LEAD SOURCES' : 'SORGENTI LEAD'}</div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 {sources.map(s => (
                   <div key={s.src} style={{ display: 'flex', alignItems: 'center', gap: 8, background: s.color + '11', borderRadius: 10, padding: '8px 14px', border: `1px solid ${s.color}33` }}>
@@ -311,18 +328,18 @@ function LeadsSection({ businessId, onOpenAria }) {
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="bg-card border-border">
-          <DialogHeader><DialogTitle>Nuovo Lead</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{en ? 'New Lead' : 'Nuovo Lead'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Nome contatto</Label>
+              <Label>{en ? 'Contact name' : 'Nome contatto'}</Label>
               <Input value={newLead.contact_nome} onChange={e => setNewLead(p => ({ ...p, contact_nome: e.target.value }))} className="mt-1 bg-secondary border-border" />
             </div>
             <div>
-              <Label>Interesse / Servizio</Label>
-              <Input value={newLead.tipo_progetto} onChange={e => setNewLead(p => ({ ...p, tipo_progetto: e.target.value }))} placeholder="Es: Consulenza, Corso, Prodotto..." className="mt-1 bg-secondary border-border" />
+              <Label>{en ? 'Interest / Service' : 'Interesse / Servizio'}</Label>
+              <Input value={newLead.tipo_progetto} onChange={e => setNewLead(p => ({ ...p, tipo_progetto: e.target.value }))} placeholder={en ? 'E.g. Consulting, Course, Product...' : 'Es: Consulenza, Corso, Prodotto...'} className="mt-1 bg-secondary border-border" />
             </div>
             <div>
-              <Label>Canale</Label>
+              <Label>{en ? 'Channel' : 'Canale'}</Label>
               <Select value={newLead.canale} onValueChange={v => setNewLead(p => ({ ...p, canale: v }))}>
                 <SelectTrigger className="mt-1 bg-secondary border-border"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -332,7 +349,7 @@ function LeadsSection({ businessId, onOpenAria }) {
               </Select>
             </div>
             <Button onClick={handleCreate} className="w-full" disabled={!newLead.contact_nome.trim() || creating}>
-              {creating ? 'Creazione...' : 'Crea Lead'}
+              {creating ? (en ? 'Creating...' : 'Creazione...') : (en ? 'Create Lead' : 'Crea Lead')}
             </Button>
           </div>
         </DialogContent>
@@ -367,11 +384,17 @@ function MailingSection({ businessId }) {
 }
 
 // ─── Main CRM page ───────────────────────────────────────────────
-const ARIA_TIPS = [
+const ARIA_TIPS_IT = [
   '📊 Analizza i tuoi lead e ottimizza il funnel di conversione',
   '📧 Usa le campagne email per nurturare i contatti warm',
   '💡 Suggerisco una follow-up ai lead inattivi da più di 7 giorni',
   '🔥 Prioritizza i lead "nuovo" che arrivano da Instagram',
+];
+const ARIA_TIPS_EN = [
+  '📊 Analyze your leads and optimize the conversion funnel',
+  '📧 Use email campaigns to nurture warm contacts',
+  '💡 I suggest following up on leads inactive for more than 7 days',
+  '🔥 Prioritize "new" leads coming from Instagram',
 ];
 
 const TABS_IT = [
@@ -439,6 +462,8 @@ export default function CRM() {
   const stats = { totalLeads: leads.length, activeLeads, emailContacts: activeContacts, campaigns: campaigns.length };
 
   const TABS = lang === 'en' ? TABS_EN : TABS_IT;
+  const KANBAN_COLS = lang === 'en' ? KANBAN_COLS_EN : KANBAN_COLS_IT;
+  const ARIA_TIPS = lang === 'en' ? ARIA_TIPS_EN : ARIA_TIPS_IT;
   const getInitials = (nome) => (nome || 'NN').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   const colColor = (stato) => KANBAN_COLS.find(c => c.id === stato)?.color || C.muted;
 
@@ -505,7 +530,7 @@ export default function CRM() {
                 Command <span style={{ background: `linear-gradient(90deg, ${C.accent}, ${C.accent2})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Center</span>
               </h1>
               <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
-                {new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · {business?.nome || ''}
+                {new Date().toLocaleDateString(lang === 'en' ? 'en-GB' : 'it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · {business?.nome || ''}
               </p>
             </div>
 
@@ -513,7 +538,7 @@ export default function CRM() {
             <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(5, 1fr)' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
               {[
                 { label: t.totalLeads, value: leads.length, delta: `${activeLeads} ${t.active}`, color: C.accent, icon: '◉' },
-                { label: t.hotLeads, value: hotLeads, delta: hotLeads > 0 ? `🔥 ${t.urgent}` : (lang === 'en' ? 'none' : 'nessuno'), color: C.danger, icon: '🔥' },
+                { label: t.hotLeads, value: hotLeads, delta: hotLeads > 0 ? `🔥 ${t.urgent}` : (lang === 'en' ? 'none' : 'nessuno'), color: C.danger, icon: '🔥' }, // already uses t
                 { label: t.emailContacts, value: activeContacts, delta: `${emailContacts.length} ${t.total}`, color: C.success, icon: '✉' },
                 { label: t.openRate, value: avgOpen > 0 ? `${avgOpen}%` : '—', delta: `${sentCampaigns} ${lang === 'en' ? 'sent camp.' : 'camp. inviate'}`, color: C.gold, icon: '◈' },
                 { label: t.conversion, value: `${convRate}%`, delta: `${wonLeads} ${lang === 'en' ? 'won' : 'vinti'}`, color: C.accent2, icon: '◫' },
@@ -533,13 +558,13 @@ export default function CRM() {
                 <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ color: C.accent }}>◉</span> {t.latestLeads}
                 </div>
-                {leads.length === 0 && <div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>Nessun lead ancora</div>}
+                {leads.length === 0 && <div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: '20px 0' }}>{lang === 'en' ? 'No leads yet' : 'Nessun lead ancora'}</div>}
                 {leads.slice(0, 4).map(l => (
                   <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
                     <Avatar initials={getInitials(l.contact_nome)} size={30} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.contact_nome || 'Sconosciuto'}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{l.canale || '—'} · {l.created_date ? new Date(l.created_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{l.canale || '—'} · {l.created_date ? new Date(l.created_date).toLocaleDateString(en ? 'en-GB' : 'it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
                     </div>
                     <StatusDot color={colColor(l.stato)} />
                   </div>
