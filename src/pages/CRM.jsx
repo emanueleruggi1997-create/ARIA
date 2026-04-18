@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
-import { useLang } from '@/lib/LanguageContext';
+import { useLang } from '@/lib/LanguageContext.jsx';
 import LeadCard from '@/components/crm/LeadCard';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
 import MailingListTab from '@/components/crm/MailingListTab';

@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
-import { useLang } from '@/lib/LanguageContext';
+import { useLang } from '@/lib/LanguageContext.jsx';
 import KpiCard from '@/components/dashboard/KpiCard';
 import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
 import RobotMascot from '@/components/dashboard/RobotMascot';

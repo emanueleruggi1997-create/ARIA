@@ -24,6 +24,7 @@ import Legal from '@/pages/Legal';
 import Homepage from '@/pages/Homepage';
 import Demo from '@/pages/Demo';
 import { base44 } from '@/api/base44Client';
+import { LanguageProvider } from '@/lib/LanguageContext.jsx';
 
 const Spinner = () => (
   <div className="fixed inset-0 flex items-center justify-center bg-background">
@@ -85,6 +86,7 @@ const PrivateZone = () => {
 function App() {
   return (
     <ErrorBoundary>
+      <LanguageProvider>
       <AuthProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
@@ -101,6 +103,7 @@ function App() {
           <Toaster />
         </QueryClientProvider>
       </AuthProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }

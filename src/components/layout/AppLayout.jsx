@@ -7,6 +7,26 @@ import MobileBottomNav from './MobileBottomNav';
 import { cn } from '@/lib/utils';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import DashboardBgPreview from '@/components/settings/DashboardBgPreview';
+import { useLang } from '@/lib/LanguageContext.jsx';
+
+function LangToggle() {
+  const { lang, setLang } = useLang();
+  return (
+    <button
+      onClick={() => setLang(lang === 'it' ? 'en' : 'it')}
+      style={{
+        background: 'transparent', border: '1px solid #1A2E4A', color: '#5A7A9A',
+        fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 20,
+        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s',
+        whiteSpace: 'nowrap',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = '#00D4FF'; e.currentTarget.style.color = '#00D4FF'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = '#1A2E4A'; e.currentTarget.style.color = '#5A7A9A'; }}
+    >
+      {lang === 'it' ? '🇬🇧 EN' : '🇮🇹 IT'}
+    </button>
+  );
+}
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -29,7 +49,8 @@ export default function AppLayout() {
       {/* Desktop */}
       <div className="hidden md:block">
         <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-        <div className="fixed top-3 right-4 z-30">
+        <div className="fixed top-3 right-4 z-30 flex items-center gap-2">
+          <LangToggle />
           <NotificationsBell />
         </div>
       </div>

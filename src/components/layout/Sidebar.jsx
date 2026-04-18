@@ -9,22 +9,24 @@ const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cf
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { useAuth } from '@/lib/AuthContext';
 import { cn } from '@/lib/utils';
-
-const navItems = [
-  { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/inbox', icon: MessageSquare, label: 'Inbox' },
-  { path: '/crm', icon: Users, label: 'CRM' },
-  { path: '/calendar', icon: CalendarDays, label: 'Agenda' },
-  { path: '/agent', icon: null, label: 'ARIA' },
-  { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-  { path: '/settings', icon: Settings, label: 'Impostazioni' },
-];
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 export default function Sidebar({ collapsed, setCollapsed }) {
   const location = useLocation();
   const { business } = useBusiness();
   const { user } = useAuth();
+  const { t } = useLang();
   const isAdmin = user?.role === 'admin';
+
+  const navItems = [
+    { path: '/dashboard', icon: LayoutDashboard, label: t.dashboard },
+    { path: '/inbox', icon: MessageSquare, label: t.inbox },
+    { path: '/crm', icon: Users, label: t.crm },
+    { path: '/calendar', icon: CalendarDays, label: t.agenda },
+    { path: '/agent', icon: null, label: t.aria },
+    { path: '/analytics', icon: BarChart3, label: t.analytics },
+    { path: '/settings', icon: Settings, label: t.settings },
+  ];
 
   return (
     <aside className={cn(
@@ -105,7 +107,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       {!collapsed && (
         <div className="px-4 pt-2 pb-1">
           <Link to="/legal" className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-            Termini & Privacy
+            {t.termsPrivacy}
           </Link>
         </div>
       )}
@@ -120,7 +122,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               business.stato_agente === 'pausa' ? 'bg-yellow-500' : 'bg-red-500'
             )} />
             <span className="text-xs text-muted-foreground">
-              Agente {business.stato_agente === 'attivo' ? 'Attivo' : business.stato_agente === 'pausa' ? 'In Pausa' : 'Disattivo'}
+              {t.agentStatus(business.stato_agente)}
             </span>
           </div>
         </div>
