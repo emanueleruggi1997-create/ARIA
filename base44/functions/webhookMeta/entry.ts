@@ -310,17 +310,37 @@ ANNULLAMENTO:
 ${cancellationHandled ? '\nATTENZIONE: L\'appuntamento è stato già annullato automaticamente. Dì solo "Ok, annullato — sei libero/a!" in modo naturale.' : ''}`;
 
   const agentName = business.nome_agente || 'ARIA';
-  const fullPrompt = `${systemPrompt}\n\nStorico conversazione:\n${historyText}\n\nCliente: ${text}\n${agentName}:`;
 
-  // Run AI reply + appointment detection in parallel for speed
-  const [aiRes] = await Promise.all([
+  // Detect client language and generate reply in parallel for max speed
+  const baseFullPrompt = `${systemPrompt}\n\nStorico conversazione:\n${historyText}\n\nCliente: ${text}\n${agentName}:`;
+
+  const [clientLangDetect, aiResFirst] = await Promise.all([
     base44.asServiceRole.integrations.Core.InvokeLLM({
-      prompt: fullPrompt,
+      prompt: `Detect the language of this short text and reply with ONLY the language name in English (e.g. "Italian", "English", "Spanish"). Text: "${text.slice(0, 200)}"`,
+      model: 'gpt_5_mini',
+    }),
+    base44.asServiceRole.integrations.Core.InvokeLLM({
+      prompt: baseFullPrompt,
       model: 'gpt_5_mini',
     }),
   ]);
-  const aiReply = typeof aiRes === 'string' ? aiRes : aiRes?.text || aiRes?.content || '';
-  console.log('[webhookMeta] AI reply:', aiReply ? aiReply.slice(0, 120) : 'EMPTY');
+
+  const detectedLang = (typeof clientLangDetect === 'string' ? clientLangDetect : clientLangDetect?.text || '').trim().split('\n')[0];
+  let aiReplyRaw = typeof aiResFirst === 'string' ? aiResFirst : aiResFirst?.text || aiResFirst?.content || '';
+
+  // If detected language doesn't match the reply language, regenerate with explicit instruction
+  const needsRetry = detectedLang && aiReplyRaw &&
+    detectedLang.toLowerCase() === 'english' && /[àèìòùéí]/.test(aiReplyRaw);
+
+  let aiRes;
+  if (needsRetry) {
+    const langPrompt = `${systemPrompt}\n\nIMPORTANT: The client wrote in ${detectedLang}. You MUST reply in ${detectedLang} only.\n\nStorico conversazione:\n${historyText}\n\nCliente: ${text}\n${agentName}:`;
+    aiRes = await base44.asServiceRole.integrations.Core.InvokeLLM({ prompt: langPrompt, model: 'gpt_5_mini' });
+  } else {
+    aiRes = aiResFirst;
+  }
+  const aiReply = typeof aiRes === 'string' ? aiRes : aiRes?.text || aiRes?.content || aiReplyRaw;
+  console.log('[webhookMeta] AI reply (lang:', detectedLang, '):', aiReply ? aiReply.slice(0, 120) : 'EMPTY');
   if (!aiReply) { console.error('[webhookMeta] Empty AI reply'); return; }
 
   // Save AI reply to DB and send IG message in parallel
