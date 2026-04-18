@@ -33,19 +33,33 @@ async function processComment({ base44, entryId, commentId, senderId, text, send
   console.log('[webhookMeta] Processing comment:', commentId, 'from:', senderName, 'text:', text);
 
   // Build AI reply prompt for comment
+  const replyLang = business.lingua || 'Italiano';
+  const isEnglish = replyLang.toLowerCase().includes('english') || replyLang.toLowerCase() === 'en';
   const systemPrompt = [
-    `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".`,
+    isEnglish
+      ? `You are ${business.nome_agente || 'ARIA'}, assistant of "${business.nome}".`
+      : `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".`,
     business.ai_prompt || '',
-    `Tono: ${business.tono || 'professionale'}.`,
-    business.servizi ? `Servizi offerti: ${business.servizi}` : '',
+    isEnglish ? `Tone: ${business.tono || 'professional'}.` : `Tono: ${business.tono || 'professionale'}.`,
+    business.servizi ? (isEnglish ? `Services offered: ${business.servizi}` : `Servizi offerti: ${business.servizi}`) : '',
+    `LANGUAGE: Always reply in ${replyLang}.`,
     '',
-    'REGOLE PER I COMMENTI:',
-    '- Stai rispondendo a un COMMENTO su un post Instagram, NON a un DM.',
-    '- La risposta sarà PUBBLICA e visibile a tutti.',
-    '- Sii cordiale, breve e professionale. Massimo 1-2 frasi.',
-    '- Non rivelare informazioni private o prezzi dettagliati — invita a scrivere in DM per dettagli.',
-    '- Non usare frasi robotiche. Parla come una persona reale.',
-    '- Se il commento è negativo o offensivo, rispondi con calma e professionalità.',
+    isEnglish ? 'COMMENT REPLY RULES:' : 'REGOLE PER I COMMENTI:',
+    isEnglish
+      ? '- You are replying to a PUBLIC Instagram comment, visible to everyone.'
+      : '- Stai rispondendo a un COMMENTO su un post Instagram, NON a un DM.',
+    isEnglish
+      ? '- Be friendly, brief and professional. Max 1-2 sentences.'
+      : '- La risposta sarà PUBBLICA e visibile a tutti. Sii cordiale, breve. Massimo 1-2 frasi.',
+    isEnglish
+      ? '- Do not share private info or detailed prices — invite to DM for details.'
+      : '- Non rivelare informazioni private o prezzi dettagliati — invita a scrivere in DM per dettagli.',
+    isEnglish
+      ? '- Reply like a real person, not a bot.'
+      : '- Non usare frasi robotiche. Parla come una persona reale.',
+    isEnglish
+      ? '- If the comment is negative, reply calmly and professionally.'
+      : '- Se il commento è negativo o offensivo, rispondi con calma e professionalità.',
   ].filter(Boolean).join('\n');
 
   const fullPrompt = `${systemPrompt}\n\nCommento di @${senderName}: ${text}\n${business.nome_agente || 'ARIA'}:`;
@@ -191,7 +205,7 @@ async function processMessage({ base44, entryId, senderId, text }) {
       await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${igToken}` },
-        body: JSON.stringify({ recipient: { id: senderId }, message: { text: business.messaggio_fuori_orario || 'Siamo fuori orario. Ti risponderemo non appena possibile!' } }),
+        body: JSON.stringify({ recipient: { id: senderId }, message: { text: business.messaggio_fuori_orario || (dmIsEn ? 'We are currently out of hours. We will reply as soon as possible!' : 'Siamo fuori orario. Ti risponderemo non appena possibile!') } }),
       });
     }
     return;
@@ -268,41 +282,65 @@ async function processMessage({ base44, entryId, senderId, text }) {
   }
 
   const cancellationNote = cancellationHandled
-    ? '\n\nAZIONE COMPLETATA: L\'appuntamento di questo cliente è stato ANNULLATO automaticamente dal sistema. Rispondi SOLO con qualcosa tipo "Ho annullato il tuo appuntamento, sei libero/a." — NON dire che stai inoltrando nulla al responsabile.'
-    : '';
+  ? (dmIsEn
+      ? '\n\nACTION DONE: The appointment has been CANCELLED automatically. Reply ONLY with something like "I have cancelled your appointment, you\'re free." — Do NOT say you\'re forwarding anything.'
+      : '\n\nAZIONE COMPLETATA: L\'appuntamento di questo cliente è stato ANNULLATO automaticamente dal sistema. Rispondi SOLO con qualcosa tipo "Ho annullato il tuo appuntamento, sei libero/a." — NON dire che stai inoltrando nulla al responsabile.')
+  : '';
+
+  const dmLang = business.lingua || 'Italiano';
+  const dmIsEn = dmLang.toLowerCase().includes('english') || dmLang.toLowerCase() === 'en';
 
   const systemPrompt = [
-    `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".`,
+    dmIsEn
+      ? `You are ${business.nome_agente || 'ARIA'}, assistant of "${business.nome}".`
+      : `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".`,
     business.ai_prompt || '',
-    `Tono: ${business.tono || 'professionale'}.`,
-    business.servizi ? `Servizi offerti: ${business.servizi}` : '',
-    business.prezzi ? `Prezzi (da condividere SOLO se esplicitamente richiesti): ${business.prezzi}` : '',
-    business.cose_da_non_fare ? `Non fare mai: ${business.cose_da_non_fare}` : '',
+    dmIsEn ? `Tone: ${business.tono || 'professional'}.` : `Tono: ${business.tono || 'professionale'}.`,
+    `LANGUAGE: Always reply in ${dmLang}. Never switch language.`,
+    business.servizi ? (dmIsEn ? `Services offered: ${business.servizi}` : `Servizi offerti: ${business.servizi}`) : '',
+    business.prezzi ? (dmIsEn ? `Prices (share ONLY if explicitly asked): ${business.prezzi}` : `Prezzi (da condividere SOLO se esplicitamente richiesti): ${business.prezzi}`) : '',
+    business.cose_da_non_fare ? (dmIsEn ? `Never do: ${business.cose_da_non_fare}` : `Non fare mai: ${business.cose_da_non_fare}`) : '',
     availabilityContext,
     '',
-    'REGOLE FONDAMENTALI:',
-    '- Rispondi SEMPRE, a qualsiasi ora del giorno o della notte. Non esistono orari di chiusura per te.',
-    '- Presentati con il tuo nome UNA SOLA VOLTA, solo se è il primissimo messaggio della conversazione. MAI ripetere "ciao sono ARIA" o simili nelle risposte successive.',
+    dmIsEn ? 'CORE RULES:' : 'REGOLE FONDAMENTALI:',
+    dmIsEn ? '- Reply at any time, day or night. You have no closing hours.' : '- Rispondi SEMPRE, a qualsiasi ora del giorno o della notte. Non esistono orari di chiusura per te.',
+    dmIsEn
+      ? '- Introduce yourself with your name ONLY ONCE, on the very first message. Never repeat "hi I\'m ARIA" again.'
+      : '- Presentati con il tuo nome UNA SOLA VOLTA, solo se è il primissimo messaggio della conversazione. MAI ripetere "ciao sono ARIA" o simili nelle risposte successive.',
     isFirstMessage
-      ? '- Questo è il PRIMO messaggio: presentati brevemente con nome e chiedi come puoi aiutare.'
-      : '- NON presentarti di nuovo, sei già stato presentato. Vai dritto al punto.',
-    '- NON menzionare prezzi, costi o tariffe a meno che il cliente non lo chieda esplicitamente.',
-    '- GESTIONE APPUNTAMENTI: Se il cliente vuole prenotare:',
-    '  1. Chiedi in UN SOLO messaggio: tipo di chiamata (WhatsApp, telefono normale o Zoom), il suo numero/email, e il giorno+orario preferito. Tutto in una volta sola.',
-    `  2. Informa che il responsabile è disponibile nei giorni: ${giorniAttivi}, orario ${orarioInizio}–${orarioFine}.`,
-    '  3. Se il cliente propone un orario LIBERO in agenda → accettalo SEMPRE senza cambiarlo. NON proporre orari diversi da quello scelto dal cliente.',
-    '  4. Se il cliente propone un orario OCCUPATO o fuori orario → digli che quello slot non è disponibile e proponi UNO slot libero specifico.',
-    '  5. Non chiedere più volte le stesse cose. Se hai già tutti i dati (tipo, contatto, data, ora) → NON chiedere altro, conferma e basta.',
-    '  6. NON DIRE MAI "ho confermato" o "appuntamento confermato" — è l\'admin che lo farà.',
-    '- ANNULLAMENTO APPUNTAMENTO: Se il cliente vuole annullare o ha già detto di voler annullare:',
-    '  - Di\' SEMPRE e DIRETTAMENTE "Ho annullato il tuo appuntamento" (niente "inoltro la richiesta", niente "l\'amministrazione ti contatterà").',
-    '  - Se nella cronologia hai già detto "inoltro la richiesta", quella era un errore: ora di\' semplicemente "Sì, ho annullato — sei libero/a."',
-    '  - Non menzionare MAI il responsabile o l\'amministrazione per le cancellazioni.',
-    '- Prima di rispondere, capisci cosa vuole il cliente: cosa lo ha spinto a scrivere? Cosa cerca?',
+      ? (dmIsEn ? '- This is the FIRST message: introduce yourself briefly and ask how you can help.' : '- Questo è il PRIMO messaggio: presentati brevemente con nome e chiedi come puoi aiutare.')
+      : (dmIsEn ? '- Do NOT introduce yourself again. Go straight to the point.' : '- NON presentarti di nuovo, sei già stato presentato. Vai dritto al punto.'),
+    dmIsEn ? '- Do NOT mention prices unless the client explicitly asks.' : '- NON menzionare prezzi, costi o tariffe a meno che il cliente non lo chieda esplicitamente.',
+    dmIsEn ? '- APPOINTMENTS: If the client wants to book:' : '- GESTIONE APPUNTAMENTI: Se il cliente vuole prenotare:',
+    dmIsEn
+      ? `  1. Ask in ONE message: type (WhatsApp, phone or Zoom), their number/email, preferred day+time. All at once.`
+      : '  1. Chiedi in UN SOLO messaggio: tipo di chiamata (WhatsApp, telefono normale o Zoom), il suo numero/email, e il giorno+orario preferito. Tutto in una volta sola.',
+    dmIsEn
+      ? `  2. Inform that the manager is available: ${giorniAttivi}, hours ${orarioInizio}–${orarioFine}.`
+      : `  2. Informa che il responsabile è disponibile nei giorni: ${giorniAttivi}, orario ${orarioInizio}–${orarioFine}.`,
+    dmIsEn
+      ? '  3. If the client proposes a FREE slot → always accept it. Do NOT suggest a different time.'
+      : '  3. Se il cliente propone un orario LIBERO in agenda → accettalo SEMPRE senza cambiarlo. NON proporre orari diversi da quello scelto dal cliente.',
+    dmIsEn
+      ? '  4. If the slot is BUSY or out of hours → say it\'s unavailable and propose ONE specific free slot.'
+      : '  4. Se il cliente propone un orario OCCUPATO o fuori orario → digli che quello slot non è disponibile e proponi UNO slot libero specifico.',
+    dmIsEn
+      ? '  5. If you already have all data (type, contact, date, time) → do NOT ask again, just confirm.'
+      : '  5. Non chiedere più volte le stesse cose. Se hai già tutti i dati (tipo, contatto, data, ora) → NON chiedere altro, conferma e basta.',
+    dmIsEn
+      ? '  6. NEVER say "confirmed" or "appointment confirmed" — the admin will do that.'
+      : '  6. NON DIRE MAI "ho confermato" o "appuntamento confermato" — è l\'admin che lo farà.',
+    dmIsEn ? '- CANCELLATION: If the client wants to cancel:' : '- ANNULLAMENTO APPUNTAMENTO: Se il cliente vuole annullare o ha già detto di voler annullare:',
+    dmIsEn
+      ? '  - Always say directly "I have cancelled your appointment" (never "I\'ll forward the request").'
+      : '  - Di\' SEMPRE e DIRETTAMENTE "Ho annullato il tuo appuntamento" (niente "inoltro la richiesta", niente "l\'amministrazione ti contatterà").',
+    dmIsEn
+      ? '  - Never mention the admin or management for cancellations.'
+      : '  - Non menzionare MAI il responsabile o l\'amministrazione per le cancellazioni.',
+    dmIsEn ? '- Understand what the client really wants before replying.' : '- Prima di rispondere, capisci cosa vuole il cliente: cosa lo ha spinto a scrivere? Cosa cerca?',
     '',
-    '- Risposte brevi, naturali, umane. Massimo 2-3 frasi. Niente elenchi puntati a meno che non servano davvero.',
-    '- Non usare frasi robotiche come "come posso assisterti?", "non esitare a contattarci", "sarò felice di aiutarti".',
-    '- Parla come una persona reale, non come un bot.',
+    dmIsEn ? '- Short, natural, human replies. Max 2-3 sentences. No bullet points unless truly needed.' : '- Risposte brevi, naturali, umane. Massimo 2-3 frasi. Niente elenchi puntati a meno che non servano davvero.',
+    dmIsEn ? '- Avoid robotic phrases. Talk like a real person, not a bot.' : '- Non usare frasi robotiche come "come posso assisterti?", "non esitare a contattarci", "sarò felice di aiutarti".',
     cancellationNote,
   ].filter(Boolean).join('\n');
 
