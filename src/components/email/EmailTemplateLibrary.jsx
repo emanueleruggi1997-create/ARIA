@@ -195,14 +195,14 @@ export default function EmailTemplateLibrary({ lang = 'en', onSelectTemplate }) 
               background: '#fff', color: '#333', padding: 20, borderRadius: 8,
               lineHeight: 1.6, fontSize: 13, marginBottom: 16,
             }}>
-              <div style={{ fontWeight: 700, marginBottom: 12 }}>Caro {'{'}{'{'}'nome{'}'}{'}''},</div>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>Caro {'{{nome}},'.replace(/{/g, '{').replace(/}/g, '}')}</div>
               <p>Contenuto del template {previewTemplate.name}</p>
               <p>Puoi personalizzare questo template con le seguenti variabili:</p>
               <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
-                <li>{'{'}{'{'}'nome{'}'}{'}'}</li>
-                <li>{'{'}{'{'}'azienda{'}'}{'}'}</li>
-                <li>{'{'}{'{'}'data{'}'}{'}'}</li>
-                <li>{'{'}{'{'}'offerta{'}'}{'}'}</li>
+                <li>{'{{nome}}'}</li>
+                <li>{'{{azienda}}'}</li>
+                <li>{'{{data}}'}</li>
+                <li>{'{{offerta}}'}</li>
               </ul>
             </div>
 
