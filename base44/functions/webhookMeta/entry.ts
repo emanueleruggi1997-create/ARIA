@@ -512,8 +512,9 @@ Deno.serve(async (req) => {
     const comments = [];
 
     for (const entry of entries) {
-      // DMs — entry.messaging
+      // DMs — entry.messaging (skip read receipts and echoes)
       for (const event of (entry.messaging || [])) {
+        if (event.read || event.delivery) continue; // skip read receipts / delivery events
         if (!event.message || event.message.is_echo) continue;
         const senderId = event.sender?.id;
         const text = event.message?.text || '';
@@ -525,8 +526,10 @@ Deno.serve(async (req) => {
       for (const change of (entry.changes || [])) {
         if (change.field !== 'comments') continue;
         const val = change.value || {};
-        // Only process top-level comments (not replies by the page itself)
-        if (val.parent_id) continue; // skip replies
+        // Skip replies (have parent_id) and skip comments from the page itself (self_ig_scoped_id)
+        if (val.parent_id) continue;
+        if (val.from?.self_ig_scoped_id) continue; // skip own page replies
+        if (val.from?.id === entry.id) continue; // skip if sender is the IG account itself
         const commentId = val.id;
         const text = val.text || '';
         const senderId = val.from?.id || '';
