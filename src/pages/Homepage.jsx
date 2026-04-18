@@ -247,27 +247,24 @@ export default function Homepage() {
       {/* ── LAUNCH BANNER ── */}
       {bannerVisible && (
         <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, zIndex: 101,
-          height: 38, background: "linear-gradient(90deg, #0A1628, #0D1E35)",
-          borderBottom: "1px solid #1A2E4A",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "0 40px",
+          height: "auto", minHeight: 40, padding: "8px 40px 8px 16px",
+          background: "#0D1525", borderBottom: "1px solid #1A2E4A",
+          textAlign: "center", position: "relative", zIndex: 101,
+          fontSize: 12, lineHeight: 1.5, color: "#5A7A9A",
         }}>
-          <p style={{ fontSize: 12, color: "#5A7A9A", textAlign: "center" }}>
-            🎁 Offerta lancio:{" "}
-            <span style={{ color: "#FFB800", fontWeight: 700 }}>2 mesi al prezzo di 1</span>
-            {" "}— Solo per le prime iscrizioni · Nessuna carta richiesta
-          </p>
+          🎁 Offerta lancio:{" "}
+          <span style={{ color: "#FFB800", fontWeight: 700 }}>2 mesi al prezzo di 1</span>
+          {" "}— Solo per le prime iscrizioni · Nessuna carta richiesta
           <button
             onClick={() => setBannerVisible(false)}
-            style={{ position: "absolute", right: 16, background: "none", border: "none", color: "#5A7A9A", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: 4 }}
+            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#5A7A9A", fontSize: 18, cursor: "pointer", lineHeight: 1 }}
           >✕</button>
         </div>
       )}
 
       {/* ── NAV ── */}
       <nav style={{
-        position: "fixed", top: bannerVisible ? 38 : 0, left: 0, right: 0, zIndex: 100,
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
         background: `${T.bg}e8`, backdropFilter: "blur(20px)",
         borderBottom: `1px solid ${T.border}`,
         padding: "0 24px", height: 60,
@@ -287,11 +284,7 @@ export default function Homepage() {
           <div style={{ width: 1, height: 20, background: T.border }} />
           <button
             onClick={handleLogin}
-            style={{
-              padding: "9px 20px", fontSize: 13, borderRadius: 14, border: "1px solid #1A2E4A",
-              background: "transparent", color: "#C8D8E8", fontFamily: "'DM Sans', sans-serif",
-              fontWeight: 600, cursor: "pointer", transition: "all 0.25s",
-            }}
+            style={{ background: "transparent", border: "1px solid #1A2E4A", color: "#C8D8E8", padding: "9px 20px", borderRadius: 12, fontSize: 13, fontFamily: "inherit", cursor: "pointer", transition: "all 0.25s" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "#00D4FF"; e.currentTarget.style.color = "#00D4FF"; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = "#1A2E4A"; e.currentTarget.style.color = "#C8D8E8"; }}
           >
