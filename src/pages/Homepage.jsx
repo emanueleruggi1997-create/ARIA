@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { base44 } from '@/api/base44Client';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 /* ─── DESIGN TOKENS ─── */
 const T = {
@@ -177,8 +178,14 @@ function StatBadge({ value, label, color }) {
   );
 }
 
-function Ticker() {
-  const items = [
+function Ticker({ lang }) {
+  const en = lang === 'en';
+  const items = en ? [
+    "◈ 24/7 RESPONSE", "◉ ZERO ABSENCES", "◈ QUALIFIED LEADS",
+    "◉ AUTOMATIC CRM", "◈ WHATSAPP + INSTAGRAM", "◉ AI APPOINTMENTS",
+    "◈ 24/7 RESPONSE", "◉ ZERO ABSENCES", "◈ QUALIFIED LEADS",
+    "◉ AUTOMATIC CRM", "◈ WHATSAPP + INSTAGRAM", "◉ AI APPOINTMENTS",
+  ] : [
     "◈ RISPOSTA H24", "◉ ZERO ASSENZE", "◈ LEAD QUALIFICATI",
     "◉ CRM AUTOMATICO", "◈ WHATSAPP + INSTAGRAM", "◉ APPUNTAMENTI AI",
     "◈ RISPOSTA H24", "◉ ZERO ASSENZE", "◈ LEAD QUALIFICATI",
@@ -197,6 +204,8 @@ function Ticker() {
 
 /* ─── MAIN COMPONENT ─── */
 export default function Homepage() {
+  const { lang, toggleLang } = useLang();
+  const en = lang === 'en';
   const [mood, setMood] = useState("felice");
   const [activeStep, setActiveStep] = useState(0);
   const [bannerVisible, setBannerVisible] = useState(true);
@@ -210,6 +219,9 @@ export default function Homepage() {
 
   const moods = ["felice", "energica", "divertita", "stanca", "innamorata", "arrabbiata"];
   const moodEmoji = { felice: "😊", energica: "⚡", divertita: "😄", stanca: "😴", innamorata: "🥰", arrabbiata: "😤" };
+  const moodLabels = en
+    ? { felice: "Happy", energica: "Energetic", divertita: "Playful", stanca: "Tired", innamorata: "In love", arrabbiata: "Angry" }
+    : { felice: "Felice", energica: "Energica", divertita: "Divertita", stanca: "Stanca", innamorata: "Innamorata", arrabbiata: "Arrabbiata" };
 
   // Se già autenticato, vai direttamente alla dashboard
   useEffect(() => {
@@ -225,14 +237,26 @@ export default function Homepage() {
 
   const handleLogin = () => base44.auth.redirectToLogin('/dashboard');
 
-  const steps = [
+  const steps = en ? [
+    { n: "01", title: "Client writes", desc: "On WhatsApp or Instagram. Day or night, weekends or holidays.", icon: "💬" },
+    { n: "02", title: "ARIA replies", desc: "Naturally, with your business tone. Qualifies the lead.", icon: "🤖" },
+    { n: "03", title: "Lead in CRM", desc: "With all gathered info, ready to be followed up.", icon: "◉" },
+    { n: "04", title: "You close", desc: "Receive only warm, pre-qualified contacts. Zero time wasted.", icon: "🎯" },
+  ] : [
     { n: "01", title: "Il cliente scrive", desc: "Su WhatsApp o Instagram. Giorno o notte, weekend o festivi.", icon: "💬" },
     { n: "02", title: "ARIA risponde", desc: "In modo naturale, con il tono della tua attività. Qualifica il lead.", icon: "🤖" },
     { n: "03", title: "Lead nel CRM", desc: "Con tutte le informazioni raccolte, pronto per essere seguito.", icon: "◉" },
     { n: "04", title: "Tu chiudi", desc: "Ricevi solo i contatti caldi, già qualificati. Zero tempo perso.", icon: "🎯" },
   ];
 
-  const features = [
+  const features = en ? [
+    { icon: "💬", title: "WhatsApp Business", desc: "ARIA responds 24/7, qualifies leads and alerts you only when needed.", tag: "PRO PLAN" },
+    { icon: "📷", title: "Instagram DM", desc: "Automatic management of direct messages. No customer left without a reply.", tag: "ALL PLANS" },
+    { icon: "◉", title: "CRM & Leads", desc: "Kanban board, qualified leads and always up-to-date sales pipeline.", tag: "ALL PLANS" },
+    { icon: "📅", title: "AI Agenda", desc: "ARIA books appointments automatically directly from the chat.", tag: "ALL PLANS" },
+    { icon: "✉", title: "Email Marketing", desc: "Automated campaigns, personalized newsletters, real-time stats.", tag: "ALL PLANS" },
+    { icon: "📊", title: "Analytics", desc: "Reports on messages, converted leads and performance. Real data, better decisions.", tag: "ALL PLANS" },
+  ] : [
     { icon: "💬", title: "WhatsApp Business", desc: "ARIA risponde H24, qualifica i lead e ti avvisa solo quando serve davvero.", tag: "PIANO PRO" },
     { icon: "📷", title: "Instagram DM", desc: "Gestione automatica dei messaggi diretti. Nessun cliente senza risposta.", tag: "TUTTI I PIANI" },
     { icon: "◉", title: "CRM & Lead", desc: "Kanban board, lead qualificati e pipeline di vendita sempre aggiornata.", tag: "TUTTI I PIANI" },
@@ -241,7 +265,11 @@ export default function Homepage() {
     { icon: "📊", title: "Analytics", desc: "Report su messaggi, lead convertiti e performance. Dati reali, decisioni migliori.", tag: "TUTTI I PIANI" },
   ];
 
-  const plans = [
+  const plans = en ? [
+    { name: "STARTER", price: "49", oldPrice: "98", featured: false, items: ["Automatic Instagram DM", "Social posting (20 posts/mo)", "CRM & Lead management", "Email marketing (1,000/mo)", "ARIA AI assistant"] },
+    { name: "PRO", price: "99", oldPrice: "198", featured: true, items: ["Everything in Starter +", "WhatsApp Business ✓", "3 manageable accounts", "60 posts/mo", "Email marketing (10,000/mo)", "CRM + AI quotes", "White label"] },
+    { name: "AGENCY", price: "249", oldPrice: "498", featured: false, items: ["Everything in Pro +", "Unlimited accounts", "Full white label", "Unlimited emails", "API access", "Priority support", "Dedicated onboarding"] },
+  ] : [
     { name: "STARTER", price: "49", oldPrice: "98", featured: false, items: ["Instagram DM automatico", "Social posting (20 post/mese)", "CRM & Lead management", "Email marketing (1.000/mese)", "ARIA assistente AI"] },
     { name: "PRO", price: "99", oldPrice: "198", featured: true, items: ["Tutto Starter +", "WhatsApp Business ✓", "3 account gestibili", "60 post/mese", "Email marketing (10.000/mese)", "CRM + preventivi AI", "White label"] },
     { name: "AGENCY", price: "249", oldPrice: "498", featured: false, items: ["Tutto Pro +", "Account illimitati", "White label completo", "Email illimitate", "API access", "Priority support", "Onboarding dedicato"] },
@@ -265,9 +293,9 @@ export default function Homepage() {
           overflow: "hidden",
           color: "#5A7A9A",
         }}>
-          🎁 Offerta lancio:{" "}
-          <span style={{ color: "#FFB800", fontWeight: 700, marginLeft: 4 }}>2 mesi al prezzo di 1</span>
-          <span style={{ marginLeft: 4 }}>— Solo per le prime iscrizioni · Nessuna carta richiesta</span>
+          🎁 {en ? 'Launch offer:' : 'Offerta lancio:'}{" "}
+          <span style={{ color: "#FFB800", fontWeight: 700, marginLeft: 4 }}>{en ? '2 months for the price of 1' : '2 mesi al prezzo di 1'}</span>
+          <span style={{ marginLeft: 4 }}>— {en ? 'First sign-ups only · No card required' : 'Solo per le prime iscrizioni · Nessuna carta richiesta'}</span>
           <button
             onClick={() => setBannerVisible(false)}
             style={{
@@ -299,20 +327,31 @@ export default function Homepage() {
             <span style={{ fontSize: 10, color: T.muted, marginLeft: -4 }}>AGENT AI</span>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isDesktop ? 28 : 12 }}>
-            {isDesktop && ["Funzionalità", "ARIA", "Prezzi"].map(l => (
-              <a key={l} className="hp-nav-link" href={`#${l.toLowerCase()}`}>{l}</a>
-            ))}
+            {isDesktop && (en
+              ? ["Features", "ARIA", "Pricing"].map((l, i) => (
+                  <a key={l} className="hp-nav-link" href={`#${["funzionalità","aria","prezzi"][i]}`}>{l}</a>
+                ))
+              : ["Funzionalità", "ARIA", "Prezzi"].map(l => (
+                  <a key={l} className="hp-nav-link" href={`#${l.toLowerCase()}`}>{l}</a>
+                ))
+            )}
             {isDesktop && <div style={{ width: 1, height: 20, background: T.border }} />}
+            <button
+              onClick={toggleLang}
+              style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.muted, padding: "7px 14px", borderRadius: 20, fontSize: 12, fontFamily: "inherit", cursor: "pointer", fontWeight: 700 }}
+            >
+              {en ? '🇮🇹 IT' : '🇬🇧 EN'}
+            </button>
             <button
               onClick={handleLogin}
               style={{ background: "transparent", border: "1px solid #1A2E4A", color: "#C8D8E8", padding: "9px 20px", borderRadius: 12, fontSize: 13, fontFamily: "inherit", cursor: "pointer", transition: "all 0.25s" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#00D4FF"; e.currentTarget.style.color = "#00D4FF"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#1A2E4A"; e.currentTarget.style.color = "#C8D8E8"; }}
             >
-              Accedi
+              {en ? 'Login' : 'Accedi'}
             </button>
             <button className="hp-btn-primary" style={{ padding: "9px 20px", fontSize: 13 }} onClick={handleLogin}>
-              <span>Inizia gratis</span>
+              <span>{en ? 'Start free' : 'Inizia gratis'}</span>
               <span style={{ position: "relative", zIndex: 1 }}>→</span>
             </button>
           </div>
@@ -330,35 +369,44 @@ export default function Homepage() {
           <div style={{ flex: 1, minWidth: 300 }}>
             <div className="slide-up-1" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${T.glow}18`, border: `1px solid ${T.glow}44`, borderRadius: 20, padding: "6px 14px", marginBottom: 24 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.success, boxShadow: `0 0 8px ${T.success}` }} />
-              <span style={{ fontSize: 12, color: T.cyan, fontWeight: 600, letterSpacing: 0.5 }}>LIVE — 2 mesi al prezzo di 1</span>
+              <span style={{ fontSize: 12, color: T.cyan, fontWeight: 600, letterSpacing: 0.5 }}>LIVE — {en ? '2 months for the price of 1' : '2 mesi al prezzo di 1'}</span>
             </div>
 
             <h1 className="slide-up-2" style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(52px, 6vw, 88px)", lineHeight: 0.92, letterSpacing: -1, marginBottom: 24, color: T.text, maxWidth: isDesktop ? 560 : "none" }}>
-              LA TUA<br />
-              <span style={{ background: `linear-gradient(90deg, ${T.cyan}, ${T.glow}, ${T.violet})`, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "gradShift 4s ease infinite" }}>SEGRETERIA</span><br />
-              A 49€/MESE
+              {en ? 'YOUR' : 'LA TUA'}<br />
+              <span style={{ background: `linear-gradient(90deg, ${T.cyan}, ${T.glow}, ${T.violet})`, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "gradShift 4s ease infinite" }}>{en ? 'SECRETARY' : 'SEGRETERIA'}</span><br />
+              {en ? 'AT €49/MO' : 'A 49€/MESE'}
             </h1>
 
             <p className="slide-up-3" style={{ fontSize: 17, lineHeight: 1.7, color: T.muted, maxWidth: 480, marginBottom: 12 }}>
-              Una segretaria umana costa <span style={{ color: T.pink, fontWeight: 700, textDecoration: "line-through" }}>3.000€/mese</span>. ARIA fa lo stesso lavoro — H24, senza ferie, senza errori — a partire da <span style={{ color: T.success, fontWeight: 700 }}>49€</span>.
+              {en
+                ? <><span>A human secretary costs </span><span style={{ color: T.pink, fontWeight: 700, textDecoration: "line-through" }}>€3,000/mo</span><span>. ARIA does the same job — 24/7, no holidays, no mistakes — starting from </span><span style={{ color: T.success, fontWeight: 700 }}>€49</span>.</>
+                : <><span>Una segretaria umana costa </span><span style={{ color: T.pink, fontWeight: 700, textDecoration: "line-through" }}>3.000€/mese</span><span>. ARIA fa lo stesso lavoro — H24, senza ferie, senza errori — a partire da </span><span style={{ color: T.success, fontWeight: 700 }}>49€</span>.</>
+              }
             </p>
             <p className="slide-up-3" style={{ fontSize: 15, lineHeight: 1.6, color: T.muted, maxWidth: 480, marginBottom: 36 }}>
-              Risponde su WhatsApp e Instagram, gestisce il CRM, prenota appuntamenti e qualifica i lead. Tu ti svegli con la pipeline già piena.
+              {en
+                ? 'Replies on WhatsApp and Instagram, manages the CRM, books appointments and qualifies leads. You wake up with a full pipeline.'
+                : 'Risponde su WhatsApp e Instagram, gestisce il CRM, prenota appuntamenti e qualifica i lead. Tu ti svegli con la pipeline già piena.'
+              }
             </p>
 
             <div className="slide-up-4" style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 40 }}>
               <button className="hp-btn-primary" onClick={handleLogin}>
-                <span>Attiva ARIA gratis</span>
+                <span>{en ? 'Activate ARIA free' : 'Attiva ARIA gratis'}</span>
                 <span>→</span>
               </button>
               <a href="https://wa.me/393784056561?text=Ciao%20Emaral%2C%20vorrei%20info%20su%20Emaral%20Agent%20AI" target="_blank" rel="noreferrer" className="hp-btn-ghost">
                 <span>💬</span>
-                <span>Parla su WhatsApp</span>
+                <span>{en ? 'Chat on WhatsApp' : 'Parla su WhatsApp'}</span>
               </a>
             </div>
 
             <div className="slide-up-5" style={{ display: "flex", gap: isDesktop ? 32 : 16, flexWrap: "nowrap", flexDirection: "row" }}>
-              {[{ v: "H24", l: "Risposta automatica" }, { v: "8+", l: "Moduli inclusi" }, { v: "49€", l: "Piano di partenza" }, { v: "100%", l: "Made in Italy" }].map(s => (
+              {(en
+                ? [{ v: "24/7", l: "Automatic reply" }, { v: "8+", l: "Modules included" }, { v: "€49", l: "Starting plan" }, { v: "100%", l: "Made in Italy" }]
+                : [{ v: "H24", l: "Risposta automatica" }, { v: "8+", l: "Moduli inclusi" }, { v: "49€", l: "Piano di partenza" }, { v: "100%", l: "Made in Italy" }]
+              ).map(s => (
                 <div key={s.v} style={{ textAlign: "center" }}>
                   <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 26, letterSpacing: 1, color: T.cyan }}>{s.v}</div>
                   <div style={{ fontSize: 11, color: T.muted, fontWeight: 500 }}>{s.l}</div>
@@ -377,10 +425,10 @@ export default function Homepage() {
                 <span style={{ fontSize: 10, color: T.muted, marginLeft: "auto" }}>WhatsApp · 09:41</span>
               </div>
               <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 10 }}>
-                <ChatBubble from="client" text="Ciao! Vorrei info sui vostri servizi 😊" delay={0} />
-                <ChatBubble from="aria" text={`Ciao! Sono ARIA ${moodEmoji[mood]} Sono l'assistente di Emaral Group. Posso aiutarti subito — cosa stai cercando?`} delay={0.3} />
-                <ChatBubble from="client" text="Vorrei prenotare una consulenza" delay={0.6} />
-                <ChatBubble from="aria" text="Perfetto! Ho un posto libero domani alle 15:00 o giovedì alle 11:00. Quale preferisci? 📅" delay={0.9} />
+                <ChatBubble from="client" text={en ? "Hi! I'd like info on your services 😊" : "Ciao! Vorrei info sui vostri servizi 😊"} delay={0} />
+                <ChatBubble from="aria" text={en ? `Hi! I'm ARIA ${moodEmoji[mood]} I'm the Emaral Group assistant. I can help you right away — what are you looking for?` : `Ciao! Sono ARIA ${moodEmoji[mood]} Sono l'assistente di Emaral Group. Posso aiutarti subito — cosa stai cercando?`} delay={0.3} />
+                <ChatBubble from="client" text={en ? "I'd like to book a consultation" : "Vorrei prenotare una consulenza"} delay={0.6} />
+                <ChatBubble from="aria" text={en ? "Perfect! I have availability tomorrow at 3:00pm or Thursday at 11:00am. Which do you prefer? 📅" : "Perfetto! Ho un posto libero domani alle 15:00 o giovedì alle 11:00. Quale preferisci? 📅"} delay={0.9} />
               </div>
             </div>
           </div>
@@ -388,22 +436,25 @@ export default function Homepage() {
       </section>
 
       {/* ── TICKER ── */}
-      <Ticker />
+      <Ticker lang={lang} />
 
       {/* ── VS COMPARISON ── */}
       <section style={{ padding: isDesktop ? "80px 40px" : "80px 24px", background: T.deep }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <h2 style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(36px, 6vw, 64px)", letterSpacing: 1, lineHeight: 0.95, color: T.text, marginBottom: 12 }}>
-              SEGRETARIA UMANA<br />
+              {en ? 'HUMAN SECRETARY' : 'SEGRETARIA UMANA'}<br />
               <span style={{ color: T.pink }}>VS</span>{" "}
               <span style={{ background: `linear-gradient(90deg, ${T.cyan}, ${T.glow})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>ARIA</span>
             </h2>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr", gap: isDesktop ? 24 : 16 }}>
             <div style={{ background: T.card, border: `1px solid ${T.pink}33`, borderRadius: 20, padding: 28 }}>
-              <div style={{ fontSize: 13, color: T.pink, fontWeight: 700, letterSpacing: 1, marginBottom: 20 }}>SEGRETARIA UMANA</div>
-              {[["💰", "~3.000€/mese", "Stipendio + contributi"], ["🕐", "8h/giorno", "Solo giorni lavorativi"], ["😴", "Ferie, malattia", "Assenze garantite"], ["😤", "Stress, errori", "Performance variabile"], ["📋", "Un canale alla volta", "WhatsApp O telefono"]].map(([icon, val, sub], i) => (
+              <div style={{ fontSize: 13, color: T.pink, fontWeight: 700, letterSpacing: 1, marginBottom: 20 }}>{en ? 'HUMAN SECRETARY' : 'SEGRETARIA UMANA'}</div>
+              {(en
+                ? [["💰", "~€3,000/mo", "Salary + benefits"], ["🕐", "8h/day", "Working days only"], ["😴", "Holidays, sick leave", "Guaranteed absences"], ["😤", "Stress, errors", "Variable performance"], ["📋", "One channel at a time", "WhatsApp OR phone"]]
+                : [["💰", "~3.000€/mese", "Stipendio + contributi"], ["🕐", "8h/giorno", "Solo giorni lavorativi"], ["😴", "Ferie, malattia", "Assenze garantite"], ["😤", "Stress, errori", "Performance variabile"], ["📋", "Un canale alla volta", "WhatsApp O telefono"]]
+              ).map(([icon, val, sub], i) => (
                 <div key={i} style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
                   <span style={{ fontSize: 20, flexShrink: 0 }}>{icon}</span>
                   <div>
@@ -415,7 +466,10 @@ export default function Homepage() {
             </div>
             <div style={{ background: `linear-gradient(135deg, ${T.glow}12, ${T.violet}12)`, border: `1px solid ${T.glow}44`, borderRadius: 20, padding: 28, boxShadow: `0 0 40px ${T.glow}18` }}>
               <div style={{ fontSize: 13, color: T.cyan, fontWeight: 700, letterSpacing: 1, marginBottom: 20 }}>ARIA — EMARAL AGENT AI</div>
-              {[["💎", "Da 49€/mese", "Tutto incluso, zero sorprese"], ["⚡", "H24 · 365 giorni", "Mai offline, mai in ritardo"], ["🚀", "Zero assenze", "Sempre operativa al 100%"], ["🎯", "Performance costante", "Stessa qualità sempre"], ["🌐", "Tutti i canali insieme", "WA + IG + CRM + Email"]].map(([icon, val, sub], i) => (
+              {(en
+                ? [["💎", "From €49/mo", "All included, zero surprises"], ["⚡", "24/7 · 365 days", "Never offline, never late"], ["🚀", "Zero absences", "Always 100% operational"], ["🎯", "Consistent performance", "Same quality always"], ["🌐", "All channels together", "WA + IG + CRM + Email"]]
+                : [["💎", "Da 49€/mese", "Tutto incluso, zero sorprese"], ["⚡", "H24 · 365 giorni", "Mai offline, mai in ritardo"], ["🚀", "Zero assenze", "Sempre operativa al 100%"], ["🎯", "Performance costante", "Stessa qualità sempre"], ["🌐", "Tutti i canali insieme", "WA + IG + CRM + Email"]]
+              ).map(([icon, val, sub], i) => (
                 <div key={i} style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
                   <span style={{ fontSize: 20, flexShrink: 0 }}>{icon}</span>
                   <div>
@@ -429,8 +483,8 @@ export default function Homepage() {
           <div style={{ marginTop: 24, background: `${T.success}12`, border: `1px solid ${T.success}44`, borderRadius: 16, padding: "18px 24px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
             <span style={{ fontSize: 28 }}>💡</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, fontSize: 16, color: T.success }}>Risparmio reale: fino a 2.951€ al mese</div>
-              <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>Con ARIA Starter a 49€ fai il lavoro di una segretaria da 3.000€. Il ROI si vede dal primo giorno.</div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: T.success }}>{en ? 'Real savings: up to €2,951 per month' : 'Risparmio reale: fino a 2.951€ al mese'}</div>
+              <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>{en ? 'With ARIA Starter at €49 you do the work of a €3,000 secretary. ROI visible from day one.' : 'Con ARIA Starter a 49€ fai il lavoro di una segretaria da 3.000€. Il ROI si vede dal primo giorno.'}</div>
             </div>
           </div>
         </div>
@@ -440,10 +494,10 @@ export default function Homepage() {
       <section id="funzionalità" style={{ padding: isDesktop ? "80px 40px" : "80px 24px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ marginBottom: 52, maxWidth: 600 }}>
-            <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>FUNZIONALITÀ</div>
+            <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>{en ? 'FEATURES' : 'FUNZIONALITÀ'}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(34px, 5vw, 56px)", letterSpacing: 0.5, lineHeight: 0.95, color: T.text }}>
-              TUTTO QUELLO CHE SERVE.<br />
-              <span style={{ color: T.muted }}>IN UNA SOLA PIATTAFORMA.</span>
+              {en ? 'EVERYTHING YOU NEED.' : 'TUTTO QUELLO CHE SERVE.'}<br />
+              <span style={{ color: T.muted }}>{en ? 'ONE SINGLE PLATFORM.' : 'IN UNA SOLA PIATTAFORMA.'}</span>
             </h2>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(280px, 1fr))", gap: isDesktop ? 20 : 16 }}>
@@ -466,29 +520,36 @@ export default function Homepage() {
         <div style={{ position: "absolute", top: "50%", right: "10%", transform: "translateY(-50%)", width: 500, height: 500, background: `radial-gradient(ellipse, ${T.violet}12 0%, transparent 70%)`, pointerEvents: "none" }} />
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", gap: 60, flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 440px" }}>
-            <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>IL TUO ASSISTENTE PERSONALE</div>
+            <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>{en ? 'YOUR PERSONAL ASSISTANT' : 'IL TUO ASSISTENTE PERSONALE'}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(40px, 6vw, 68px)", letterSpacing: 0.5, lineHeight: 0.92, color: T.text, marginBottom: 20 }}>
-              INCONTRA<br />
+              {en ? 'MEET' : 'INCONTRA'}<br />
               <span style={{ background: `linear-gradient(90deg, ${T.violet}, ${T.pink})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>ARIA.</span>
             </h2>
             <p style={{ fontSize: 16, color: T.muted, lineHeight: 1.7, marginBottom: 28, maxWidth: 440 }}>
-              Non è un chatbot. È una persona digitale con carattere, memoria e personalità. Cambia umore, ricorda le conversazioni precedenti, non risponde mai come un robot.
+              {en
+                ? "It's not a chatbot. It's a digital person with character, memory and personality. Changes mood, remembers past conversations, never responds like a robot."
+                : "Non è un chatbot. È una persona digitale con carattere, memoria e personalità. Cambia umore, ricorda le conversazioni precedenti, non risponde mai come un robot."
+              }
             </p>
             <div style={{ marginBottom: 28 }}>
-              <div style={{ fontSize: 12, color: T.muted, fontWeight: 700, marginBottom: 12, letterSpacing: 1 }}>SCEGLI IL SUO UMORE</div>
+              <div style={{ fontSize: 12, color: T.muted, fontWeight: 700, marginBottom: 12, letterSpacing: 1 }}>{en ? "CHOOSE HER MOOD" : "SCEGLI IL SUO UMORE"}</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {moods.map(m => (
                   <button key={m} className={`hp-mood-btn ${mood === m ? "active" : ""}`} onClick={() => setMood(m)}>
-                    {moodEmoji[m]} {m.charAt(0).toUpperCase() + m.slice(1)}
+                    {moodEmoji[m]} {moodLabels[m]}
                   </button>
                 ))}
               </div>
             </div>
-            {[
+            {(en ? [
+              { title: "Replies to clients", desc: "On WhatsApp and Instagram, like a real collaborator. Without sounding like a bot." },
+              { title: "Helps you work", desc: "Generates quotes, analyzes leads, creates posts. All from the dashboard." },
+              { title: "Has a real personality", desc: "Changes mood, remembers conversations, never replies the same way twice." },
+            ] : [
               { title: "Risponde ai clienti", desc: "Su WhatsApp e Instagram, come un vero collaboratore. Senza sembrare un bot." },
               { title: "Ti aiuta nel lavoro", desc: "Genera preventivi, analizza lead, crea post. Tutto dalla dashboard." },
               { title: "Ha una personalità vera", desc: "Cambia umore, ricorda le conversazioni, non risponde mai uguale." },
-            ].map((item, i) => (
+            ]).map((item, i) => (
               <div key={i} style={{ display: "flex", gap: 14, marginBottom: 16 }}>
                 <div style={{ width: 4, borderRadius: 2, background: `linear-gradient(to bottom, ${T.violet}, ${T.pink})`, flexShrink: 0 }} />
                 <div>
@@ -513,9 +574,9 @@ export default function Homepage() {
       <section style={{ padding: isDesktop ? "80px 40px" : "80px 24px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>COME FUNZIONA</div>
+            <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>{en ? 'HOW IT WORKS' : 'COME FUNZIONA'}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(36px, 5vw, 58px)", letterSpacing: 0.5, color: T.text }}>
-              4 STEP. <span style={{ color: T.muted }}>ZERO FATICA.</span>
+              4 STEP. <span style={{ color: T.muted }}>{en ? 'ZERO EFFORT.' : 'ZERO FATICA.'}</span>
             </h2>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(auto-fill, minmax(190px, 1fr))", gap: 14 }}>
@@ -540,13 +601,13 @@ export default function Homepage() {
       <section id="prezzi" style={{ padding: isDesktop ? "80px 40px" : "80px 24px", background: T.deep }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>PREZZI</div>
+            <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>{en ? 'PRICING' : 'PREZZI'}</div>
             <h2 style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(36px, 5vw, 58px)", letterSpacing: 0.5, color: T.text, marginBottom: 10 }}>
-              SEMPLICE. <span style={{ color: T.muted }}>TRASPARENTE.</span>
+              {en ? 'SIMPLE.' : 'SEMPLICE.'} <span style={{ color: T.muted }}>{en ? 'TRANSPARENT.' : 'TRASPARENTE.'}</span>
             </h2>
           </div>
           <div style={{ background: `linear-gradient(135deg, ${T.gold}18, ${T.gold}08)`, border: `1px solid ${T.gold}44`, borderRadius: 14, padding: "12px 20px", textAlign: "center", marginBottom: 36 }}>
-            <span style={{ fontSize: 14, color: T.gold, fontWeight: 700 }}>🎁 Offerta lancio: 2 mesi al prezzo di 1 · Solo per le prime iscrizioni · Non rinnovabile</span>
+            <span style={{ fontSize: 14, color: T.gold, fontWeight: 700 }}>🎁 {en ? 'Launch offer: 2 months for the price of 1 · First sign-ups only · Non-renewable' : 'Offerta lancio: 2 mesi al prezzo di 1 · Solo per le prime iscrizioni · Non rinnovabile'}</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, alignItems: "start" }}>
             {plans.map((p, i) => (
@@ -559,7 +620,7 @@ export default function Homepage() {
                   <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 54, letterSpacing: -1, color: T.text, lineHeight: 1 }}>{p.price}€</span>
                   <span style={{ color: T.muted, fontSize: 13 }}>/mese</span>
                 </div>
-                <div style={{ fontSize: 12, color: T.muted, marginBottom: 24 }}>invece di <span style={{ textDecoration: "line-through" }}>{p.oldPrice}€</span></div>
+                <div style={{ fontSize: 12, color: T.muted, marginBottom: 24 }}>{en ? 'instead of' : 'invece di'} <span style={{ textDecoration: "line-through" }}>{p.oldPrice}€</span></div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
                   {p.items.map((item, j) => (
                     <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
@@ -573,7 +634,7 @@ export default function Homepage() {
                   className={p.featured ? "hp-btn-primary" : "hp-btn-ghost"}
                   style={{ width: "100%", justifyContent: "center" }}
                 >
-                  <span>Inizia con {p.name}</span>
+                  <span>{en ? `Start with ${p.name}` : `Inizia con ${p.name}`}</span>
                 </button>
               </div>
             ))}
@@ -585,23 +646,23 @@ export default function Homepage() {
       <section style={{ padding: isDesktop ? "100px 40px" : "100px 24px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 600, height: 400, background: `radial-gradient(ellipse, ${T.glow}14 0%, transparent 70%)`, pointerEvents: "none" }} />
         <div style={{ maxWidth: 680, margin: "0 auto", position: "relative" }}>
-          <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 16 }}>INIZIA OGGI</div>
+          <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 16 }}>{en ? 'START TODAY' : 'INIZIA OGGI'}</div>
           <h2 style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(44px, 7vw, 80px)", letterSpacing: -0.5, lineHeight: 0.92, color: T.text, marginBottom: 20 }}>
-            PRONTO A FAR<br />
-            <span style={{ background: `linear-gradient(90deg, ${T.cyan}, ${T.glow}, ${T.violet})`, backgroundSize: "200%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "gradShift 4s ease infinite" }}>LAVORARE L'AI</span><br />
-            PER TE?
+            {en ? 'READY TO LET' : 'PRONTO A FAR'}<br />
+            <span style={{ background: `linear-gradient(90deg, ${T.cyan}, ${T.glow}, ${T.violet})`, backgroundSize: "200%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "gradShift 4s ease infinite" }}>{en ? 'AI WORK' : "LAVORARE L'AI"}</span><br />
+            {en ? 'FOR YOU?' : 'PER TE?'}
           </h2>
           <p style={{ fontSize: 16, color: T.muted, marginBottom: 36, lineHeight: 1.7 }}>
-            Nessuna carta richiesta subito.<br />Attiva e testa ARIA in meno di 5 minuti.
+            {en ? 'No card required right now.' : 'Nessuna carta richiesta subito.'}<br />{en ? 'Activate and test ARIA in less than 5 minutes.' : 'Attiva e testa ARIA in meno di 5 minuti.'}
           </p>
           <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
             <button className="hp-btn-primary" style={{ fontSize: 16, padding: "18px 36px" }} onClick={handleLogin}>
-              <span>Attiva Emaral Agent AI</span>
+              <span>{en ? 'Activate Emaral Agent AI' : 'Attiva Emaral Agent AI'}</span>
               <span>→</span>
             </button>
             <a href="https://wa.me/393784056561?text=Ciao%20Emaral%2C%20vorrei%20info%20su%20Emaral%20Agent%20AI" target="_blank" rel="noreferrer" className="hp-btn-ghost" style={{ fontSize: 15 }}>
               <span>💬</span>
-              <span>Parla su WhatsApp</span>
+              <span>{en ? 'Chat on WhatsApp' : 'Parla su WhatsApp'}</span>
             </a>
           </div>
         </div>
@@ -617,7 +678,7 @@ export default function Homepage() {
             <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 16, letterSpacing: 2 }}>EMARAL AGENT AI</span>
           </div>
           <div style={{ fontSize: 12, color: T.muted }}>by Emaral Group · emaral.it</div>
-          <div style={{ fontSize: 12, color: T.muted }}>© 2026 Emaral Group. Tutti i diritti riservati.</div>
+          <div style={{ fontSize: 12, color: T.muted }}>© 2026 Emaral Group. {en ? 'All rights reserved.' : 'Tutti i diritti riservati.'}</div>
         </div>
       </footer>
     </>
