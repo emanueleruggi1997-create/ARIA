@@ -235,7 +235,7 @@ export default function Calendar() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState(null);
-  const [filterStato, setFilterStato] = useState('tutti');
+  const [filterStato, setFilterStato] = useState('confermato');
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ['appointments', business?.id],
