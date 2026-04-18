@@ -113,9 +113,10 @@ function ARIAPanel({ onClose, business, stats }) {
     setLoading(false);
   };
 
+  const isDesktop = window.innerWidth >= 768;
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000000cc', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 520, height: '82vh', background: C.surface, borderRadius: '24px 24px 0 0', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000000cc', backdropFilter: 'blur(8px)', display: 'flex', alignItems: isDesktop ? 'center' : 'flex-end', justifyContent: 'center' }}>
+      <div style={{ width: '100%', maxWidth: isDesktop ? 600 : 520, height: isDesktop ? '85vh' : '82vh', background: C.surface, borderRadius: isDesktop ? 20 : '24px 24px 0 0', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: '50%', background: `linear-gradient(135deg, ${C.accent2}, ${C.accent3})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🤖</div>
@@ -384,6 +385,12 @@ export default function CRM() {
   const [tab, setTab] = useState('dashboard');
   const [ariaOpen, setAriaOpen] = useState(false);
   const [ariaIdx, setAriaIdx] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+  useEffect(() => {
+    const fn = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads', business?.id],
@@ -479,7 +486,7 @@ export default function CRM() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px 96px', position: 'relative', zIndex: 1 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: isDesktop ? '24px 40px 96px' : '24px 20px 96px', position: 'relative', zIndex: 1 }}>
 
         {/* ── DASHBOARD ── */}
         {tab === 'dashboard' && (
@@ -494,7 +501,7 @@ export default function CRM() {
             </div>
 
             {/* KPIs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(5, 1fr)' : 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
               {[
                 { label: 'Lead Totali', value: leads.length, delta: `${activeLeads} attivi`, color: C.accent, icon: '◉' },
                 { label: 'Lead Caldi', value: hotLeads, delta: hotLeads > 0 ? '🔥 urgenti' : 'nessuno', color: C.danger, icon: '🔥' },
@@ -512,7 +519,7 @@ export default function CRM() {
             </div>
 
             {/* Recent leads + Quick actions */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr', gap: 16 }}>
               <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
                 <div style={{ fontWeight: 800, fontSize: 13, color: C.text, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ color: C.accent }}>◉</span> Ultimi Lead

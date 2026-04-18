@@ -157,15 +157,15 @@ export default function Inbox() {
     { id: 'archiviati', label: 'Archiviati', icon: '📦' },
   ];
 
-  // Desktop filter pills (compact)
+  // Desktop filter pills (vertical column)
   const FilterPills = () => (
-    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+    <div className="flex flex-col gap-1">
       {FILTER_PILLS.map(p => (
         <button
           key={p.id}
           onClick={() => setFilter(p.id)}
           className={cn(
-            "shrink-0 text-[12px] font-semibold px-3 py-1.5 rounded-full transition-all whitespace-nowrap border",
+            "text-left text-[12px] font-semibold px-3 py-2 rounded-lg transition-all whitespace-nowrap border",
             filter === p.id
               ? "bg-primary/20 text-primary border-primary/40"
               : "bg-card text-muted-foreground border-border hover:text-foreground"
@@ -206,9 +206,10 @@ export default function Inbox() {
     <>
       {/* ── DESKTOP layout ── */}
       <div className="hidden md:flex flex-col h-screen">
-        <div className="h-14 px-6 flex items-center border-b border-white/[0.06] shrink-0 gap-3">
+        <div className="h-16 px-6 flex items-center border-b border-white/[0.06] shrink-0 gap-3">
           <MessageSquare className="w-5 h-5 text-primary" />
           <h1 className="text-lg font-bold text-foreground">Inbox</h1>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/[0.06] text-muted-foreground">{conversations.filter(c => !c.archiviata).length} conversazioni</span>
           {unreadTotal > 0 && (
             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-500/15 text-red-400">{unreadTotal} non letti</span>
           )}

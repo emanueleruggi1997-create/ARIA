@@ -200,6 +200,13 @@ export default function Homepage() {
   const [mood, setMood] = useState("felice");
   const [activeStep, setActiveStep] = useState(0);
   const [bannerVisible, setBannerVisible] = useState(true);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
+
+  useEffect(() => {
+    const fn = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
 
   const moods = ["felice", "energica", "divertita", "stanca", "innamorata", "arrabbiata"];
   const moodEmoji = { felice: "😊", energica: "⚡", divertita: "😄", stanca: "😴", innamorata: "🥰", arrabbiata: "😤" };
@@ -267,51 +274,54 @@ export default function Homepage() {
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
         background: `${T.bg}e8`, backdropFilter: "blur(20px)",
         borderBottom: `1px solid ${T.border}`,
-        padding: "0 24px", height: 60,
+        padding: isDesktop ? "0 40px" : "0 24px",
+        height: isDesktop ? 64 : 60,
         display: "flex", alignItems: "center", gap: 24,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.glow}, ${T.violet})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 16px ${T.glow}66` }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" stroke="white" strokeWidth="1.5" fill="none"/><circle cx="8" cy="8" r="2" fill="white"/></svg>
+        <div style={{ maxWidth: isDesktop ? 1200 : "none", margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.glow}, ${T.violet})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 16px ${T.glow}66` }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" stroke="white" strokeWidth="1.5" fill="none"/><circle cx="8" cy="8" r="2" fill="white"/></svg>
+            </div>
+            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 20, letterSpacing: 2, color: T.text }}>EMARAL</span>
+            <span style={{ fontSize: 10, color: T.muted, marginLeft: -4 }}>AGENT AI</span>
           </div>
-          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 20, letterSpacing: 2, color: T.text }}>EMARAL</span>
-          <span style={{ fontSize: 10, color: T.muted, marginLeft: -4 }}>AGENT AI</span>
-        </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 28 }}>
-          {["Funzionalità", "ARIA", "Prezzi"].map(l => (
-            <a key={l} className="hp-nav-link" href={`#${l.toLowerCase()}`}>{l}</a>
-          ))}
-          <div style={{ width: 1, height: 20, background: T.border }} />
-          <button
-            onClick={handleLogin}
-            style={{ background: "transparent", border: "1px solid #1A2E4A", color: "#C8D8E8", padding: "9px 20px", borderRadius: 12, fontSize: 13, fontFamily: "inherit", cursor: "pointer", transition: "all 0.25s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#00D4FF"; e.currentTarget.style.color = "#00D4FF"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#1A2E4A"; e.currentTarget.style.color = "#C8D8E8"; }}
-          >
-            Accedi
-          </button>
-          <button className="hp-btn-primary" style={{ padding: "9px 20px", fontSize: 13 }} onClick={handleLogin}>
-            <span>Inizia gratis</span>
-            <span style={{ position: "relative", zIndex: 1 }}>→</span>
-          </button>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isDesktop ? 28 : 12 }}>
+            {isDesktop && ["Funzionalità", "ARIA", "Prezzi"].map(l => (
+              <a key={l} className="hp-nav-link" href={`#${l.toLowerCase()}`}>{l}</a>
+            ))}
+            {isDesktop && <div style={{ width: 1, height: 20, background: T.border }} />}
+            <button
+              onClick={handleLogin}
+              style={{ background: "transparent", border: "1px solid #1A2E4A", color: "#C8D8E8", padding: "9px 20px", borderRadius: 12, fontSize: 13, fontFamily: "inherit", cursor: "pointer", transition: "all 0.25s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#00D4FF"; e.currentTarget.style.color = "#00D4FF"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#1A2E4A"; e.currentTarget.style.color = "#C8D8E8"; }}
+            >
+              Accedi
+            </button>
+            <button className="hp-btn-primary" style={{ padding: "9px 20px", fontSize: 13 }} onClick={handleLogin}>
+              <span>Inizia gratis</span>
+              <span style={{ position: "relative", zIndex: 1 }}>→</span>
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* ── HERO ── */}
-      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", padding: "80px 24px 40px", position: "relative", overflow: "hidden" }}>
+      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", padding: isDesktop ? "100px 40px 60px" : "80px 24px 40px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: "20%", left: "50%", transform: "translateX(-50%)", width: 700, height: 500, background: `radial-gradient(ellipse, ${T.glow}18 0%, transparent 70%)`, pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: "40%", left: "20%", width: 400, height: 400, background: `radial-gradient(ellipse, ${T.violet}0E 0%, transparent 70%)`, pointerEvents: "none" }} />
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: `linear-gradient(${T.border}18 1px, transparent 1px), linear-gradient(90deg, ${T.border}18 1px, transparent 1px)`, backgroundSize: "50px 50px" }} />
 
-        <div style={{ maxWidth: 1100, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 60, flexWrap: "wrap" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 60, flexDirection: isDesktop ? "row" : "column", flexWrap: isDesktop ? "nowrap" : "wrap" }}>
           {/* LEFT */}
-          <div style={{ flex: "1 1 480px", minWidth: 300 }}>
+          <div style={{ flex: 1, minWidth: 300 }}>
             <div className="slide-up-1" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${T.glow}18`, border: `1px solid ${T.glow}44`, borderRadius: 20, padding: "6px 14px", marginBottom: 24 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.success, boxShadow: `0 0 8px ${T.success}` }} />
               <span style={{ fontSize: 12, color: T.cyan, fontWeight: 600, letterSpacing: 0.5 }}>LIVE — 2 mesi al prezzo di 1</span>
             </div>
 
-            <h1 className="slide-up-2" style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(52px, 8vw, 88px)", lineHeight: 0.92, letterSpacing: -1, marginBottom: 24, color: T.text }}>
+            <h1 className="slide-up-2" style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(52px, 6vw, 88px)", lineHeight: 0.92, letterSpacing: -1, marginBottom: 24, color: T.text, maxWidth: isDesktop ? 560 : "none" }}>
               LA TUA<br />
               <span style={{ background: `linear-gradient(90deg, ${T.cyan}, ${T.glow}, ${T.violet})`, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "gradShift 4s ease infinite" }}>SEGRETERIA</span><br />
               A 49€/MESE
@@ -335,7 +345,7 @@ export default function Homepage() {
               </a>
             </div>
 
-            <div className="slide-up-5" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <div className="slide-up-5" style={{ display: "flex", gap: isDesktop ? 32 : 16, flexWrap: "nowrap", flexDirection: "row" }}>
               {[{ v: "H24", l: "Risposta automatica" }, { v: "8+", l: "Moduli inclusi" }, { v: "49€", l: "Piano di partenza" }, { v: "100%", l: "Made in Italy" }].map(s => (
                 <div key={s.v} style={{ textAlign: "center" }}>
                   <div style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 26, letterSpacing: 1, color: T.cyan }}>{s.v}</div>
@@ -346,7 +356,7 @@ export default function Homepage() {
           </div>
 
           {/* RIGHT — ARIA orb + live chat */}
-          <div className="slide-up-3" style={{ flex: "1 1 340px", display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+          <div className="slide-up-3" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
             <ARIAOrb mood={mood} />
             <div style={{ width: "100%", maxWidth: 340, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, overflow: "hidden" }}>
               <div style={{ background: T.card, padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10 }}>
@@ -369,7 +379,7 @@ export default function Homepage() {
       <Ticker />
 
       {/* ── VS COMPARISON ── */}
-      <section style={{ padding: "80px 24px", background: T.deep }}>
+      <section style={{ padding: isDesktop ? "80px 40px" : "80px 24px", background: T.deep }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <h2 style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(36px, 6vw, 64px)", letterSpacing: 1, lineHeight: 0.95, color: T.text, marginBottom: 12 }}>
@@ -378,7 +388,7 @@ export default function Homepage() {
               <span style={{ background: `linear-gradient(90deg, ${T.cyan}, ${T.glow})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>ARIA</span>
             </h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr", gap: isDesktop ? 24 : 16 }}>
             <div style={{ background: T.card, border: `1px solid ${T.pink}33`, borderRadius: 20, padding: 28 }}>
               <div style={{ fontSize: 13, color: T.pink, fontWeight: 700, letterSpacing: 1, marginBottom: 20 }}>SEGRETARIA UMANA</div>
               {[["💰", "~3.000€/mese", "Stipendio + contributi"], ["🕐", "8h/giorno", "Solo giorni lavorativi"], ["😴", "Ferie, malattia", "Assenze garantite"], ["😤", "Stress, errori", "Performance variabile"], ["📋", "Un canale alla volta", "WhatsApp O telefono"]].map(([icon, val, sub], i) => (
@@ -415,7 +425,7 @@ export default function Homepage() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section id="funzionalità" style={{ padding: "80px 24px" }}>
+      <section id="funzionalità" style={{ padding: isDesktop ? "80px 40px" : "80px 24px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ marginBottom: 52, maxWidth: 600 }}>
             <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>FUNZIONALITÀ</div>
@@ -424,7 +434,7 @@ export default function Homepage() {
               <span style={{ color: T.muted }}>IN UNA SOLA PIATTAFORMA.</span>
             </h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(280px, 1fr))", gap: isDesktop ? 20 : 16 }}>
             {features.map((f, i) => (
               <div key={i} className="hp-feature-card">
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
@@ -440,7 +450,7 @@ export default function Homepage() {
       </section>
 
       {/* ── ARIA PERSONALITY ── */}
-      <section id="aria" style={{ padding: "80px 24px", background: T.deep, position: "relative", overflow: "hidden" }}>
+      <section id="aria" style={{ padding: isDesktop ? "80px 40px" : "80px 24px", background: T.deep, position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: "50%", right: "10%", transform: "translateY(-50%)", width: 500, height: 500, background: `radial-gradient(ellipse, ${T.violet}12 0%, transparent 70%)`, pointerEvents: "none" }} />
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", gap: 60, flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 440px" }}>
@@ -488,7 +498,7 @@ export default function Homepage() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section style={{ padding: "80px 24px" }}>
+      <section style={{ padding: isDesktop ? "80px 40px" : "80px 24px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 52 }}>
             <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>COME FUNZIONA</div>
@@ -496,7 +506,7 @@ export default function Homepage() {
               4 STEP. <span style={{ color: T.muted }}>ZERO FATICA.</span>
             </h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(auto-fill, minmax(190px, 1fr))", gap: 14 }}>
             {steps.map((s, i) => (
               <div key={i} onClick={() => setActiveStep(i)} style={{
                 background: activeStep === i ? `linear-gradient(135deg, ${T.glow}18, ${T.violet}18)` : T.card,
@@ -515,7 +525,7 @@ export default function Homepage() {
       </section>
 
       {/* ── PRICING ── */}
-      <section id="prezzi" style={{ padding: "80px 24px", background: T.deep }}>
+      <section id="prezzi" style={{ padding: isDesktop ? "80px 40px" : "80px 24px", background: T.deep }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>PREZZI</div>
@@ -526,9 +536,9 @@ export default function Homepage() {
           <div style={{ background: `linear-gradient(135deg, ${T.gold}18, ${T.gold}08)`, border: `1px solid ${T.gold}44`, borderRadius: 14, padding: "12px 20px", textAlign: "center", marginBottom: 36 }}>
             <span style={{ fontSize: 14, color: T.gold, fontWeight: 700 }}>🎁 Offerta lancio: 2 mesi al prezzo di 1 · Solo per le prime iscrizioni · Non rinnovabile</span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(3, 1fr)" : "repeat(auto-fill, minmax(260px, 1fr))", gap: 16, alignItems: "start" }}>
             {plans.map((p, i) => (
-              <div key={i} className={`hp-price-card ${p.featured ? "featured" : ""}`}>
+              <div key={i} className={`hp-price-card ${p.featured ? "featured" : ""}`} style={{ transform: isDesktop && p.featured ? "scale(1.04)" : "none" }}>
                 {p.featured && (
                   <div style={{ position: "absolute", top: -1, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(90deg, ${T.glow}, ${T.violet})`, padding: "5px 18px", borderRadius: "0 0 12px 12px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: 1 }}>PIÙ SCELTO</div>
                 )}
@@ -560,7 +570,7 @@ export default function Homepage() {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section style={{ padding: "100px 24px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+      <section style={{ padding: isDesktop ? "100px 40px" : "100px 24px", textAlign: "center", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 600, height: 400, background: `radial-gradient(ellipse, ${T.glow}14 0%, transparent 70%)`, pointerEvents: "none" }} />
         <div style={{ maxWidth: 680, margin: "0 auto", position: "relative" }}>
           <div style={{ fontSize: 12, color: T.cyan, fontWeight: 700, letterSpacing: 2, marginBottom: 16 }}>INIZIA OGGI</div>
