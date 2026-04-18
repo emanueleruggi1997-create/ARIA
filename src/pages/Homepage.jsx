@@ -254,17 +254,29 @@ export default function Homepage() {
       {/* ── LAUNCH BANNER ── */}
       {bannerVisible && (
         <div style={{
-          height: "auto", minHeight: 40, padding: "8px 40px 8px 16px",
+          height: isDesktop ? 36 : "auto",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: isDesktop ? "0 40px" : "8px 36px 8px 12px",
           background: "#0D1525", borderBottom: "1px solid #1A2E4A",
-          textAlign: "center", position: "relative", zIndex: 101,
-          fontSize: 12, lineHeight: 1.5, color: "#5A7A9A",
+          position: "relative", zIndex: 101,
+          fontSize: isDesktop ? 13 : 11,
+          lineHeight: isDesktop ? 1 : 1.4,
+          whiteSpace: isDesktop ? "nowrap" : "normal",
+          overflow: "hidden",
+          color: "#5A7A9A",
         }}>
           🎁 Offerta lancio:{" "}
-          <span style={{ color: "#FFB800", fontWeight: 700 }}>2 mesi al prezzo di 1</span>
-          {" "}— Solo per le prime iscrizioni · Nessuna carta richiesta
+          <span style={{ color: "#FFB800", fontWeight: 700, marginLeft: 4 }}>2 mesi al prezzo di 1</span>
+          <span style={{ marginLeft: 4 }}>— Solo per le prime iscrizioni · Nessuna carta richiesta</span>
           <button
             onClick={() => setBannerVisible(false)}
-            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#5A7A9A", fontSize: 18, cursor: "pointer", lineHeight: 1 }}
+            style={{
+              position: "absolute",
+              right: 12,
+              top: isDesktop ? "50%" : 8,
+              transform: isDesktop ? "translateY(-50%)" : "none",
+              background: "none", border: "none", color: "#5A7A9A", fontSize: 18, cursor: "pointer", lineHeight: 1,
+            }}
           >✕</button>
         </div>
       )}

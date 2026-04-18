@@ -157,21 +157,23 @@ export default function Inbox() {
     { id: 'archiviati', label: 'Archiviati', icon: '📦' },
   ];
 
-  // Desktop filter pills (vertical column)
+  // Desktop filter pills (horizontal row)
   const FilterPills = () => (
-    <div className="flex flex-col gap-1">
+    <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: '12px 16px' }}>
       {FILTER_PILLS.map(p => (
         <button
           key={p.id}
           onClick={() => setFilter(p.id)}
-          className={cn(
-            "text-left text-[12px] font-semibold px-3 py-2 rounded-lg transition-all whitespace-nowrap border",
-            filter === p.id
-              ? "bg-primary/20 text-primary border-primary/40"
-              : "bg-card text-muted-foreground border-border hover:text-foreground"
-          )}
+          style={{
+            width: 'auto', padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+            fontFamily: 'inherit', whiteSpace: 'nowrap', cursor: 'pointer', border: '1px solid',
+            borderColor: filter === p.id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.08)',
+            background: filter === p.id ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)',
+            color: filter === p.id ? '#a5b4fc' : '#5A7A9A',
+            transition: 'all 0.15s',
+          }}
         >
-          {p.icon && <span className="mr-1">{p.icon}</span>}{p.label}
+          {p.icon && <span style={{ marginRight: 4 }}>{p.icon}</span>}{p.label}
         </button>
       ))}
     </div>
@@ -219,9 +221,9 @@ export default function Inbox() {
           </div>
         </div>
         <div className="flex-1 flex overflow-hidden">
-          <div className="w-72 border-r border-white/[0.06] flex flex-col shrink-0">
-            <div className="px-3 py-2.5 border-b border-white/[0.06]"><FilterPills /></div>
-            <div className="flex-1 overflow-y-auto p-2">
+          <div style={{ width: 340, flexShrink: 0, borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
+            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}><FilterPills /></div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
               {loadingContacts ? <ConvSkeleton /> : (
                 <ConversationList
                   conversations={conversations}
@@ -235,17 +237,19 @@ export default function Inbox() {
               )}
             </div>
           </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
           <ChatView
             conversation={activeConv}
             messages={activeMessages}
             onSendMessage={handleSendMessage}
             onRefresh={() => queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] })}
-              />
-              <ContactSidebar
-                contact={activeContact}
-                businessId={business?.id}
-                onRefresh={() => queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] })}
-              />
+          />
+          </div>
+          <ContactSidebar
+            contact={activeContact}
+            businessId={business?.id}
+            onRefresh={() => queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] })}
+          />
         </div>
       </div>
 

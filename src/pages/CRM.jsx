@@ -566,7 +566,7 @@ export default function CRM() {
       </div>
 
       {/* Mobile tab nav (only visible on small screens, sits above app bottom nav) */}
-      <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, zIndex: 40, background: C.surface + 'f0', backdropFilter: 'blur(16px)', borderTop: `1px solid ${C.border}`, display: 'flex', padding: '6px 0 8px' }} className="md:hidden">
+      <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, zIndex: 40, background: C.surface + 'f0', backdropFilter: 'blur(16px)', borderTop: `1px solid ${C.border}`, display: isDesktop ? 'none' : 'flex', padding: '6px 0 8px' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             flex: 1, background: 'none', border: 'none', color: tab === t.id ? C.accent : C.muted,
