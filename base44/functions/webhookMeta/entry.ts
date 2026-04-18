@@ -59,6 +59,32 @@ COME RISPONDI:
   if (!aiReply) { console.error('[webhookMeta] Empty AI reply for comment'); return; }
   console.log('[webhookMeta] Comment AI reply:', aiReply.slice(0, 120));
 
+  // Save comment + AI reply to DB
+  // Find or create contact for the commenter
+  const commenterContacts = await base44.asServiceRole.entities.Contact.filter({
+    business_id: businessId, numero: senderId, canale: 'instagram',
+  });
+  let commenterContact = commenterContacts[0];
+  if (!commenterContact) {
+    commenterContact = await base44.asServiceRole.entities.Contact.create({
+      business_id: businessId, nome: senderName,
+      numero: senderId, canale: 'instagram', stato: 'lead',
+    });
+  }
+  // Save the comment as a message (tipo: commento)
+  await base44.asServiceRole.entities.Message.create({
+    business_id: businessId, contact_id: commenterContact.id,
+    canale: 'instagram', ruolo: 'user', testo: text, letto: false,
+    tipo: 'commento', comment_id: commentId,
+  });
+  // Save ARIA reply
+  await base44.asServiceRole.entities.Message.create({
+    business_id: businessId, contact_id: commenterContact.id,
+    canale: 'instagram', ruolo: 'assistant', testo: aiReply, letto: true,
+    tipo: 'commento', comment_id: commentId,
+  });
+  console.log('[webhookMeta] Comment saved to DB for contact:', commenterContact.nome);
+
   // Reply to the comment via Instagram API
   const igToken = conn.access_token;
   if (!igToken) { console.error('[webhookMeta] Missing token for comment reply'); return; }

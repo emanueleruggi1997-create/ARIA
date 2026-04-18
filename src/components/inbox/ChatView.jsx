@@ -224,6 +224,7 @@ Genera una risposta professionale al cliente. Rispondi SOLO con il testo della r
               <div style={{ maxWidth: '72%', padding: '10px 14px', fontSize: 13, lineHeight: 1.5, borderRadius: bubbleRadius, background: bubbleBg, color: C.text, border: bubbleBorder }}>
                 {isAI && <div style={{ fontSize: 10, color: C.accent2, fontWeight: 700, marginBottom: 3 }}>ARIA ·</div>}
                 {isHuman && <div style={{ fontSize: 10, color: '#60a5fa', fontWeight: 700, marginBottom: 3 }}>👤 {lang === 'en' ? 'You' : 'Tu'} ·</div>}
+                {msg.tipo === 'commento' && <div style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700, marginBottom: 4 }}>💬 {lang === 'en' ? 'IG Comment' : 'Commento IG'}</div>}
                 <span>{msg.testo || ''}</span>
                 <div style={{ fontSize: 10, color: isRight ? 'rgba(255,255,255,0.5)' : C.muted, marginTop: 4, textAlign: isRight ? 'right' : 'left' }}>
                   {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}

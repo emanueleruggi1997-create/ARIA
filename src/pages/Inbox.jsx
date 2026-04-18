@@ -38,6 +38,8 @@ export default function Inbox() {
       const msgs = allMessages.filter(m => m.contact_id === contact.id);
       const lastMsg = msgs[0];
       const unread = msgs.filter(m => !m.letto && m.ruolo === 'user' && !readIds.has(contact.id));
+      const hasComments = msgs.some(m => m.tipo === 'commento');
+      const hasOnlyComments = hasComments && msgs.every(m => m.tipo === 'commento');
       return {
         contact_id: contact.id,
         nome: contact.nome,
@@ -49,6 +51,8 @@ export default function Inbox() {
         unreadCount: unread.length,
         lastResponder: lastMsg?.ruolo,
         archiviata: contact.archiviata || false,
+        hasComments,
+        hasOnlyComments,
       };
     }).sort((a, b) => new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0));
   }, [contacts, allMessages, readIds]);
@@ -155,6 +159,7 @@ export default function Inbox() {
     { id: 'tutti', label: lang === 'en' ? 'All' : 'Tutti', icon: null },
     { id: 'instagram', label: 'Instagram', icon: '📸' },
     { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
+    { id: 'commenti', label: lang === 'en' ? 'Comments' : 'Commenti', icon: '💬' },
     { id: 'non_letti', label: lang === 'en' ? 'Unread' : 'Non letti', icon: '🔴' },
     { id: 'archiviati', label: lang === 'en' ? 'Archived' : 'Archiviati', icon: '📦' },
   ];

@@ -1,0 +1,57 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "contact_id": {
+      "type": "string",
+      "description": "ID del contatto"
+    },
+    "business_id": {
+      "type": "string",
+      "description": "ID del business"
+    },
+    "canale": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "instagram"
+      ]
+    },
+    "ruolo": {
+      "type": "string",
+      "enum": [
+        "user",
+        "assistant",
+        "human"
+      ],
+      "description": "Chi ha inviato il messaggio"
+    },
+    "testo": {
+      "type": "string",
+      "description": "Contenuto del messaggio"
+    },
+    "letto": {
+      "type": "boolean",
+      "default": false
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "dm",
+        "commento"
+      ],
+      "default": "dm",
+      "description": "Tipo di messaggio: DM o commento Instagram"
+    },
+    "comment_id": {
+      "type": "string",
+      "description": "ID del commento Instagram (se tipo=commento)"
+    }
+  },
+  "required": [
+    "contact_id",
+    "business_id",
+    "testo",
+    "ruolo"
+  ]
+}

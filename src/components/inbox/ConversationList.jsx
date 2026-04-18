@@ -116,9 +116,10 @@ function ConvRow({ conv, isActive, onSelect, onMarkRead, onArchive, onDelete }) 
           <p style={{
             fontSize: 12, color: hasUnread ? `${C.text}cc` : C.muted,
             margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            fontWeight: hasUnread ? 600 : 400,
+            fontWeight: hasUnread ? 600 : 400, display: 'flex', alignItems: 'center', gap: 4,
           }}>
-            {conv.lastMessage || 'Nessun messaggio'}
+            {conv.hasComments && <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700, background: 'rgba(245,158,11,0.1)', borderRadius: 4, padding: '1px 5px', flexShrink: 0 }}>💬 commento</span>}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conv.lastMessage || 'Nessun messaggio'}</span>
           </p>
         </div>
 
@@ -168,7 +169,8 @@ export default function ConversationList({ conversations, activeId, onSelect, on
   const filtered = conversations.filter(c => {
     if (filter === 'archiviati') return c.archiviata;
     if (filter === 'whatsapp') return c.canale === 'whatsapp' && !c.archiviata;
-    if (filter === 'instagram') return c.canale === 'instagram' && !c.archiviata;
+    if (filter === 'instagram') return c.canale === 'instagram' && !c.archiviata && !c.hasOnlyComments;
+    if (filter === 'commenti') return c.hasComments && !c.archiviata;
     if (filter === 'non_letti') return c.unreadCount > 0 && !c.archiviata;
     return !c.archiviata;
   });
