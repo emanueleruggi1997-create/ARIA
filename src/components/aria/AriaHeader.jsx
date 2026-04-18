@@ -3,8 +3,10 @@ import { base44 } from '@/api/base44Client';
 import RobotARIA from './RobotARIA';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 export default function AriaHeader({ form, ariaName, ariaColor, autoSaved, business, onToggle }) {
+  const { lang } = useLang();
   const [greeting, setGreeting] = useState('');
   const [loadingGreeting, setLoadingGreeting] = useState(true);
 
@@ -60,7 +62,7 @@ Sii caldo, diretto, in italiano. Inizia con "Ciao!" o simile. Non usare virgolet
           </div>
           <div>
             <h1 className="text-3xl font-bold text-foreground tracking-tight">{ariaName}</h1>
-            <p className="text-sm text-muted-foreground">Il tuo assistente personale</p>
+            <p className="text-sm text-muted-foreground">{lang === 'en' ? 'Your personal assistant' : 'Il tuo assistente personale'}</p>
           </div>
         </div>
 
@@ -76,7 +78,7 @@ Sii caldo, diretto, in italiano. Inizia con "Ciao!" o simile. Non usare virgolet
               "w-2 h-2 rounded-full",
               isActive ? 'bg-green-500' : 'bg-red-500'
             )} style={isActive ? { animation: 'pulse 2s infinite', boxShadow: '0 0 6px #10B981' } : {}} />
-            {isActive ? 'ATTIVA' : 'DISATTIVA'}
+            {isActive ? (lang === 'en' ? 'ACTIVE' : 'ACTIVE') : (lang === 'en' ? 'INACTIVE' : 'DISATTIVA')}
           </div>
 
           <div className="flex items-center gap-2">
@@ -84,7 +86,7 @@ Sii caldo, diretto, in italiano. Inizia con "Ciao!" o simile. Non usare virgolet
           </div>
 
           {autoSaved && (
-            <span className="text-xs text-green-400 font-semibold">✓ ARIA aggiornata!</span>
+            <span className="text-xs text-green-400 font-semibold">✓ {lang === 'en' ? 'ARIA updated!' : 'ARIA aggiornata!'}</span>
           )}
         </div>
 
@@ -94,7 +96,7 @@ Sii caldo, diretto, in italiano. Inizia con "Ciao!" o simile. Non usare virgolet
           style={{ background: `${ariaColor}11`, border: `1px solid ${ariaColor}22` }}
         >
           {loadingGreeting ? (
-            <span className="text-muted-foreground italic">ARIA sta pensando...</span>
+            <span className="text-muted-foreground italic">{lang === 'en' ? 'ARIA is thinking...' : 'ARIA sta pensando...'}</span>
           ) : (
             <span>"{greeting}"</span>
           )}

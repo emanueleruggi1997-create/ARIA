@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
+import { useLang } from '@/lib/LanguageContext.jsx';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import MobileTabSelect from '@/components/ui/MobileTabSelect';
 import AriaHeader from '@/components/aria/AriaHeader';
@@ -12,6 +13,7 @@ import AriaAvanzato from '@/components/aria/AriaAvanzato';
 
 export default function AgentConfig() {
   const { business, refreshBusiness } = useBusiness();
+  const { lang, t } = useLang();
   const [activeTab, setActiveTab] = useState('chi-sono');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -89,7 +91,13 @@ export default function AgentConfig() {
   const ariaName = form.nome_agente || 'ARIA';
   const ariaColor = form.avatar_agente || '#3B6EF8';
 
-  const tabs = [
+  const tabs = lang === 'en' ? [
+    { value: 'chi-sono', label: '👤 Who I am' },
+    { value: 'cosa-so', label: '🧠 What I know' },
+    { value: 'comportamento', label: '⚙️ How I behave' },
+    { value: 'parlami', label: '💬 Talk to me' },
+    { value: 'avanzato', label: '🔬 Advanced' },
+  ] : [
     { value: 'chi-sono', label: '👤 Chi sono' },
     { value: 'cosa-so', label: '🧠 Cosa so' },
     { value: 'comportamento', label: '⚙️ Come mi comporto' },
@@ -126,7 +134,7 @@ export default function AgentConfig() {
           <AriaCosaSo form={form} updateField={updateField} />
           <div className="mt-4 flex justify-end">
             <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
-              {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva'}
+              {saving ? t.saving : saved ? t.saved : (lang === 'en' ? 'Save' : 'Salva')}
             </button>
           </div>
         </TabsContent>
@@ -135,7 +143,7 @@ export default function AgentConfig() {
           <AriaComportamento form={form} updateField={updateField} ariaColor={ariaColor} />
           <div className="mt-4 flex justify-end">
             <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
-              {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva'}
+              {saving ? t.saving : saved ? t.saved : (lang === 'en' ? 'Save' : 'Salva')}
             </button>
           </div>
         </TabsContent>
@@ -148,7 +156,7 @@ export default function AgentConfig() {
           <AriaAvanzato form={form} updateField={updateField} business={business} autoSaved={saved} />
           <div className="mt-4 flex justify-end">
             <button onClick={handleSave} disabled={saving} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors">
-              {saving ? 'Salvataggio...' : saved ? '✓ Salvato' : 'Salva'}
+              {saving ? t.saving : saved ? t.saved : (lang === 'en' ? 'Save' : 'Salva')}
             </button>
           </div>
         </TabsContent>

@@ -112,7 +112,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-semibold text-green-400">ATTIVO</span>
+            <span className="text-xs font-semibold text-green-400">{lang === 'en' ? 'ACTIVE' : 'ATTIVO'}</span>
           </div>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{lead.contact_nome || 'Sconosciuto'}</p>
-                  <p className="text-xs text-muted-foreground truncate">{lead.tipo_progetto || 'Non specificato'}</p>
+                  <p className="text-xs text-muted-foreground truncate">{lead.tipo_progetto || (lang === 'en' ? 'Not specified' : 'Non specificato')}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${STATO_COLORS[lead.stato] || 'text-muted-foreground bg-secondary'}`}>

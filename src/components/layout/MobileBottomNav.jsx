@@ -6,19 +6,7 @@ import { base44 } from '@/api/base44Client';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-
-const mainNav = [
-  { path: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-  { path: '/inbox', icon: MessageSquare, label: 'Inbox' },
-  { path: '/crm', icon: Users, label: 'CRM' },
-  { path: '/calendar', icon: CalendarDays, label: 'Agenda' },
-];
-
-const baseMenuItems = [
-  { path: '/agent', icon: Bot, label: 'ARIA', isAria: true },
-  { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-  { path: '/settings', icon: Settings, label: 'Impostazioni' },
-];
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 export default function MobileBottomNav() {
   const location = useLocation();
@@ -26,7 +14,22 @@ export default function MobileBottomNav() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { business } = useBusiness();
   const { user } = useAuth();
+  const { t, lang } = useLang();
   const isAdmin = user?.role === 'admin';
+
+  const mainNav = [
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Home' },
+    { path: '/inbox', icon: MessageSquare, label: 'Inbox' },
+    { path: '/crm', icon: Users, label: 'CRM' },
+    { path: '/calendar', icon: CalendarDays, label: lang === 'en' ? 'Calendar' : 'Agenda' },
+  ];
+
+  const baseMenuItems = [
+    { path: '/agent', icon: Bot, label: 'ARIA', isAria: true },
+    { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { path: '/settings', icon: Settings, label: t.settings },
+  ];
+
   const menuItems = isAdmin
     ? [...baseMenuItems, { path: '/admin', icon: Shield, label: 'Admin' }]
     : baseMenuItems;
@@ -101,14 +104,14 @@ export default function MobileBottomNav() {
                 className="w-full flex items-center gap-4 px-5 py-4 text-left text-muted-foreground hover:bg-secondary/50 transition-colors"
               >
                 <span className="text-[15px]">📄</span>
-                <span className="text-[15px] font-medium">Termini & Privacy</span>
+                <span className="text-[15px] font-medium">{t.termsPrivacy}</span>
               </button>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-4 px-5 py-4 text-left text-red-400 hover:bg-red-500/10 transition-colors border-t border-border mt-2"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="text-[15px] font-medium">Logout</span>
+                <span className="text-[15px] font-medium">{t.logout}</span>
               </button>
             </div>
           </div>
