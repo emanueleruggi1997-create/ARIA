@@ -92,18 +92,12 @@ export default function AgentConfig() {
   const ariaName = form.nome_agente || 'ARIA';
   const ariaColor = form.avatar_agente || '#3B6EF8';
 
-  const tabs = lang === 'en' ? [
-    { value: 'chi-sono', label: '👤 Who I am' },
-    { value: 'cosa-so', label: '🧠 What I know' },
-    { value: 'comportamento', label: '⚙️ How I behave' },
-    { value: 'parlami', label: '💬 Talk to me' },
-    { value: 'avanzato', label: '🔬 Advanced' },
-  ] : [
-    { value: 'chi-sono', label: '👤 Chi sono' },
-    { value: 'cosa-so', label: '🧠 Cosa so' },
-    { value: 'comportamento', label: '⚙️ Come mi comporto' },
-    { value: 'parlami', label: '💬 Parlami' },
-    { value: 'avanzato', label: '🔬 Avanzato' },
+  const tabs = [
+    { value: 'chi-sono', label: t.agentTabChiSono },
+    { value: 'cosa-so', label: t.agentTabCosaSo },
+    { value: 'comportamento', label: t.agentTabComportamento },
+    { value: 'parlami', label: t.agentTabParlami },
+    { value: 'avanzato', label: t.agentTabAvanzato },
   ];
 
   return (
