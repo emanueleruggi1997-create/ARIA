@@ -47,7 +47,7 @@ COME RISPONDI:
 - Se fanno un complimento → ringrazia con semplicità, senza esagerare.
 - Se il commento è critico → rispondi con calma, senza difenderti.
 - Non spingere servizi o vendite. Non usare call-to-action come "scopri di più!" o "contattaci!".
-- Non rivelare prezzi o dettagli riservati — se chiedono, digli di scriverti in DM.`;
+- Non rivelare MAI prezzi, tariffe o costi — se chiedono, digli sempre di scriverti in DM per i dettagli.`;
 
   const fullPrompt = `${commentSystemPrompt}\n\nCommento di @${senderName}: ${text}\n${commentAgentName}:`;
 
