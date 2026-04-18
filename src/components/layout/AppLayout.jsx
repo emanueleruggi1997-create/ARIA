@@ -23,7 +23,7 @@ function LangToggle() {
       onMouseEnter={e => { e.currentTarget.style.borderColor = '#00D4FF'; e.currentTarget.style.color = '#00D4FF'; }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = '#1A2E4A'; e.currentTarget.style.color = '#5A7A9A'; }}
     >
-      {lang === 'it' ? '🇬🇧 EN' : '🇮🇹 IT'}
+      {lang === 'it' ? '🇮🇹 IT · Switch EN' : '🇬🇧 EN · Switch IT'}
     </button>
   );
 }

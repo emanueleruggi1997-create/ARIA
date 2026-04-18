@@ -25,7 +25,7 @@ export default function MobileHeader() {
             cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
-          {lang === 'it' ? '🇬🇧 EN' : '🇮🇹 IT'}
+          {lang === 'it' ? '🇮🇹 IT' : '🇬🇧 EN'}
         </button>
         <NotificationsBell />
         <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">

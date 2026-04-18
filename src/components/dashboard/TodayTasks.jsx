@@ -1,38 +1,50 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MessageSquare, Users, CalendarDays, Mail, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 export default function TodayTasks({ unreadMessages, pendingLeads, todayAppointments, pendingCampaigns }) {
+  const { lang } = useLang();
+  const en = lang === 'en';
+
   const tasks = [
     {
       icon: '💬',
       label: unreadMessages > 0
-        ? `${unreadMessages} messagg${unreadMessages === 1 ? 'io non letto' : 'i non letti'} da rispondere`
-        : 'Nessun messaggio non letto',
+        ? en
+          ? `${unreadMessages} unread message${unreadMessages === 1 ? '' : 's'} to reply to`
+          : `${unreadMessages} messagg${unreadMessages === 1 ? 'io non letto' : 'i non letti'} da rispondere`
+        : en ? 'No unread messages' : 'Nessun messaggio non letto',
       to: '/inbox',
       urgent: unreadMessages > 0,
     },
     {
       icon: '👥',
       label: pendingLeads > 0
-        ? `${pendingLeads} lead in attesa di follow-up`
-        : 'Nessun lead in attesa',
+        ? en
+          ? `${pendingLeads} lead${pendingLeads === 1 ? '' : 's'} waiting for follow-up`
+          : `${pendingLeads} lead in attesa di follow-up`
+        : en ? 'No leads waiting' : 'Nessun lead in attesa',
       to: '/crm',
       urgent: pendingLeads > 0,
     },
     {
       icon: '📅',
       label: todayAppointments > 0
-        ? `${todayAppointments} appuntament${todayAppointments === 1 ? 'o' : 'i'} oggi`
-        : 'Nessun appuntamento oggi',
+        ? en
+          ? `${todayAppointments} appointment${todayAppointments === 1 ? '' : 's'} today`
+          : `${todayAppointments} appuntament${todayAppointments === 1 ? 'o' : 'i'} oggi`
+        : en ? 'No appointments today' : 'Nessun appuntamento oggi',
       to: '/calendar',
       urgent: todayAppointments > 0,
     },
     {
       icon: '📧',
       label: pendingCampaigns > 0
-        ? `${pendingCampaigns} campagna email programmata`
-        : 'Nessuna campagna email programmata',
+        ? en
+          ? `${pendingCampaigns} scheduled email campaign${pendingCampaigns === 1 ? '' : 's'}`
+          : `${pendingCampaigns} campagna email programmata`
+        : en ? 'No scheduled email campaigns' : 'Nessuna campagna email programmata',
       to: '/crm',
       urgent: false,
     },
@@ -40,7 +52,9 @@ export default function TodayTasks({ unreadMessages, pendingLeads, todayAppointm
 
   return (
     <div className="bg-card border border-border rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-foreground mb-3">✅ Cosa fare oggi</h3>
+      <h3 className="text-sm font-semibold text-foreground mb-3">
+        {en ? '✅ What to do today' : '✅ Cosa fare oggi'}
+      </h3>
       <div className="space-y-2">
         {tasks.map((task, i) => (
           <Link

@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useLang } from '@/lib/LanguageContext.jsx';
 
 export default function AriaProactiveWidget({ business, messages, leads }) {
+  const { lang } = useLang();
+  const en = lang === 'en';
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -13,7 +16,7 @@ export default function AriaProactiveWidget({ business, messages, leads }) {
   useEffect(() => {
     if (!business) return;
     generateMessage();
-  }, [business?.id]);
+  }, [business?.id, lang]);
 
   const generateMessage = async () => {
     setLoading(true);
@@ -25,7 +28,15 @@ export default function AriaProactiveWidget({ business, messages, leads }) {
       const openLeads = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato)).length;
 
       const res = await base44.integrations.Core.InvokeLLM({
-        prompt: `Sei ${ariaName}, l'assistente AI di "${business.nome}". 
+        prompt: en
+          ? `You are ${ariaName}, the AI assistant of "${business.nome}".
+Generate ONE short proactive message (max 2 sentences) for the business owner, based on today's real data:
+- Total Instagram messages: ${igMsgs}
+- AI response rate: ${aiRate}%
+- Open leads: ${openLeads}
+Be direct, helpful and concrete. Don't start with "Hi" or introduce yourself. End with a question or action suggestion.
+Reply ONLY with the message, nothing else.`
+          : `Sei ${ariaName}, l'assistente AI di "${business.nome}". 
 Genera UN SOLO messaggio proattivo breve (max 2 frasi) per il proprietario del business, basato su questi dati reali di oggi:
 - Messaggi Instagram totali: ${igMsgs}
 - Tasso risposta AI: ${aiRate}%
@@ -36,7 +47,11 @@ Rispondi SOLO con il messaggio, nient'altro.`,
       });
       setMessage(typeof res === 'string' ? res : res?.text || res?.content || '');
     } catch {
-      setMessage(`Oggi hai ${messages.filter(m => !m.letto && m.ruolo === 'user').length} messaggi non letti. Vuoi che controlli i lead in attesa?`);
+      const unread = messages.filter(m => !m.letto && m.ruolo === 'user').length;
+      setMessage(en
+        ? `You have ${unread} unread messages today. Want me to check the pending leads?`
+        : `Oggi hai ${unread} messaggi non letti. Vuoi che controlli i lead in attesa?`
+      );
     } finally {
       setLoading(false);
     }
@@ -52,10 +67,13 @@ Rispondi SOLO con il messaggio, nient'altro.`,
           {ariaName[0]?.toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold mb-1" style={{ color: ariaColor }}>{ariaName} dice</p>
+          <p className="text-xs font-semibold mb-1" style={{ color: ariaColor }}>
+            {ariaName} {en ? 'says' : 'dice'}
+          </p>
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="w-3 h-3 animate-spin" /> Sto analizzando...
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {en ? 'Analyzing...' : 'Sto analizzando...'}
             </div>
           ) : (
             <p className="text-sm text-foreground leading-relaxed">{message}</p>
@@ -65,10 +83,10 @@ Rispondi SOLO con il messaggio, nient'altro.`,
       {!loading && (
         <div className="flex gap-2 mt-3 flex-wrap">
           <Link to="/inbox" className="text-xs px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground transition-colors font-medium">
-            Vai all'Inbox →
+            {en ? 'Go to Inbox →' : "Vai all'Inbox →"}
           </Link>
           <Link to="/crm" className="text-xs px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground transition-colors font-medium">
-            Vedi Lead →
+            {en ? 'See Leads →' : 'Vedi Lead →'}
           </Link>
         </div>
       )}
