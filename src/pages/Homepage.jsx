@@ -317,11 +317,9 @@ export default function Homepage() {
         <div style={{ maxWidth: isDesktop ? 1200 : "none", margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 0 }}>
           {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.glow}, ${T.violet})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 16px ${T.glow}66` }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" stroke="white" strokeWidth="1.5" fill="none"/><circle cx="8" cy="8" r="2" fill="white"/></svg>
-            </div>
-            <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 20, letterSpacing: 2, color: T.text }}>EMARAL</span>
-            {isDesktop && <span style={{ fontSize: 10, color: T.muted, marginLeft: -4 }}>AGENT AI</span>}
+          <img src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/367e8d4d2_Emaralagentailogo.png" alt="Emaral" style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 8 }} />
+          <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 20, letterSpacing: 2, color: T.text }}>EMARAL</span>
+          {isDesktop && <span style={{ fontSize: 10, color: T.muted, marginLeft: -4 }}>AGENT AI</span>}
           </div>
 
           {/* Desktop nav links */}
@@ -737,9 +735,7 @@ export default function Homepage() {
       <footer style={{ background: T.deep, borderTop: `1px solid ${T.border}`, padding: "28px 24px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 8, background: `linear-gradient(135deg, ${T.glow}, ${T.violet})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" stroke="white" strokeWidth="1.5" fill="none"/><circle cx="8" cy="8" r="2" fill="white"/></svg>
-            </div>
+            <img src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/367e8d4d2_Emaralagentailogo.png" alt="Emaral" style={{ width: 28, height: 28, objectFit: "contain", borderRadius: 6 }} />
             <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 16, letterSpacing: 2 }}>EMARAL AGENT AI</span>
           </div>
           <div style={{ fontSize: 12, color: T.muted }}>by Emaral Group · emaral.it</div>
