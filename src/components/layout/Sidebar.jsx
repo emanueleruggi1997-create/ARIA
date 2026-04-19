@@ -5,7 +5,7 @@ import {
   Bot, BarChart3, Settings, Shield, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
-const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/e4c50e443_image.png';
+const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/aa1e7e580_provatrasparenza.png';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { useAuth } from '@/lib/AuthContext';
 import { cn } from '@/lib/utils';
