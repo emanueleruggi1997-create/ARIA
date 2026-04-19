@@ -438,6 +438,12 @@ export default function Homepage() {
               {en ? 'AT €49/MO' : 'A 49€/MESE'}
             </h1>
 
+            <img
+              className="slide-up-3"
+              src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/7065a9a72_logoemaralrobot.png"
+              alt="Emaral Robot"
+              style={{ width: 220, objectFit: "contain", mixBlendMode: "screen", filter: "drop-shadow(0 0 24px rgba(0,102,255,0.35))", marginBottom: 8 }}
+            />
             <p className="slide-up-3" style={{ fontSize: 17, lineHeight: 1.7, color: T.muted, maxWidth: 480, marginBottom: 12, textAlign: "left" }}>
               {en
                 ? <><span>A human secretary costs </span><span style={{ color: T.pink, fontWeight: 700, textDecoration: "line-through" }}>€3,000/mo</span><span>. ARIA does the same job — 24/7, no holidays, no mistakes — starting from </span><span style={{ color: T.success, fontWeight: 700 }}>€49</span>.</>
@@ -478,13 +484,8 @@ export default function Homepage() {
             </div>
           </div>
 
-          {/* RIGHT — Robot image + live chat */}
+          {/* RIGHT — Orb + live chat */}
           <div className="slide-up-3" style={{ flex: 1, display: isDesktop ? "flex" : "none", flexDirection: "column", alignItems: "center", gap: 16 }}>
-            <img
-              src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/7065a9a72_logoemaralrobot.png"
-              alt="Emaral Robot"
-              style={{ width: 320, maxWidth: "100%", objectFit: "contain", mixBlendMode: "screen", filter: "drop-shadow(0 0 30px rgba(0,102,255,0.35))" }}
-            />
             <ARIAOrb mood={mood} />
             <div style={{ width: "100%", maxWidth: 340, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, overflow: "hidden" }}>
               <div style={{ background: T.card, padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10 }}>
