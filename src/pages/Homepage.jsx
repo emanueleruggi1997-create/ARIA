@@ -483,7 +483,7 @@ export default function Homepage() {
             <img
               src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/7065a9a72_logoemaralrobot.png"
               alt="Emaral Robot"
-              style={{ width: 420, maxWidth: "100%", objectFit: "contain", filter: "drop-shadow(0 0 40px rgba(0,102,255,0.4))", animation: "float 4s ease-in-out infinite" }}
+              style={{ width: 420, maxWidth: "100%", objectFit: "contain", filter: "drop-shadow(0 0 40px rgba(0,102,255,0.4))", animation: "float 4s ease-in-out infinite", mixBlendMode: "screen" }}
             />
             <div style={{ width: "100%", maxWidth: 340, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, overflow: "hidden" }}>
               <div style={{ background: T.card, padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10 }}>
