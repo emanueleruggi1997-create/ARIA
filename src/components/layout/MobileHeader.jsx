@@ -13,7 +13,7 @@ export default function MobileHeader() {
   return (
     <header className="h-14 bg-[#080A0F] border-b border-border flex items-center justify-between px-4 shrink-0 z-40">
       <div className="flex items-center gap-2">
-        <img src={LOGO_URL} alt="Emaral" className="shrink-0" style={{ width: 52, height: 36, objectFit: 'contain' }} />
+        <img src={LOGO_URL} alt="Emaral" className="shrink-0" style={{ width: 64, height: 44, objectFit: 'contain' }} />
         <span className="text-sm font-bold text-foreground tracking-tight">Emaral Agent AI</span>
       </div>
       <div className="flex items-center gap-2">
