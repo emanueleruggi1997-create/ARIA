@@ -479,7 +479,12 @@ export default function Homepage() {
           </div>
 
           {/* RIGHT — Robot image + live chat */}
-          <div className="slide-up-3" style={{ flex: 1, display: isDesktop ? "flex" : "none", flexDirection: "column", alignItems: "center", gap: 24 }}>
+          <div className="slide-up-3" style={{ flex: 1, display: isDesktop ? "flex" : "none", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <img
+              src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/7065a9a72_logoemaralrobot.png"
+              alt="Emaral Robot"
+              style={{ width: 320, maxWidth: "100%", objectFit: "contain", mixBlendMode: "screen", filter: "drop-shadow(0 0 30px rgba(0,102,255,0.35))" }}
+            />
             <ARIAOrb mood={mood} />
             <div style={{ width: "100%", maxWidth: 340, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, overflow: "hidden" }}>
               <div style={{ background: T.card, padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10 }}>
