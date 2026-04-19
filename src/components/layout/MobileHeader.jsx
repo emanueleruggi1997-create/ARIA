@@ -3,7 +3,7 @@ import NotificationsBell from './NotificationsBell';
 import { useAuth } from '@/lib/AuthContext';
 import { useLang } from '@/lib/LanguageContext.jsx';
 
-const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/66c6320a5_logotrasparenteaiagent.png';
+const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/e4c50e443_image.png';
 
 export default function MobileHeader() {
   const { user } = useAuth();
