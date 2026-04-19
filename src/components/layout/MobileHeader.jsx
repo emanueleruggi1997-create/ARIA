@@ -3,7 +3,7 @@ import NotificationsBell from './NotificationsBell';
 import { useAuth } from '@/lib/AuthContext';
 import { useLang } from '@/lib/LanguageContext.jsx';
 
-const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/367e8d4d2_Emaralagentailogo.png';
+const LOGO_URL = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/66c6320a5_logotrasparenteaiagent.png';
 
 export default function MobileHeader() {
   const { user } = useAuth();
@@ -13,7 +13,7 @@ export default function MobileHeader() {
   return (
     <header className="h-14 bg-[#080A0F] border-b border-border flex items-center justify-between px-4 shrink-0 z-40">
       <div className="flex items-center gap-2">
-        <img src={LOGO_URL} alt="Emaral" className="w-7 h-7 rounded-lg object-cover shrink-0" />
+        <img src={LOGO_URL} alt="Emaral" className="w-9 h-9 object-contain shrink-0" />
         <span className="text-sm font-bold text-foreground tracking-tight">Emaral Agent AI</span>
       </div>
       <div className="flex items-center gap-2">

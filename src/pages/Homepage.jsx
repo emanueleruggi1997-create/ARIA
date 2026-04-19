@@ -317,7 +317,7 @@ export default function Homepage() {
         <div style={{ maxWidth: isDesktop ? 1200 : "none", margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 0 }}>
           {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <img src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/367e8d4d2_Emaralagentailogo.png" alt="Emaral" style={{ width: 36, height: 36, objectFit: "contain", borderRadius: 8 }} />
+          <img src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/66c6320a5_logotrasparenteaiagent.png" alt="Emaral" style={{ width: 48, height: 48, objectFit: "contain" }} />
           <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 20, letterSpacing: 2, color: T.text }}>EMARAL</span>
           {isDesktop && <span style={{ fontSize: 10, color: T.muted, marginLeft: -4 }}>AGENT AI</span>}
           </div>
@@ -735,7 +735,7 @@ export default function Homepage() {
       <footer style={{ background: T.deep, borderTop: `1px solid ${T.border}`, padding: "28px 24px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <img src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/367e8d4d2_Emaralagentailogo.png" alt="Emaral" style={{ width: 28, height: 28, objectFit: "contain", borderRadius: 6 }} />
+            <img src="https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/66c6320a5_logotrasparenteaiagent.png" alt="Emaral" style={{ width: 38, height: 38, objectFit: "contain" }} />
             <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 16, letterSpacing: 2 }}>EMARAL AGENT AI</span>
           </div>
           <div style={{ fontSize: 12, color: T.muted }}>by Emaral Group · emaral.it</div>
