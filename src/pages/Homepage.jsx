@@ -275,21 +275,22 @@ export default function Homepage() {
     { name: "AGENCY", price: "249", oldPrice: "498", featured: false, items: ["Tutto Pro +", "Account illimitati", "White label completo", "Email illimitate", "API access", "Priority support", "Onboarding dedicato"] },
   ];
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <>
       <style>{STYLE}</style>
 
-      {/* ── LAUNCH BANNER ── */}
-      {bannerVisible && (
+      {/* ── DESKTOP BANNER (above nav, in flow) ── */}
+      {bannerVisible && isDesktop && (
         <div style={{
-          height: isDesktop ? 36 : "auto",
+          height: 36,
           display: "flex", alignItems: "center", justifyContent: "center",
-          padding: isDesktop ? "0 40px" : "8px 36px 8px 12px",
+          padding: "0 48px",
           background: "#0D1525", borderBottom: "1px solid #1A2E4A",
-          position: "relative", zIndex: 101,
-          fontSize: isDesktop ? 13 : 11,
-          lineHeight: isDesktop ? 1 : 1.4,
-          whiteSpace: isDesktop ? "nowrap" : "normal",
+          position: "relative",
+          fontSize: 13,
+          whiteSpace: "nowrap",
           overflow: "hidden",
           color: "#5A7A9A",
         }}>
@@ -298,111 +299,175 @@ export default function Homepage() {
           <span style={{ marginLeft: 4 }}>— {en ? 'First sign-ups only · No card required' : 'Solo per le prime iscrizioni · Nessuna carta richiesta'}</span>
           <button
             onClick={() => setBannerVisible(false)}
-            style={{
-              position: "absolute",
-              right: 12,
-              top: isDesktop ? "50%" : 8,
-              transform: isDesktop ? "translateY(-50%)" : "none",
-              background: "none", border: "none", color: "#5A7A9A", fontSize: 18, cursor: "pointer", lineHeight: 1,
-            }}
+            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#5A7A9A", fontSize: 18, cursor: "pointer", lineHeight: 1 }}
           >✕</button>
         </div>
       )}
 
       {/* ── NAV ── */}
       <nav style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        position: isDesktop ? "sticky" : "fixed",
+        top: 0, left: 0, right: 0, zIndex: 100,
         background: `${T.bg}e8`, backdropFilter: "blur(20px)",
         borderBottom: `1px solid ${T.border}`,
-        padding: isDesktop ? "0 40px" : "0 24px",
-        height: isDesktop ? 64 : 60,
-        display: "flex", alignItems: "center", gap: 24,
+        padding: isDesktop ? "0 40px" : "0 20px",
+        height: isDesktop ? 60 : 56,
+        display: "flex", alignItems: "center",
       }}>
-        <div style={{ maxWidth: isDesktop ? 1200 : "none", margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ maxWidth: isDesktop ? 1200 : "none", margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 0 }}>
+          {/* Logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${T.glow}, ${T.violet})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 16px ${T.glow}66` }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" stroke="white" strokeWidth="1.5" fill="none"/><circle cx="8" cy="8" r="2" fill="white"/></svg>
             </div>
             <span style={{ fontFamily: "'Bebas Neue', cursive", fontSize: 20, letterSpacing: 2, color: T.text }}>EMARAL</span>
-            <span style={{ fontSize: 10, color: T.muted, marginLeft: -4 }}>AGENT AI</span>
+            {isDesktop && <span style={{ fontSize: 10, color: T.muted, marginLeft: -4 }}>AGENT AI</span>}
           </div>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isDesktop ? 28 : 12 }}>
-            {isDesktop && (en
-              ? ["Features", "ARIA", "Pricing"].map((l, i) => (
-                  <a key={l} className="hp-nav-link" href={`#${["funzionalità","aria","prezzi"][i]}`}>{l}</a>
-                ))
-              : ["Funzionalità", "ARIA", "Prezzi"].map(l => (
-                  <a key={l} className="hp-nav-link" href={`#${l.toLowerCase()}`}>{l}</a>
-                ))
-            )}
+
+          {/* Desktop nav links */}
+          {isDesktop && (
+            <div style={{ display: "flex", alignItems: "center", gap: 28, marginLeft: 40 }}>
+              {(en
+                ? ["Features", "ARIA", "Pricing"].map((l, i) => (
+                    <a key={l} className="hp-nav-link" href={`#${["funzionalità","aria","prezzi"][i]}`} style={{ fontSize: 14 }}>{l}</a>
+                  ))
+                : ["Funzionalità", "ARIA", "Prezzi"].map(l => (
+                    <a key={l} className="hp-nav-link" href={`#${l.toLowerCase()}`} style={{ fontSize: 14 }}>{l}</a>
+                  ))
+              )}
+            </div>
+          )}
+
+          {/* Right side */}
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: isDesktop ? 16 : 10 }}>
             {isDesktop && <div style={{ width: 1, height: 20, background: T.border }} />}
             <button
               onClick={toggleLang}
-              style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.muted, padding: "7px 14px", borderRadius: 20, fontSize: 12, fontFamily: "inherit", cursor: "pointer", fontWeight: 700 }}
+              style={{ background: "transparent", border: `1px solid ${T.border}`, color: T.muted, padding: "7px 14px", borderRadius: 20, fontSize: 12, fontFamily: "inherit", cursor: "pointer", fontWeight: 700, flexShrink: 0 }}
             >
               {en ? '🇮🇹 IT' : '🇬🇧 EN'}
             </button>
             <button
               onClick={handleLogin}
-              style={{ background: "transparent", border: "1px solid #1A2E4A", color: "#C8D8E8", padding: "9px 20px", borderRadius: 12, fontSize: 13, fontFamily: "inherit", cursor: "pointer", transition: "all 0.25s" }}
+              style={{ background: "transparent", border: "1px solid #1A2E4A", color: "#C8D8E8", padding: isDesktop ? "9px 20px" : "7px 14px", borderRadius: 12, fontSize: 13, fontFamily: "inherit", cursor: "pointer", transition: "all 0.25s", flexShrink: 0 }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "#00D4FF"; e.currentTarget.style.color = "#00D4FF"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "#1A2E4A"; e.currentTarget.style.color = "#C8D8E8"; }}
             >
               {en ? 'Login' : 'Accedi'}
             </button>
-            <button className="hp-btn-primary" style={{ padding: "9px 20px", fontSize: 13 }} onClick={handleLogin}>
-              <span>{en ? 'Start free' : 'Inizia gratis'}</span>
-              <span style={{ position: "relative", zIndex: 1 }}>→</span>
-            </button>
+            {isDesktop && (
+              <button className="hp-btn-primary" style={{ padding: "9px 20px", fontSize: 13 }} onClick={handleLogin}>
+                <span>{en ? 'Start free' : 'Inizia gratis'}</span>
+                <span style={{ position: "relative", zIndex: 1 }}>→</span>
+              </button>
+            )}
+            {/* Mobile hamburger */}
+            {!isDesktop && (
+              <button
+                onClick={() => setMobileMenuOpen(v => !v)}
+                style={{ background: "transparent", border: "none", color: T.text, fontSize: 22, cursor: "pointer", padding: "4px", lineHeight: 1, flexShrink: 0 }}
+              >
+                {mobileMenuOpen ? '✕' : '☰'}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {!isDesktop && mobileMenuOpen && (
+          <div style={{
+            position: "absolute", top: 56, left: 0, right: 0,
+            background: "#0D1525", borderBottom: "1px solid #1A2E4A",
+            padding: "16px 20px", display: "flex", flexDirection: "column", gap: 4, zIndex: 99,
+          }}>
+            {(en
+              ? ["Features", "ARIA", "Pricing"].map((l, i) => (
+                  <a key={l} className="hp-nav-link" href={`#${["funzionalità","aria","prezzi"][i]}`}
+                    style={{ fontSize: 15, padding: "12px 0", borderBottom: "1px solid #1A2E4A", display: "block" }}
+                    onClick={() => setMobileMenuOpen(false)}>{l}</a>
+                ))
+              : ["Funzionalità", "ARIA", "Prezzi"].map(l => (
+                  <a key={l} className="hp-nav-link" href={`#${l.toLowerCase()}`}
+                    style={{ fontSize: 15, padding: "12px 0", borderBottom: "1px solid #1A2E4A", display: "block" }}
+                    onClick={() => setMobileMenuOpen(false)}>{l}</a>
+                ))
+            )}
+            <button className="hp-btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 12 }} onClick={() => { setMobileMenuOpen(false); handleLogin(); }}>
+              <span>{en ? 'Start free' : 'Inizia gratis'}</span>
+              <span>→</span>
+            </button>
+          </div>
+        )}
       </nav>
 
+      {/* ── MOBILE BANNER (below navbar, in flow) ── */}
+      {bannerVisible && !isDesktop && (
+        <div style={{
+          position: "relative",
+          width: "100%",
+          padding: "10px 40px 10px 16px",
+          background: "#0D1525", borderBottom: "1px solid #1A2E4A",
+          fontSize: 12, lineHeight: 1.5, textAlign: "center",
+          color: "#5A7A9A",
+        }}>
+          🎁 {en ? 'Launch offer:' : 'Offerta lancio:'}{" "}
+          <span style={{ color: "#FFB800", fontWeight: 700 }}>{en ? '2 months for the price of 1' : '2 mesi al prezzo di 1'}</span>
+          {" "}— {en ? 'First sign-ups only' : 'Solo per le prime iscrizioni'}
+          <button
+            onClick={() => setBannerVisible(false)}
+            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#5A7A9A", fontSize: 18, cursor: "pointer", lineHeight: 1 }}
+          >✕</button>
+        </div>
+      )}
+
       {/* ── HERO ── */}
-      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", padding: isDesktop ? "100px 40px 60px" : "80px 24px 40px", position: "relative", overflow: "hidden" }}>
+      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", padding: isDesktop ? "80px 40px 60px" : "24px 20px 40px", paddingTop: isDesktop ? "80px" : "24px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: "20%", left: "50%", transform: "translateX(-50%)", width: 700, height: 500, background: `radial-gradient(ellipse, ${T.glow}18 0%, transparent 70%)`, pointerEvents: "none" }} />
         <div style={{ position: "absolute", top: "40%", left: "20%", width: 400, height: 400, background: `radial-gradient(ellipse, ${T.violet}0E 0%, transparent 70%)`, pointerEvents: "none" }} />
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: `linear-gradient(${T.border}18 1px, transparent 1px), linear-gradient(90deg, ${T.border}18 1px, transparent 1px)`, backgroundSize: "50px 50px" }} />
 
         <div style={{ maxWidth: 1100, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 60, flexDirection: isDesktop ? "row" : "column", flexWrap: isDesktop ? "nowrap" : "wrap" }}>
           {/* LEFT */}
-          <div style={{ flex: 1, minWidth: 300 }}>
+          <div style={{ flex: 1, minWidth: 300, width: "100%" }}>
             <div className="slide-up-1" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: `${T.glow}18`, border: `1px solid ${T.glow}44`, borderRadius: 20, padding: "6px 14px", marginBottom: 24 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.success, boxShadow: `0 0 8px ${T.success}` }} />
               <span style={{ fontSize: 12, color: T.cyan, fontWeight: 600, letterSpacing: 0.5 }}>LIVE — {en ? '2 months for the price of 1' : '2 mesi al prezzo di 1'}</span>
             </div>
 
-            <h1 className="slide-up-2" style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "clamp(52px, 6vw, 88px)", lineHeight: 0.92, letterSpacing: -1, marginBottom: 24, color: T.text, maxWidth: isDesktop ? 560 : "none" }}>
+            <h1 className="slide-up-2" style={{ fontFamily: "'Bebas Neue', cursive", fontSize: isDesktop ? "clamp(52px, 6vw, 88px)" : "clamp(44px, 12vw, 72px)", lineHeight: 0.92, letterSpacing: -1, marginBottom: 24, color: T.text, maxWidth: isDesktop ? 560 : "none", textAlign: "left" }}>
               {en ? 'YOUR' : 'LA TUA'}<br />
               <span style={{ background: `linear-gradient(90deg, ${T.cyan}, ${T.glow}, ${T.violet})`, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", animation: "gradShift 4s ease infinite" }}>{en ? 'SECRETARY' : 'SEGRETERIA'}</span><br />
               {en ? 'AT €49/MO' : 'A 49€/MESE'}
             </h1>
 
-            <p className="slide-up-3" style={{ fontSize: 17, lineHeight: 1.7, color: T.muted, maxWidth: 480, marginBottom: 12 }}>
+            <p className="slide-up-3" style={{ fontSize: 17, lineHeight: 1.7, color: T.muted, maxWidth: 480, marginBottom: 12, textAlign: "left" }}>
               {en
                 ? <><span>A human secretary costs </span><span style={{ color: T.pink, fontWeight: 700, textDecoration: "line-through" }}>€3,000/mo</span><span>. ARIA does the same job — 24/7, no holidays, no mistakes — starting from </span><span style={{ color: T.success, fontWeight: 700 }}>€49</span>.</>
                 : <><span>Una segretaria umana costa </span><span style={{ color: T.pink, fontWeight: 700, textDecoration: "line-through" }}>3.000€/mese</span><span>. ARIA fa lo stesso lavoro — H24, senza ferie, senza errori — a partire da </span><span style={{ color: T.success, fontWeight: 700 }}>49€</span>.</>
               }
             </p>
-            <p className="slide-up-3" style={{ fontSize: 15, lineHeight: 1.6, color: T.muted, maxWidth: 480, marginBottom: 36 }}>
+            <p className="slide-up-3" style={{ fontSize: 15, lineHeight: 1.6, color: T.muted, maxWidth: 480, marginBottom: 36, textAlign: "left" }}>
               {en
                 ? 'Replies on WhatsApp and Instagram, manages the CRM, books appointments and qualifies leads. You wake up with a full pipeline.'
                 : 'Risponde su WhatsApp e Instagram, gestisce il CRM, prenota appuntamenti e qualifica i lead. Tu ti svegli con la pipeline già piena.'
               }
             </p>
 
-            <div className="slide-up-4" style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 40 }}>
-              <button className="hp-btn-primary" onClick={handleLogin}>
+            <div className="slide-up-4" style={{ display: "flex", gap: 14, flexDirection: isDesktop ? "row" : "column", marginBottom: 40 }}>
+              <button className="hp-btn-primary" onClick={handleLogin} style={isDesktop ? {} : { width: "100%", justifyContent: "center" }}>
                 <span>{en ? 'Activate ARIA free' : 'Attiva ARIA gratis'}</span>
                 <span>→</span>
               </button>
-              <a href="https://wa.me/393784056561?text=Ciao%20Emaral%2C%20vorrei%20info%20su%20Emaral%20Agent%20AI" target="_blank" rel="noreferrer" className="hp-btn-ghost">
+              <a href="https://wa.me/393784056561?text=Ciao%20Emaral%2C%20vorrei%20info%20su%20Emaral%20Agent%20AI" target="_blank" rel="noreferrer" className="hp-btn-ghost" style={isDesktop ? {} : { width: "100%", justifyContent: "center" }}>
                 <span>💬</span>
                 <span>{en ? 'Chat on WhatsApp' : 'Parla su WhatsApp'}</span>
               </a>
             </div>
 
-            <div className="slide-up-5" style={{ display: "flex", gap: isDesktop ? 32 : 16, flexWrap: "nowrap", flexDirection: "row" }}>
+            <div className="slide-up-5" style={isDesktop
+              ? { display: "flex", gap: 32, flexDirection: "row" }
+              : { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }
+            }>
               {(en
                 ? [{ v: "24/7", l: "Automatic reply" }, { v: "8+", l: "Modules included" }, { v: "€49", l: "Starting plan" }, { v: "100%", l: "Made in Italy" }]
                 : [{ v: "H24", l: "Risposta automatica" }, { v: "8+", l: "Moduli inclusi" }, { v: "49€", l: "Piano di partenza" }, { v: "100%", l: "Made in Italy" }]
@@ -416,7 +481,7 @@ export default function Homepage() {
           </div>
 
           {/* RIGHT — ARIA orb + live chat */}
-          <div className="slide-up-3" style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+          <div className="slide-up-3" style={{ flex: 1, display: isDesktop ? "flex" : "none", flexDirection: "column", alignItems: "center", gap: 24 }}>
             <ARIAOrb mood={mood} />
             <div style={{ width: "100%", maxWidth: 340, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, overflow: "hidden" }}>
               <div style={{ background: T.card, padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10 }}>
