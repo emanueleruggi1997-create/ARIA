@@ -36,7 +36,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-3 overflow-hidden">
-          <img src={LOGO_URL} alt="Emaral" className="w-10 h-10 shrink-0 object-contain" />
+          <img src={LOGO_URL} alt="Emaral" className="shrink-0" style={{ width: 56, height: 40, objectFit: 'contain' }} />
           {!collapsed && (
             <div className="whitespace-nowrap">
               <p className="text-sm font-bold text-foreground tracking-tight">Emaral Agent AI</p>
