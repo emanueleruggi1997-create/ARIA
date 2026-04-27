@@ -198,8 +198,8 @@ async function processMessage({ base44, entryId, senderId, text }) {
   // Check if current time is within ARIA's operating hours
   // Use Intl to get hour/minute in Rome timezone reliably (avoids split locale issues)
   const nowRome = new Date();
-  const romeHour = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: 'numeric', hour12: false }).format(nowRome), 10);
-  const romeMinute = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', minute: 'numeric' }).format(nowRome), 10);
+  const romeHour = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', hour12: false }).format(nowRome), 10) % 24;
+  const romeMinute = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', minute: '2-digit' }).format(nowRome), 10);
   const currentMinutes = romeHour * 60 + romeMinute;
 
   const [startH, startM] = (business.orario_inizio || '08:00').split(':').map(Number);
@@ -207,7 +207,8 @@ async function processMessage({ base44, entryId, senderId, text }) {
   const [endH, endM] = (business.orario_fine || '20:00').split(':').map(Number);
   const endMinutes = endH * 60 + endM;
 
-  const is24h = (startMinutes === 0 && endMinutes === 1439);
+  // is24h: start e fine uguali (es. 00:00–00:00) OPPURE fine = 23:59 con inizio 00:00
+  const is24h = (startMinutes === 0 && (endMinutes === 0 || endMinutes === 1439 || endMinutes >= 1439));
   const withinHours = is24h || (currentMinutes >= startMinutes && currentMinutes < endMinutes);
 
   if (!withinHours && business.fuori_orario_attivo) {
