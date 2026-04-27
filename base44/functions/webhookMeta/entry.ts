@@ -207,9 +207,10 @@ async function processMessage({ base44, entryId, senderId, text }) {
   const [endH, endM] = (business.orario_fine || '20:00').split(':').map(Number);
   const endMinutes = endH * 60 + endM;
 
-  // is24h: start e fine uguali (es. 00:00–00:00) OPPURE fine = 23:59 con inizio 00:00
-  const is24h = (startMinutes === 0 && (endMinutes === 0 || endMinutes === 1439 || endMinutes >= 1439));
+  // is24h: 00:00–23:59, 00:00–00:00, o orario_inizio === orario_fine (tutto il giorno)
+  const is24h = startMinutes === endMinutes || (startMinutes === 0 && endMinutes >= 1439);
   const withinHours = is24h || (currentMinutes >= startMinutes && currentMinutes < endMinutes);
+  console.log(`[webhookMeta] Orari: ${business.orario_inizio}–${business.orario_fine} | ora Roma: ${romeHour}:${String(romeMinute).padStart(2,'0')} | currentMin=${currentMinutes} startMin=${startMinutes} endMin=${endMinutes} | is24h=${is24h} withinHours=${withinHours} fuori_orario_attivo=${business.fuori_orario_attivo}`);
 
   if (!withinHours && business.fuori_orario_attivo) {
     console.log('[webhookMeta] Outside operating hours, sending out-of-hours message');
