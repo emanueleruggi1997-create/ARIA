@@ -1,0 +1,38 @@
+{
+  "name": "HumanRequest",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string"
+    },
+    "contact_id": {
+      "type": "string"
+    },
+    "contact_nome": {
+      "type": "string"
+    },
+    "canale": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "instagram"
+      ]
+    },
+    "motivo": {
+      "type": "string",
+      "description": "Cosa ha detto il cliente"
+    },
+    "stato": {
+      "type": "string",
+      "enum": [
+        "nuovo",
+        "gestito"
+      ],
+      "default": "nuovo"
+    }
+  },
+  "required": [
+    "business_id",
+    "contact_nome"
+  ]
+}

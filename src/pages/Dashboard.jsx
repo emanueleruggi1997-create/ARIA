@@ -8,6 +8,7 @@ import KpiCard from '@/components/dashboard/KpiCard';
 import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
 import RobotMascot from '@/components/dashboard/RobotMascot';
 import AppointmentRequests from '@/components/dashboard/AppointmentRequests';
+import HumanRequestsWidget from '@/components/dashboard/HumanRequestsWidget';
 import TodayTasks from '@/components/dashboard/TodayTasks';
 import AriaProactiveWidget from '@/components/dashboard/AriaProactiveWidget';
 import MessagesChartEnhanced from '@/components/dashboard/MessagesChartEnhanced';
@@ -163,6 +164,9 @@ export default function Dashboard() {
           </Link>
         </div>
       )}
+
+      {/* Richieste di parlare col titolare */}
+      <HumanRequestsWidget businessId={business?.id} />
 
       {/* Appointment Requests */}
       <AppointmentRequests businessId={business?.id} />

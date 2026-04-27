@@ -87,6 +87,31 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
     return;
   }
 
+  // ── Pre-detect: vuole parlare col titolare? ──
+  const humanRequestKeywords = /parla(re)? con (te|voi|il titolare|il responsabile|una persona|qualcuno)|voglio (sentire|parlare con) (te|voi|qualcuno|una persona reale)|mettimi in contatto|chiamami|chiamatemi|richiama(temi)?|pass(ami|atemi) (a qualcuno|al titolare)/i;
+  if (humanRequestKeywords.test(text)) {
+    try {
+      const existing = await base44.asServiceRole.entities.HumanRequest.filter({
+        business_id: businessId,
+        contact_id: contact.id,
+        stato: 'nuovo',
+      });
+      if (!existing.length) {
+        await base44.asServiceRole.entities.HumanRequest.create({
+          business_id: businessId,
+          contact_id: contact.id,
+          contact_nome: contact.nome,
+          canale: 'whatsapp',
+          motivo: text.slice(0, 200),
+          stato: 'nuovo',
+        });
+        console.log('[webhookWA] HumanRequest created for:', contact.nome);
+      }
+    } catch (e) {
+      console.log('[webhookWA] HumanRequest creation error:', e.message);
+    }
+  }
+
   // Fetch recent messages for context
   const recentMessages = await base44.asServiceRole.entities.Message.filter(
     { business_id: businessId, contact_id: contact.id },
@@ -134,7 +159,10 @@ COSA NON FAI MAI:
 - Non spingi a vendere, non usi call-to-action aggressivi.
 - Non menzioni prezzi se il cliente non li ha chiesti.
 - Se qualcuno vuole solo fare due chiacchiere, stai al gioco.
-- Se il cliente dice "no grazie", "no", "non mi interessa" → rispondi con qualcosa di cordiale e brevissimo tipo "Ok, figurati! 😊" o "Nessun problema, sono qui se cambii idea." Fine.`;
+- Se il cliente dice "no grazie", "no", "non mi interessa" → rispondi con qualcosa di cordiale e brevissimo tipo "Ok, figurati! 😊" o "Nessun problema, sono qui se cambii idea." Fine.
+
+RICHIESTA DI PARLARE CON UNA PERSONA REALE:
+- Se il cliente chiede di parlare con te/il titolare/una persona reale → rassicuralo che la sua richiesta è stata ricevuta e che verrà contattato a breve. Esempio: "Certo! Ho avvisato il team — ti risponderemo personalmente appena possibile 😊" NON creare appuntamenti per questo.`;
 
   const langLine = detectedLang ? `\n\nCRITICAL: You MUST reply in ${detectedLang} ONLY.` : '';
   const fullPrompt = `${systemPrompt}${langLine}\n\nStorico conversazione:\n${historyText}\n\nCliente: ${text}\n${agentName}:`;

@@ -273,6 +273,31 @@ async function processMessage({ base44, entryId, senderId, text }) {
   const orarioInizio = business?.responsabile_orario_inizio || '09:00';
   const orarioFine = business?.responsabile_orario_fine || '18:00';
 
+  // ── Pre-detect: vuole parlare col titolare? ──
+  const humanRequestKeywords = /parla(re)? con (te|voi|il titolare|il responsabile|una persona|qualcuno)|voglio (sentire|parlare con) (te|voi|qualcuno|una persona reale)|mettimi in contatto|chiamami|chiamatemi|richiama(temi)?|pass(ami|atemi) (a qualcuno|al titolare)/i;
+  if (humanRequestKeywords.test(text)) {
+    try {
+      const existing = await base44.asServiceRole.entities.HumanRequest.filter({
+        business_id: businessId,
+        contact_id: contact.id,
+        stato: 'nuovo',
+      });
+      if (!existing.length) {
+        await base44.asServiceRole.entities.HumanRequest.create({
+          business_id: businessId,
+          contact_id: contact.id,
+          contact_nome: contact.nome,
+          canale: 'instagram',
+          motivo: text.slice(0, 200),
+          stato: 'nuovo',
+        });
+        console.log('[webhookMeta] HumanRequest created for:', contact.nome);
+      }
+    } catch (e) {
+      console.log('[webhookMeta] HumanRequest creation error:', e.message);
+    }
+  }
+
   // ── Pre-detect cancellation BEFORE generating AI reply ──
   let cancellationHandled = false;
   const cancellationKeywords = /annull|cancel|non voglio|disdic|non mi interessa più|lasciar perdere|non ho più voglia/i;
@@ -336,6 +361,9 @@ APPUNTAMENTI (solo se il cliente lo chiede o lo propone):
 
 ANNULLAMENTO:
 - Se il cliente vuole annullare, di' semplicemente "Ok, ho annullato — sei libero/a." Senza burocrazia.
+
+RICHIESTA DI PARLARE CON UNA PERSONA REALE:
+- Se il cliente chiede di parlare con te/il titolare/una persona reale → rispondi in modo naturale, rassicuralo che la sua richiesta è stata ricevuta e che verrai contattato a breve. Esempio: "Certo! Ho avvisato il team — ti risponderemo personalmente appena possibile 😊" NON creare appuntamenti per questo.
 ${cancellationHandled ? '\nATTENZIONE: L\'appuntamento è stato già annullato automaticamente. Dì solo "Ok, annullato — sei libero/a!" in modo naturale.' : ''}`;
 
   const agentName = business.nome_agente || 'ARIA';
