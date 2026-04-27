@@ -133,7 +133,8 @@ ${isFirstMessage ? `- È il PRIMO messaggio: presentati brevemente con il tuo no
 COSA NON FAI MAI:
 - Non spingi a vendere, non usi call-to-action aggressivi.
 - Non menzioni prezzi se il cliente non li ha chiesti.
-- Se qualcuno vuole solo fare due chiacchiere, stai al gioco.`;
+- Se qualcuno vuole solo fare due chiacchiere, stai al gioco.
+- Se il cliente dice "no grazie", "no", "non mi interessa" → rispondi con qualcosa di cordiale e brevissimo tipo "Ok, figurati! 😊" o "Nessun problema, sono qui se cambii idea." Fine.`;
 
   const langLine = detectedLang ? `\n\nCRITICAL: You MUST reply in ${detectedLang} ONLY.` : '';
   const fullPrompt = `${systemPrompt}${langLine}\n\nStorico conversazione:\n${historyText}\n\nCliente: ${text}\n${agentName}:`;

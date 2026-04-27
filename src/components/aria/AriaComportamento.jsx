@@ -20,6 +20,8 @@ export default function AriaComportamento({ form, updateField, ariaColor }) {
   const { t, lang } = useLang();
   const GIORNI = lang === 'en' ? GIORNI_EN : GIORNI_IT;
 
+  const is24h = form.orario_inizio === '00:00' && (form.orario_fine === '23:59' || form.orario_fine === '00:00');
+
   const ESCALATION_ITEMS = [
     { id: 'arrabbiato', label: t.escalationAngry },
     { id: 'prezzo', label: t.escalationPrice },
@@ -34,10 +36,15 @@ export default function AriaComportamento({ form, updateField, ariaColor }) {
     updateField('giorni_attivi', updated);
   };
 
-  const setAlways247 = () => {
-    updateField('orario_inizio', '00:00');
-    updateField('orario_fine', '23:59');
-    updateField('giorni_attivi', ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']);
+  const toggle24h = (v) => {
+    if (v) {
+      updateField('orario_inizio', '00:00');
+      updateField('orario_fine', '23:59');
+      updateField('giorni_attivi', ['lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom']);
+    } else {
+      updateField('orario_inizio', '08:00');
+      updateField('orario_fine', '20:00');
+    }
   };
 
   const toggleEscalation = (id) => {
@@ -71,54 +78,66 @@ export default function AriaComportamento({ form, updateField, ariaColor }) {
           <Switch checked={!!form.auto_commenti} onCheckedChange={v => updateField('auto_commenti', v)} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 mb-3">
+        {/* Toggle 24h — semplice e diretto */}
+        <div className="flex items-center justify-between pt-1 border-t border-border/50">
           <div>
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.from}</Label>
-            <Input type="time" value={form.orario_inizio} onChange={e => updateField('orario_inizio', e.target.value)} className="mt-2 bg-secondary border-border" />
+            <p className="text-sm font-bold text-foreground">⚡ Sempre disponibile 24h</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {is24h ? 'ARIA risponde sempre, senza limiti di orario' : 'Attivo solo negli orari impostati'}
+            </p>
           </div>
-          <div>
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.to}</Label>
-            <Input type="time" value={form.orario_fine} onChange={e => updateField('orario_fine', e.target.value)} className="mt-2 bg-secondary border-border" />
-          </div>
+          <Switch checked={is24h} onCheckedChange={toggle24h} />
         </div>
 
-        <Button onClick={setAlways247} variant="outline" size="sm" className="w-full mb-4">
-          {t.ariaAlways247}
-        </Button>
+        {/* Orari personalizzati — visibili solo se NON 24h */}
+        {!is24h && (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.from}</Label>
+                <Input type="time" value={form.orario_inizio} onChange={e => updateField('orario_inizio', e.target.value)} className="mt-2 bg-secondary border-border" />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.to}</Label>
+                <Input type="time" value={form.orario_fine} onChange={e => updateField('orario_fine', e.target.value)} className="mt-2 bg-secondary border-border" />
+              </div>
+            </div>
 
-        <div>
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 block">{t.activeDays}</Label>
-          <div className="flex gap-2">
-            {GIORNI.map(g => (
-              <button
-                key={g.id}
-                onClick={() => toggleGiorno(g.id)}
-                className={cn(
-                  "w-9 h-9 rounded-full text-xs font-bold transition-all",
-                  form.giorni_attivi.includes(g.id) ? 'text-white' : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
-                )}
-                style={form.giorni_attivi.includes(g.id) ? { background: ariaColor } : {}}
-              >
-                {g.label}
-              </button>
-            ))}
-          </div>
-        </div>
+            <div>
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 block">{t.activeDays}</Label>
+              <div className="flex gap-2">
+                {GIORNI.map(g => (
+                  <button
+                    key={g.id}
+                    onClick={() => toggleGiorno(g.id)}
+                    className={cn(
+                      "w-9 h-9 rounded-full text-xs font-bold transition-all",
+                      form.giorni_attivi.includes(g.id) ? 'text-white' : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                    )}
+                    style={form.giorni_attivi.includes(g.id) ? { background: ariaColor } : {}}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-medium text-foreground">{t.outOfHoursMsg}</p>
-            <Switch checked={form.fuori_orario_attivo} onCheckedChange={v => updateField('fuori_orario_attivo', v)} />
-          </div>
-          {form.fuori_orario_attivo && (
-            <Textarea
-              value={form.messaggio_fuori_orario}
-              onChange={e => updateField('messaggio_fuori_orario', e.target.value)}
-              placeholder={t.outOfHoursMsgPlaceholder}
-              className="bg-secondary border-border h-16 resize-none"
-            />
-          )}
-        </div>
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium text-foreground">{t.outOfHoursMsg}</p>
+                <Switch checked={form.fuori_orario_attivo} onCheckedChange={v => updateField('fuori_orario_attivo', v)} />
+              </div>
+              {form.fuori_orario_attivo && (
+                <Textarea
+                  value={form.messaggio_fuori_orario}
+                  onChange={e => updateField('messaggio_fuori_orario', e.target.value)}
+                  placeholder={t.outOfHoursMsgPlaceholder}
+                  className="bg-secondary border-border h-16 resize-none"
+                />
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Escalation */}
