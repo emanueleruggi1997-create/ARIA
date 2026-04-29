@@ -1,56 +1,64 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const APP_SUCCESS_URL = 'https://emaral.it/settings?meta=success&tab=connections';
-const APP_ERROR_URL   = 'https://emaral.it/settings?meta=error&tab=connections';
 const IG_APP_ID     = Deno.env.get('IG_APP_ID') || '';
 const IG_APP_SECRET = Deno.env.get('IG_APP_SECRET') || '';
+const VERIFY_TOKEN  = 'emaral2026';
 
-const VERIFY_TOKEN = 'emaral2026';
+// URL app — funziona sia su dominio custom che su base44
+function getAppBaseUrl(req) {
+  const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+  // Se arriva da emaral.it usa quello, altrimenti usa il base44 app url
+  if (origin.includes('emaral.it')) return 'https://emaral.it';
+  // fallback al dominio base44 dell'app
+  return 'https://emaral-agent-ai.base44.app';
+}
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
 
-  // ── Webhook verification (GET from Meta) ──
+  // ── Webhook verification (GET da Meta) ──
   if (req.method === 'GET') {
     const mode      = url.searchParams.get('hub.mode');
     const token     = url.searchParams.get('hub.verify_token');
     const challenge = url.searchParams.get('hub.challenge');
-    console.log('[metaOAuthCallback] GET verify — mode:', mode, '| token match:', token === VERIFY_TOKEN);
     if (mode === 'subscribe' && token === VERIFY_TOKEN && challenge) {
+      console.log('[metaOAuthCallback] Webhook verified OK');
       return new Response(challenge, { status: 200, headers: { 'Content-Type': 'text/plain' } });
     }
-    // Fall through: could be an OAuth redirect (has code/state params)
   }
 
   const code  = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
 
-  console.log('[metaOAuthCallback] code:', code ? 'PRESENT' : 'MISSING', '| error:', error || 'none');
+  const redirectBase = 'https://emaral.it';
+  const SUCCESS_URL = `${redirectBase}/settings?meta=success&tab=connections`;
+  const ERROR_URL   = `${redirectBase}/settings?meta=error&tab=connections`;
+
+  console.log('[metaOAuthCallback] code:', code ? 'PRESENTE' : 'ASSENTE', '| error:', error || 'nessuno');
 
   if (error || !code || !state) {
-    console.error('[metaOAuthCallback] OAuth denied or missing params:', error);
-    return Response.redirect(APP_ERROR_URL, 302);
+    console.error('[metaOAuthCallback] OAuth negato o parametri mancanti:', error);
+    return Response.redirect(ERROR_URL, 302);
   }
 
-  // Decode state
+  // Decodifica state
   let userId = '';
   let businessId = '';
   try {
     const decoded = JSON.parse(atob(state));
-    userId     = decoded.userId;
+    userId     = decoded.userId || '';
     businessId = decoded.businessId || '';
-    console.log('[metaOAuthCallback] state decoded — userId:', userId, 'businessId:', businessId);
+    console.log('[metaOAuthCallback] state → userId:', userId, '| businessId:', businessId);
   } catch (e) {
-    console.error('[metaOAuthCallback] Invalid state:', e.message);
-    return Response.redirect(APP_ERROR_URL, 302);
+    console.error('[metaOAuthCallback] State non valido:', e.message);
+    return Response.redirect(ERROR_URL, 302);
   }
 
-  const rawUri = (Deno.env.get('META_REDIRECT_URI') || '').trim();
-  const redirectUri = rawUri.includes('=') ? rawUri.split('=').slice(1).join('=').trim() : rawUri;
-  console.log('[metaOAuthCallback] redirectUri used:', redirectUri);
+  const redirectUri = (Deno.env.get('META_REDIRECT_URI') || '').trim();
+  console.log('[metaOAuthCallback] redirectUri:', redirectUri);
 
-  // 1. Exchange code → short-lived token (Instagram Business Login API)
+  // 1. Scambio code → token short-lived
   const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -63,59 +71,88 @@ Deno.serve(async (req) => {
     }),
   });
   const tokenData = await tokenRes.json();
-  console.log('[metaOAuthCallback] short-lived token:', tokenData.access_token ? 'PRESENT' : 'MISSING', '| error:', JSON.stringify(tokenData.error_message || tokenData.error || ''));
+  console.log('[metaOAuthCallback] short-lived token:', tokenData.access_token ? 'OK' : 'FALLITO', '| err:', JSON.stringify(tokenData.error_message || tokenData.error || ''));
 
   if (!tokenData.access_token) {
-    console.error('[metaOAuthCallback] Token exchange FAILED:', JSON.stringify(tokenData));
-    return Response.redirect(APP_ERROR_URL, 302);
+    console.error('[metaOAuthCallback] Token exchange FALLITO:', JSON.stringify(tokenData));
+    return Response.redirect(ERROR_URL, 302);
   }
 
   const shortToken = tokenData.access_token;
-  const igUserId   = tokenData.user_id || '';
+  const igUserId   = String(tokenData.user_id || '');
 
-  // 2. Exchange short-lived → long-lived token (60 giorni)
+  // 2. Scambio short-lived → long-lived (60 giorni)
   const llRes = await fetch(
     `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${IG_APP_SECRET}&access_token=${shortToken}`
   );
   const llData = await llRes.json();
   const longToken = llData.access_token || shortToken;
-  console.log('[metaOAuthCallback] long-lived token:', llData.access_token ? 'obtained' : 'fallback to short-lived');
+  console.log('[metaOAuthCallback] long-lived token:', llData.access_token ? 'OK' : 'fallback a short-lived');
 
-  // 3. Fetch Instagram user info
-  const meRes  = await fetch(`https://graph.instagram.com/v19.0/me?fields=id,name,username&access_token=${longToken}`);
+  // 3. Info utente Instagram
+  const meRes  = await fetch(`https://graph.instagram.com/v21.0/me?fields=id,name,username&access_token=${longToken}`);
   const meData = await meRes.json();
-  console.log('[metaOAuthCallback] IG user info:', JSON.stringify({ id: meData.id, username: meData.username, name: meData.name }));
+  console.log('[metaOAuthCallback] IG user:', JSON.stringify({ id: meData.id, username: meData.username }));
 
-  // 4. Build payload
+  const igAccountId   = meData.id || igUserId || '';
+  const igAccountName = meData.username || meData.name || '';
+
+  // 4. Se non abbiamo businessId dallo state, cercalo nel DB tramite userId
+  const base44 = createClientFromRequest(req);
+  if (!businessId && userId) {
+    try {
+      const allBiz = await base44.asServiceRole.entities.Business.filter({});
+      const match = allBiz.find(b => b.created_by === userId);
+      if (match) {
+        businessId = match.id;
+        console.log('[metaOAuthCallback] businessId ricavato dal DB:', businessId);
+      }
+    } catch (e) {
+      console.log('[metaOAuthCallback] Impossibile trovare business:', e.message);
+    }
+  }
+
+  // 5. Salvataggio su DB
   const payload = {
-    user_id: userId,
-    business_id: businessId,
-    access_token: longToken,
-    meta_user_id: meData.id || igUserId || '',
-    meta_user_name: meData.username || meData.name || '',
-    ig_connected: true,
-    ig_account_id: meData.id || igUserId || '',
-    ig_account_name: meData.username || meData.name || '',
-    status: 'connected',
-    connected_at: new Date().toISOString(),
+    user_id:          userId,
+    business_id:      businessId,
+    access_token:     longToken,
+    meta_user_id:     igAccountId,
+    meta_user_name:   igAccountName,
+    ig_connected:     true,
+    ig_account_id:    igAccountId,
+    ig_account_name:  igAccountName,
+    status:           'connected',
+    connected_at:     new Date().toISOString(),
   };
 
-  // 5. Save to DB
-  const base44 = createClientFromRequest(req);
   try {
     const existing = await base44.asServiceRole.entities.MetaConnection.filter({ user_id: userId });
     if (existing.length > 0) {
       await base44.asServiceRole.entities.MetaConnection.update(existing[0].id, payload);
-      console.log('[metaOAuthCallback] DB update SUCCESS id:', existing[0].id);
+      console.log('[metaOAuthCallback] DB aggiornato, id:', existing[0].id);
     } else {
       const created = await base44.asServiceRole.entities.MetaConnection.create(payload);
-      console.log('[metaOAuthCallback] DB create SUCCESS id:', created?.id);
+      console.log('[metaOAuthCallback] DB creato, id:', created?.id);
     }
   } catch (dbErr) {
-    console.error('[metaOAuthCallback] DB save FAILED:', dbErr.message);
-    return Response.redirect(APP_ERROR_URL, 302);
+    console.error('[metaOAuthCallback] DB FALLITO:', dbErr.message);
+    return Response.redirect(ERROR_URL, 302);
   }
 
-  console.log('[metaOAuthCallback] Redirecting to:', APP_SUCCESS_URL);
-  return Response.redirect(APP_SUCCESS_URL, 302);
+  // 6. Aggiorna anche il Business con ig_connesso: true
+  if (businessId) {
+    try {
+      await base44.asServiceRole.entities.Business.update(businessId, {
+        ig_connesso: true,
+        ig_username: igAccountName,
+      });
+      console.log('[metaOAuthCallback] Business aggiornato con ig_connesso: true');
+    } catch (e) {
+      console.log('[metaOAuthCallback] Aggiornamento business non riuscito:', e.message);
+    }
+  }
+
+  console.log('[metaOAuthCallback] ✅ Connessione completata → redirect a SUCCESS');
+  return Response.redirect(SUCCESS_URL, 302);
 });

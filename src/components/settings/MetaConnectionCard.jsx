@@ -32,7 +32,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
     setError(null);
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('startMetaOAuth', { type: 'instagram' });
+      const res = await base44.functions.invoke('startMetaOAuth', { type: 'instagram', businessId });
       if (!res.data?.url) {
         setError(lang === 'en' ? 'Unable to start connection. Please try again.' : 'Impossibile avviare la connessione. Riprova.');
         setLoading(false);
