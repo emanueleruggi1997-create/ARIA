@@ -1,0 +1,45 @@
+{
+  "name": "UrgentAction",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string"
+    },
+    "contact_id": {
+      "type": "string"
+    },
+    "contact_nome": {
+      "type": "string"
+    },
+    "contact_canale": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "instagram"
+      ]
+    },
+    "trigger": {
+      "type": "string",
+      "description": "Tipo di trigger: appuntamento, documento, preventivo, ecc."
+    },
+    "messaggio_originale": {
+      "type": "string",
+      "description": "Testo esatto del messaggio del cliente"
+    },
+    "stato": {
+      "type": "string",
+      "enum": [
+        "nuovo",
+        "confermato",
+        "rifiutato",
+        "gestito"
+      ],
+      "default": "nuovo"
+    }
+  },
+  "required": [
+    "business_id",
+    "contact_nome",
+    "messaggio_originale"
+  ]
+}

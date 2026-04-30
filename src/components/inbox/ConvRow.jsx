@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { MoreHorizontal, Archive, Trash2, CheckCheck } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 const C = {
   bg: '#04080F', surface: '#0D1525', card: '#111C30', border: '#1A2E4A',
@@ -42,11 +43,20 @@ function Avatar({ nome, canale, size = 48 }) {
   );
 }
 
-export default function ConvRow({ conv, isActive, onSelect, onArchive, onDelete, onMarkRead }) {
+export default function ConvRow({ conv, isActive, onSelect, onArchive, onDelete, onMarkRead, onToggleAI }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const hasUnread = conv.unreadCount > 0;
   const ariaActive = !conv.ai_disabled;
+
+  const handleToggleAI = async (e) => {
+    e.stopPropagation();
+    const newDisabled = !conv.ai_disabled;
+    if (conv.contact_id) {
+      await base44.entities.Contact.update(conv.contact_id, { ai_disabled: newDisabled });
+    }
+    onToggleAI?.(conv, newDisabled);
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -89,10 +99,22 @@ export default function ConvRow({ conv, isActive, onSelect, onArchive, onDelete,
             }}>
               {previewText()}
             </span>
-            <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
-              {ariaActive && (
-                <span style={{ fontSize: 10, color: C.accent2 }} title="ARIA attiva">🤖</span>
-              )}
+            <div style={{ display: 'flex', gap: 5, flexShrink: 0, alignItems: 'center' }}>
+              {/* Quick AI toggle */}
+              <button
+                onMouseDown={e => e.stopPropagation()}
+                onClick={handleToggleAI}
+                title={ariaActive ? 'ARIA ON — clicca per modalità manuale' : 'MANUALE — clicca per riattivare ARIA'}
+                style={{
+                  padding: '2px 6px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
+                  background: ariaActive ? `${C.accent2}22` : `${C.danger}22`,
+                  color: ariaActive ? C.accent2 : C.danger,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {ariaActive ? '🤖 AUTO' : '🔴 MAN'}
+              </button>
               {hasUnread && (
                 <span style={{
                   background: conv.canale === 'whatsapp' ? C.wa : C.ig,

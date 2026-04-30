@@ -9,6 +9,7 @@ import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
 import RobotMascot from '@/components/dashboard/RobotMascot';
 import AppointmentRequests from '@/components/dashboard/AppointmentRequests';
 import HumanRequestsWidget from '@/components/dashboard/HumanRequestsWidget';
+import UrgentActionsWidget from '@/components/dashboard/UrgentActionsWidget';
 import TodayTasks from '@/components/dashboard/TodayTasks';
 import AriaProactiveWidget from '@/components/dashboard/AriaProactiveWidget';
 import MessagesChartEnhanced from '@/components/dashboard/MessagesChartEnhanced';
@@ -164,6 +165,9 @@ export default function Dashboard() {
           </Link>
         </div>
       )}
+
+      {/* Azioni urgenti ARIA */}
+      <UrgentActionsWidget businessId={business?.id} />
 
       {/* Richieste di parlare col titolare */}
       <HumanRequestsWidget businessId={business?.id} />

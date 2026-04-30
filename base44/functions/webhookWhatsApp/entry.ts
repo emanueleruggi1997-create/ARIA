@@ -87,6 +87,29 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
     return;
   }
 
+  // ── Pre-detect: trigger URGENTI (appuntamento, documento, preventivo, collaborazione) ──
+  const urgentKeywords = /appuntament|call|telefonat|videochiamata|zoom|meet|colloquio|incontr|documento|visura|file|attestato|certificato|preventivo|prez(zo|zi)|cost(o|i)|collaborar|lavorare insieme|contratto|accordo|partnership/i;
+  if (urgentKeywords.test(text)) {
+    try {
+      let triggerType = 'appuntamento';
+      if (/documento|visura|file|attestato|certificato/i.test(text)) triggerType = 'documento';
+      else if (/preventivo|prezzo|prezzi|costo|costi/i.test(text)) triggerType = 'preventivo';
+      else if (/collaborar|lavorare insieme|contratto|accordo|partnership/i.test(text)) triggerType = 'collaborazione';
+      await base44.asServiceRole.entities.UrgentAction.create({
+        business_id: businessId,
+        contact_id: contact.id,
+        contact_nome: contact.nome,
+        contact_canale: 'whatsapp',
+        trigger: triggerType,
+        messaggio_originale: text.slice(0, 500),
+        stato: 'nuovo',
+      });
+      console.log('[webhookWA] UrgentAction creata per:', contact.nome, '| trigger:', triggerType);
+    } catch (e) {
+      console.log('[webhookWA] UrgentAction creation error:', e.message);
+    }
+  }
+
   // ── Pre-detect: vuole parlare col titolare? ──
   const humanRequestKeywords = /parla(re)? con (te|voi|il titolare|il responsabile|una persona|qualcuno)|voglio (sentire|parlare con) (te|voi|qualcuno|una persona reale)|mettimi in contatto|chiamami|chiamatemi|richiama(temi)?|pass(ami|atemi) (a qualcuno|al titolare)/i;
   if (humanRequestKeywords.test(text)) {
@@ -140,29 +163,46 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
   const detectedLang = (typeof clientLangDetect === 'string' ? clientLangDetect : clientLangDetect?.text || '').trim().split('\n')[0];
 
   const systemPrompt = `Sei ${agentName}, assistente di "${business.nome}".
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REGOLE ASSOLUTE — NON DEROGABILI MAI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. NON confermare MAI appuntamenti, call o incontri senza approvazione esplicita del titolare. Quando ti chiedono un appuntamento/call rispondi SEMPRE e SOLO: "Perfetto! Ho preso nota della tua richiesta e la giro subito al team. Ti ricontatteremo entro breve per confermare data e orario. 😊"
+
+2. NON promettere MAI l'invio di documenti, file, visure, attestati o materiali. Rispondi SEMPRE: "Certamente! Giro la richiesta al team che ti contatterà direttamente. 😊"
+
+3. NON dare MAI date, orari specifici o numeri di telefono del titolare al posto del team.
+
+4. Se non sei SICURA al 100% di un'informazione, NON inventare. Di': "Ottima domanda! La giro al team che ti risponderà con precisione. 😊"
+
+5. Non parlare MAI a nome del titolare in prima persona (no "ti chiamerò io", "ti mando io"). Usa sempre "il team ti contatterà".
+
+6. Se il cliente chiede prezzi di servizi non listati → rimanda al team.
+
+7. Non rivelare MAI dati su collaboratori, disponibilità interna, documenti posseduti dall'azienda.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ${business.ai_prompt ? business.ai_prompt + '\n' : ''}
 LINGUA: Rileva in che lingua sta scrivendo il cliente e rispondi SEMPRE nella sua stessa lingua.
 
 CONTESTO BUSINESS:
 ${business.servizi ? `- Servizi: ${business.servizi}` : ''}
-${business.prezzi ? `- Prezzi: ${business.prezzi}` : ''}
+${business.prezzi ? `- Prezzi (condividi SOLO se già listati e il cliente lo chiede): ${business.prezzi}` : ''}
 ${business.cose_da_non_fare ? `- Non fare mai: ${business.cose_da_non_fare}` : ''}
 
 COME SEI:
-- Sei una persona reale che chatta, non un bot.
-- Parli in modo naturale, caldo, diretto. Come un amico esperto.
+- Sei un assistente AI del team, non il titolare.
+- Parli in modo naturale, caldo, diretto.
 - Risposte brevi: 1-3 frasi al massimo.
 - Non usi mai frasi come "come posso assisterti?", "non esitare a contattarci".
-${isFirstMessage ? `- È il PRIMO messaggio: presentati brevemente con il tuo nome e sii accogliente. Una frase, non un paragrafo.` : `- Non ripresentarti, la conversazione è già iniziata.`}
+${isFirstMessage ? `- È il PRIMO messaggio: presentati brevemente con il tuo nome e sii accogliente. Una frase.` : `- Non ripresentarti. Vai dritto al punto.`}
 
 COSA NON FAI MAI:
-- Non spingi a vendere, non usi call-to-action aggressivi.
-- Non menzioni prezzi se il cliente non li ha chiesti.
-- Se qualcuno vuole solo fare due chiacchiere, stai al gioco.
-- Se il cliente dice "no grazie", "no", "non mi interessa" → rispondi con qualcosa di cordiale e brevissimo tipo "Ok, figurati! 😊" o "Nessun problema, sono qui se cambii idea." Fine.
+- Non spingi a vendere, non insisti.
+- Se il cliente dice "no grazie" → risposta cordiale e brevissima. Fine.
 
-RICHIESTA DI PARLARE CON UNA PERSONA REALE:
-- Se il cliente chiede di parlare con te/il titolare/una persona reale → rassicuralo che la sua richiesta è stata ricevuta e che verrà contattato a breve. Esempio: "Certo! Ho avvisato il team — ti risponderemo personalmente appena possibile 😊" NON creare appuntamenti per questo.`;
+RICHIESTA DI PARLARE CON PERSONA REALE:
+- Rispondi: "Certo! Ho avvisato il team — ti risponderemo personalmente appena possibile 😊"`;
 
   const langLine = detectedLang ? `\n\nCRITICAL: You MUST reply in ${detectedLang} ONLY.` : '';
   const fullPrompt = `${systemPrompt}${langLine}\n\nStorico conversazione:\n${historyText}\n\nCliente: ${text}\n${agentName}:`;

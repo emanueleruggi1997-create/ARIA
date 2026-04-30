@@ -54,6 +54,7 @@ export default function NewChatView({ conversation, messages, onSendMessage, onB
   const [aiSuggestion, setAiSuggestion] = useState('');
   const [manualMode, setManualMode] = useState(!!conversation?.ai_disabled);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [showAriaLog, setShowAriaLog] = useState(false);
   const { business } = useBusiness();
   const endRef = useRef(null);
   const textareaRef = useRef(null);
@@ -152,31 +153,59 @@ export default function NewChatView({ conversation, messages, onSendMessage, onB
       {/* ── ARIA CONTROL BAR ── */}
       <div style={{
         padding: '8px 14px', borderBottom: `1px solid ${C.border}`,
-        background: manualMode ? `#facc1508` : `${C.accent2}08`,
-        display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, flexWrap: 'wrap',
+        background: manualMode ? `#ef444408` : `${C.accent2}08`,
+        display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-          <span style={{ fontSize: 14 }}>🤖</span>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: manualMode ? '#facc15' : C.success }}>
-              {manualMode ? 'Modalità manuale' : 'ARIA automatica ON'}
-            </div>
-            <div style={{ fontSize: 10, color: C.muted }}>
-              {manualMode ? 'Stai rispondendo tu' : 'ARIA sta gestendo questa conversazione'}
-            </div>
+        {/* Badge MANUALE visibile */}
+        {manualMode && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, background: '#ef444420', border: '1px solid #ef444440' }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.danger, display: 'inline-block', animation: 'pulseDot 1.5s infinite' }} />
+            <span style={{ fontSize: 11, fontWeight: 900, color: C.danger, letterSpacing: 1 }}>MANUALE</span>
           </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+          <span style={{ fontSize: 13 }}>🤖</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: manualMode ? C.danger : C.success }}>
+            {manualMode ? 'ARIA disattivata — rispondi tu' : 'ARIA automatica attiva'}
+          </span>
         </div>
-        <Switch
-          checked={!manualMode}
-          onCheckedChange={async (val) => {
-            const newManual = !val;
-            setManualMode(newManual);
-            if (conversation?.contact_id) {
-              await base44.entities.Contact.update(conversation.contact_id, { ai_disabled: newManual });
-            }
-          }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {/* Log ARIA button */}
+          <button
+            onClick={() => setShowAriaLog(v => !v)}
+            style={{ padding: '4px 10px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            📋 Log ARIA
+          </button>
+          <Switch
+            checked={!manualMode}
+            onCheckedChange={async (val) => {
+              const newManual = !val;
+              setManualMode(newManual);
+              if (conversation?.contact_id) {
+                await base44.entities.Contact.update(conversation.contact_id, { ai_disabled: newManual });
+              }
+            }}
+          />
+        </div>
       </div>
+
+      {/* ── ARIA LOG PANEL ── */}
+      {showAriaLog && (
+        <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`, background: `${C.accent2}06`, maxHeight: 220, overflowY: 'auto', flexShrink: 0 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.accent2, marginBottom: 8 }}>📋 Messaggi inviati da ARIA</div>
+          {messages.filter(m => m.ruolo === 'assistant').length === 0 ? (
+            <div style={{ fontSize: 12, color: C.muted }}>Nessun messaggio ARIA in questa conversazione.</div>
+          ) : messages.filter(m => m.ruolo === 'assistant').map(m => (
+            <div key={m.id} style={{ marginBottom: 8, padding: '7px 10px', background: C.card, borderRadius: 8, border: `1px solid ${C.accent2}22` }}>
+              <div style={{ fontSize: 10, color: C.accent2, marginBottom: 3 }}>
+                {m.created_date ? format(new Date(m.created_date), 'dd/MM HH:mm') : ''}
+              </div>
+              <div style={{ fontSize: 12, color: C.text, lineHeight: 1.5 }}>{m.testo}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── MESSAGES AREA ── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 2, background: `linear-gradient(180deg, ${C.bg} 0%, ${C.surface}44 100%)` }}>

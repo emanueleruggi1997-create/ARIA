@@ -178,6 +178,15 @@ export default function Inbox() {
 
   const handleMarkRead = (conv) => setReadIds(prev => new Set([...prev, conv.contact_id]));
 
+  const handleToggleAI = (conv, newDisabled) => {
+    // Aggiorna la lista localmente subito, poi refetch
+    queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
+    // Se è la conv attiva, aggiorna anche quella
+    if (activeConv?.contact_id === conv.contact_id) {
+      setActiveConv(prev => prev ? { ...prev, ai_disabled: newDisabled } : prev);
+    }
+  };
+
   // ── MOBILE LAYOUT ──
   if (isMobile) {
     if (activeConv) {
@@ -234,6 +243,7 @@ export default function Inbox() {
                 onArchive={handleArchive}
                 onDelete={handleDelete}
                 onMarkRead={handleMarkRead}
+                onToggleAI={handleToggleAI}
               />
             ))
           )}
@@ -282,6 +292,7 @@ export default function Inbox() {
                   onArchive={handleArchive}
                   onDelete={handleDelete}
                   onMarkRead={handleMarkRead}
+                  onToggleAI={handleToggleAI}
                 />
               ))
             )}
