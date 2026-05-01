@@ -26,7 +26,9 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
 
   const igConnected = connection?.ig_connected && !!connection?.ig_account_id;
   const tokenInfo = formatTokenExpiry(connection?.connected_at, lang);
-  const igAccountName = connection?.ig_account_name || connection?.meta_user_name || connection?.ig_account_id || '';
+  // Usa ig_account_name se non numerico, altrimenti meta_user_name, altrimenti niente (non mostrare ID grezzo)
+  const rawName = connection?.ig_account_name || connection?.meta_user_name || '';
+  const igAccountName = /^\d+$/.test(rawName) ? '' : rawName;
 
   const startOAuth = async () => {
     if (loading) return;

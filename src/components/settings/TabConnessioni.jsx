@@ -164,21 +164,16 @@ export default function TabConnessioni({ form, setForm, onSave, business, metaNo
       const conns = await base44.entities.MetaConnection.filter({ user_id: user.id });
       const conn = conns.length > 0 ? conns[0] : null;
 
-      // Se connesso ma il nome account è mancante o è un ID numerico, prova a recuperarlo dall'API IG
+      // Se il nome è mancante o numerico, chiama la funzione backend per risolverlo
       const nameIsMissingOrNumeric = !conn?.ig_account_name || /^\d+$/.test(conn?.ig_account_name);
-      if (conn?.ig_connected && conn?.ig_account_id && nameIsMissingOrNumeric && conn?.access_token) {
+      if (conn?.ig_connected && conn?.ig_account_id && nameIsMissingOrNumeric) {
         try {
-          const res = await fetch(`https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,name,username,biography&access_token=${conn.access_token}`);
-          const data = await res.json();
-          console.log('[TabConnessioni] IG profile data:', JSON.stringify(data));
-          // username è il vero handle IG, name è il nome display
-          const resolvedName = (/^\d+$/.test(data.username || '') ? '' : data.username) || data.name || '';
-          if (resolvedName) {
-            await base44.entities.MetaConnection.update(conn.id, { ig_account_name: resolvedName, meta_user_name: resolvedName });
-            conn.ig_account_name = resolvedName;
+          const res = await base44.functions.invoke('resolveIGUsername', {});
+          if (res.data?.resolvedName) {
+            conn.ig_account_name = res.data.resolvedName;
           }
         } catch (e) {
-          console.log('[TabConnessioni] Could not fetch IG name:', e.message);
+          console.log('[TabConnessioni] resolveIGUsername failed:', e.message);
         }
       }
 
