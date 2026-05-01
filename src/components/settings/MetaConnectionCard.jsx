@@ -26,6 +26,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
 
   const igConnected = connection?.ig_connected && !!connection?.ig_account_id;
   const tokenInfo = formatTokenExpiry(connection?.connected_at, lang);
+  const igAccountName = connection?.ig_account_name || connection?.meta_user_name || connection?.ig_account_id || '';
 
   const startOAuth = async () => {
     if (loading) return;
@@ -103,7 +104,9 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
             )}
           </div>
           {igConnected ? (
-            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>@{connection.ig_account_name}</div>
+            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
+              {igAccountName ? `@${igAccountName}` : <span style={{ color: '#6B7280', fontStyle: 'italic' }}>ID: {connection?.ig_account_id}</span>}
+            </div>
           ) : (
             <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{lang === 'en' ? 'No account connected' : 'Nessun account collegato'}</div>
           )}

@@ -162,7 +162,24 @@ export default function TabConnessioni({ form, setForm, onSave, business, metaNo
     try {
       const user = await base44.auth.me();
       const conns = await base44.entities.MetaConnection.filter({ user_id: user.id });
-      setMetaConnection(conns.length > 0 ? conns[0] : null);
+      const conn = conns.length > 0 ? conns[0] : null;
+
+      // Se connesso ma il nome account è mancante, prova a recuperarlo dall'API IG
+      if (conn?.ig_connected && conn?.ig_account_id && !conn?.ig_account_name && conn?.access_token) {
+        try {
+          const res = await fetch(`https://graph.instagram.com/v21.0/me?fields=id,name,username&access_token=${conn.access_token}`);
+          const data = await res.json();
+          const name = data.username || data.name || '';
+          if (name) {
+            await base44.entities.MetaConnection.update(conn.id, { ig_account_name: name, meta_user_name: name });
+            conn.ig_account_name = name;
+          }
+        } catch (e) {
+          console.log('[TabConnessioni] Could not fetch IG name:', e.message);
+        }
+      }
+
+      setMetaConnection(conn);
     } catch (err) {
       console.error('[TabConnessioni] loadMetaConnection error:', err);
       setMetaConnection(null);
