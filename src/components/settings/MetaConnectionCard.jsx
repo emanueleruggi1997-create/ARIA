@@ -26,7 +26,8 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
 
   const igConnected = connection?.ig_connected && !!connection?.ig_account_id;
   const tokenInfo = formatTokenExpiry(connection?.connected_at, lang);
-  // Usa ig_account_name se non numerico, altrimenti meta_user_name, altrimenti niente (non mostrare ID grezzo)
+  const tokenExpired = tokenInfo?.color === '#EF4444'; // rosso = scaduto
+  // Usa ig_account_name se non numerico, altrimenti meta_user_name
   const rawName = connection?.ig_account_name || connection?.meta_user_name || '';
   const igAccountName = /^\d+$/.test(rawName) ? '' : rawName;
 
@@ -98,18 +99,24 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: '#F0F4FF', display: 'flex', alignItems: 'center', gap: 8 }}>
             Instagram Business
-            {igConnected && (
+            {igConnected && !tokenExpired && (
               <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#10B98120', color: '#10B981', border: '1px solid #10B98140', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
                 {lang === 'en' ? 'Connected' : 'Connesso'}
               </span>
             )}
+            {igConnected && tokenExpired && (
+              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#EF444420', color: '#EF4444', border: '1px solid #EF444440', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
+                {lang === 'en' ? 'Token expired' : 'Token scaduto'}
+              </span>
+            )}
           </div>
           {igConnected ? (
             <div style={{ fontSize: 12, marginTop: 2 }}>
-              {igAccountName && !/^\d+$/.test(igAccountName)
+              {igAccountName
                 ? <span style={{ color: '#9CA3AF' }}>@{igAccountName}</span>
-                : <span style={{ color: '#F59E0B', fontStyle: 'italic' }}>⚠️ {lang === 'en' ? 'Token expired — please reconnect' : 'Token scaduto — riconnetti l\'account'}</span>
+                : <span style={{ color: '#6B7280' }}>ID: {connection?.ig_account_id}</span>
               }
             </div>
           ) : (
@@ -120,7 +127,8 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
 
       {igConnected && tokenInfo && (
         <div style={{ marginTop: 10, fontSize: 11, color: tokenInfo.color, background: `${tokenInfo.color}10`, border: `1px solid ${tokenInfo.color}30`, borderRadius: 8, padding: '6px 10px' }}>
-          🔑 {tokenInfo.label}
+          {tokenExpired ? '⚠️' : '🔑'} {tokenInfo.label}
+          {tokenExpired && <span style={{ display: 'block', marginTop: 2, color: '#9CA3AF' }}>{lang === 'en' ? 'Please reconnect to continue' : 'Riconnetti per continuare'}</span>}
         </div>
       )}
 
