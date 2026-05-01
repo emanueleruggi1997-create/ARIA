@@ -95,7 +95,9 @@ Deno.serve(async (req) => {
   console.log('[metaOAuthCallback] IG user:', JSON.stringify({ id: meData.id, username: meData.username }));
 
   const igAccountId   = meData.id || igUserId || '';
-  const igAccountName = meData.username || meData.name || meData.id || igUserId || '';
+  // username può essere numerico se il permesso non è concesso — in quel caso usa name
+  const rawUsername = meData.username || '';
+  const igAccountName = (/^\d+$/.test(rawUsername) ? '' : rawUsername) || meData.name || '';
   console.log('[metaOAuthCallback] igAccountName resolved:', igAccountName, '| meData:', JSON.stringify(meData));
 
   // 4. Se non abbiamo businessId dallo state, cercalo nel DB tramite userId

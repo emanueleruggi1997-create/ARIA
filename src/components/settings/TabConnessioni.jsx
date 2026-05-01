@@ -164,15 +164,18 @@ export default function TabConnessioni({ form, setForm, onSave, business, metaNo
       const conns = await base44.entities.MetaConnection.filter({ user_id: user.id });
       const conn = conns.length > 0 ? conns[0] : null;
 
-      // Se connesso ma il nome account è mancante, prova a recuperarlo dall'API IG
-      if (conn?.ig_connected && conn?.ig_account_id && !conn?.ig_account_name && conn?.access_token) {
+      // Se connesso ma il nome account è mancante o è un ID numerico, prova a recuperarlo dall'API IG
+      const nameIsMissingOrNumeric = !conn?.ig_account_name || /^\d+$/.test(conn?.ig_account_name);
+      if (conn?.ig_connected && conn?.ig_account_id && nameIsMissingOrNumeric && conn?.access_token) {
         try {
-          const res = await fetch(`https://graph.instagram.com/v21.0/me?fields=id,name,username&access_token=${conn.access_token}`);
+          const res = await fetch(`https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,name,username,biography&access_token=${conn.access_token}`);
           const data = await res.json();
-          const name = data.username || data.name || '';
-          if (name) {
-            await base44.entities.MetaConnection.update(conn.id, { ig_account_name: name, meta_user_name: name });
-            conn.ig_account_name = name;
+          console.log('[TabConnessioni] IG profile data:', JSON.stringify(data));
+          // username è il vero handle IG, name è il nome display
+          const resolvedName = (/^\d+$/.test(data.username || '') ? '' : data.username) || data.name || '';
+          if (resolvedName) {
+            await base44.entities.MetaConnection.update(conn.id, { ig_account_name: resolvedName, meta_user_name: resolvedName });
+            conn.ig_account_name = resolvedName;
           }
         } catch (e) {
           console.log('[TabConnessioni] Could not fetch IG name:', e.message);
