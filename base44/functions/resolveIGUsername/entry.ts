@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
     `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,name,username&access_token=${conn.access_token}`,
   ];
 
+  let resolvedUsername = '';
   let resolvedName = '';
   let resolvedData = null;
 
@@ -28,33 +29,42 @@ Deno.serve(async (req) => {
     const res = await fetch(url);
     const data = await res.json();
     console.log('[resolveIGUsername] attempt:', url.split('?')[0], '→', JSON.stringify(data));
-    if (data.error) continue;
+    if (data.error) {
+      console.log('[resolveIGUsername] error:', JSON.stringify(data.error));
+      continue;
+    }
     resolvedData = data;
-    // Prendi username se non numerico, altrimenti name
     const u = data.username || '';
     const n = data.name || '';
-    resolvedName = (!u || /^\d+$/.test(u)) ? n : u;
-    if (resolvedName) break;
+    // Salva separatamente username (non numerico) e name
+    if (u && !/^\d+$/.test(u)) resolvedUsername = u;
+    if (n && !/^\d+$/.test(n)) resolvedName = n;
+    // Abbiamo almeno qualcosa di utile
+    if (resolvedUsername || resolvedName) break;
   }
 
-  if (!resolvedName) {
-    // Token invalido o permessi insufficienti — non è un errore bloccante
-    // Restituiamo 200 con resolved: false così il frontend non crasha
-    return Response.json({ success: false, resolved: false, message: 'Token non valido o permessi insufficienti — riconnetti l\'account Instagram' });
+  const displayName = resolvedUsername || resolvedName;
+
+  if (!displayName) {
+    console.log('[resolveIGUsername] Nessun username/nome trovato — token probabilmente non valido');
+    return Response.json({ success: false, resolved: false, message: 'Impossibile recuperare il nome account — riconnetti l\'account Instagram' });
   }
 
-  // Aggiorna DB
-  await base44.asServiceRole.entities.MetaConnection.update(conn.id, {
-    ig_account_name: resolvedName,
-    meta_user_name: resolvedName,
-  });
+  console.log('[resolveIGUsername] Risolto → username:', resolvedUsername, '| name:', resolvedName);
+
+  // Aggiorna DB con username e name separati
+  const dbUpdate = {
+    ig_account_name: resolvedUsername || resolvedName,
+    meta_user_name: resolvedUsername || resolvedName,
+  };
+  await base44.asServiceRole.entities.MetaConnection.update(conn.id, dbUpdate);
 
   // Aggiorna anche Business
   if (conn.business_id) {
     await base44.asServiceRole.entities.Business.update(conn.business_id, {
-      ig_username: resolvedName,
+      ig_username: resolvedUsername || resolvedName,
     });
   }
 
-  return Response.json({ success: true, resolvedName });
+  return Response.json({ success: true, resolvedName: displayName, username: resolvedUsername, name: resolvedName });
 });

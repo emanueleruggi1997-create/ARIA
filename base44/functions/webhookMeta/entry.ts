@@ -3,13 +3,20 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 const VERIFY_TOKEN = 'emaral2026';
 
 async function processComment({ base44, entryId, commentId, senderId, text, senderName }) {
-  // Find MetaConnection
+  // ── Multi-account routing per commenti ──
+  console.log('[webhookMeta] processComment → entryId:', entryId, '| commentId:', commentId, '| sender:', senderName);
   let connections = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entryId });
+  console.log('[webhookMeta] Connessioni trovate per ig_account_id (comment):', connections.length);
   if (!connections.length) {
     connections = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: entryId });
+    console.log('[webhookMeta] Connessioni trovate per meta_user_id (comment):', connections.length);
   }
   const conn = connections[0];
-  if (!conn) { console.log('[webhookMeta] No MetaConnection for comment entry.id:', entryId); return; }
+  if (!conn) {
+    console.log('[webhookMeta] ⚠️ NESSUNA MetaConnection per comment entry.id:', entryId, '— commento ignorato.');
+    return;
+  }
+  console.log('[webhookMeta] ✅ Business trovato per commento: conn.id:', conn.id, '| business_id:', conn.business_id);
 
   // Resolve business_id
   let businessId = conn.business_id || '';
@@ -103,13 +110,20 @@ COME RISPONDI:
 }
 
 async function processMessage({ base44, entryId, senderId, text }) {
-  // Find MetaConnection
+  // ── Multi-account routing: identifica il business tramite ig_account_id ──
+  console.log('[webhookMeta] processMessage → entryId (ig_account_id):', entryId, '| senderId:', senderId);
   let connections = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entryId });
+  console.log('[webhookMeta] Connessioni trovate per ig_account_id:', connections.length);
   if (!connections.length) {
     connections = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: entryId });
+    console.log('[webhookMeta] Connessioni trovate per meta_user_id:', connections.length);
   }
   const conn = connections[0];
-  if (!conn) { console.log('[webhookMeta] No MetaConnection for entry.id:', entryId); return; }
+  if (!conn) {
+    console.log('[webhookMeta] ⚠️ NESSUNA MetaConnection trovata per entry.id:', entryId, '— messaggio ignorato. Verificare che il business abbia connesso Instagram.');
+    return;
+  }
+  console.log('[webhookMeta] ✅ Business trovato: conn.id:', conn.id, '| business_id:', conn.business_id, '| ig_account_id:', conn.ig_account_id);
 
   // Resolve business_id
   let businessId = conn.business_id || '';
@@ -564,7 +578,9 @@ Deno.serve(async (req) => {
 
   if (req.method === 'POST') {
     const body = await req.json().catch(() => ({}));
-    console.log('[webhookMeta] Event received:', JSON.stringify(body).slice(0, 400));
+    console.log('[webhookMeta] ═══ WEBHOOK RICEVUTO ═══');
+    console.log('[webhookMeta] Entry IDs:', (body.entry || []).map(e => e.id).join(', ') || 'nessuno');
+    console.log('[webhookMeta] Full body (troncato):', JSON.stringify(body).slice(0, 500));
 
     const base44 = createClientFromRequest(req);
     const entries = body.entry || [];

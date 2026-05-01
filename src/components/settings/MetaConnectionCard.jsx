@@ -115,8 +115,8 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
           {igConnected ? (
             <div style={{ fontSize: 12, marginTop: 2 }}>
               {igAccountName
-                ? <span style={{ color: '#9CA3AF' }}>@{igAccountName}</span>
-                : <span style={{ color: '#6B7280' }}>ID: {connection?.ig_account_id}</span>
+                ? <span style={{ color: '#9CA3AF' }}>{igAccountName.startsWith('@') ? igAccountName : `@${igAccountName}`}</span>
+                : <span style={{ color: '#6B7280', fontStyle: 'italic' }}>ID: {connection?.ig_account_id}</span>
               }
             </div>
           ) : (
