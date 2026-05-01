@@ -167,14 +167,12 @@ export default function TabConnessioni({ form, setForm, onSave, business, metaNo
       // Se il nome è mancante o numerico, chiama la funzione backend per risolverlo
       const nameIsMissingOrNumeric = !conn?.ig_account_name || /^\d+$/.test(conn?.ig_account_name);
       if (conn?.ig_connected && conn?.ig_account_id && nameIsMissingOrNumeric) {
-        try {
-          const res = await base44.functions.invoke('resolveIGUsername', {});
+        // Ignoriamo silenziosamente qualsiasi errore — non blocca il caricamento
+        base44.functions.invoke('resolveIGUsername', {}).then(res => {
           if (res.data?.resolvedName) {
-            conn.ig_account_name = res.data.resolvedName;
+            setMetaConnection(prev => prev ? { ...prev, ig_account_name: res.data.resolvedName } : prev);
           }
-        } catch (e) {
-          console.log('[TabConnessioni] resolveIGUsername failed:', e.message);
-        }
+        }).catch(() => {});
       }
 
       setMetaConnection(conn);

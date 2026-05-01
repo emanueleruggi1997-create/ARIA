@@ -38,7 +38,9 @@ Deno.serve(async (req) => {
   }
 
   if (!resolvedName) {
-    return Response.json({ error: 'Impossibile risolvere il nome', raw: resolvedData }, { status: 422 });
+    // Token invalido o permessi insufficienti — non è un errore bloccante
+    // Restituiamo 200 con resolved: false così il frontend non crasha
+    return Response.json({ success: false, resolved: false, message: 'Token non valido o permessi insufficienti — riconnetti l\'account Instagram' });
   }
 
   // Aggiorna DB
