@@ -132,6 +132,19 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       )}
 
+      {igConnected && !tokenExpired && !igAccountName && (
+        <div style={{ marginTop: 10, fontSize: 12, color: '#F59E0B', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '10px 12px' }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>
+            ⚠️ {lang === 'en' ? 'Account not recognized as Business.' : 'Account non riconosciuto come Business.'}
+          </div>
+          <div style={{ color: '#D97706', lineHeight: 1.5 }}>
+            {lang === 'en'
+              ? 'For ARIA to work, convert your Instagram profile to a Business account, then click Reconnect.'
+              : 'Per far funzionare ARIA, converti il tuo profilo Instagram in account Business e clicca Riconnetti.'}
+          </div>
+        </div>
+      )}
+
       {error && (
         <div style={{ marginTop: 10, fontSize: 11, color: '#EF4444', background: '#EF444410', border: '1px solid #EF444430', borderRadius: 8, padding: '8px 12px' }}>
           ⚠️ {error}
