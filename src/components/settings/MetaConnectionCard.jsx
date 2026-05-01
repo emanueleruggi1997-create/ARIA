@@ -29,7 +29,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
   const tokenExpired = tokenInfo?.color === '#EF4444'; // rosso = scaduto
   // Usa ig_account_name se non numerico, altrimenti meta_user_name
   const rawName = connection?.ig_account_name || connection?.meta_user_name || '';
-  const igAccountName = /^\d+$/.test(rawName) ? '' : rawName;
+  const igAccountName = (!rawName || /^\d+$/.test(rawName)) ? '' : rawName;
 
   const startOAuth = async () => {
     if (loading) return;
