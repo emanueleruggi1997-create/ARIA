@@ -104,8 +104,11 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
             )}
           </div>
           {igConnected ? (
-            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
-              {igAccountName ? `@${igAccountName}` : <span style={{ color: '#6B7280', fontStyle: 'italic' }}>ID: {connection?.ig_account_id}</span>}
+            <div style={{ fontSize: 12, marginTop: 2 }}>
+              {igAccountName && !/^\d+$/.test(igAccountName)
+                ? <span style={{ color: '#9CA3AF' }}>@{igAccountName}</span>
+                : <span style={{ color: '#F59E0B', fontStyle: 'italic' }}>⚠️ {lang === 'en' ? 'Token expired — please reconnect' : 'Token scaduto — riconnetti l\'account'}</span>
+              }
             </div>
           ) : (
             <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{lang === 'en' ? 'No account connected' : 'Nessun account collegato'}</div>
