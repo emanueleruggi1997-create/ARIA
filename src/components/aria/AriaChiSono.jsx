@@ -109,8 +109,8 @@ export default function AriaChiSono({ form, updateField, ariaName, ariaColor, on
 
         <div>
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.agentLanguage}</Label>
-          <Select value={form.lingua} onValueChange={v => updateField('lingua', v)}>
-            <SelectTrigger className="mt-2 bg-secondary border-border"><SelectValue /></SelectTrigger>
+          <Select value={form.lingua || ''} onValueChange={v => updateField('lingua', v)}>
+            <SelectTrigger className="mt-2 bg-secondary border-border"><SelectValue placeholder={lang === 'en' ? 'Select language' : 'Seleziona lingua'} /></SelectTrigger>
             <SelectContent>
               {['Italiano', 'English', 'Español', 'Français', 'Deutsch'].map(l => (
                 <SelectItem key={l} value={l}>{l}</SelectItem>

@@ -18,7 +18,7 @@ export default function AgentConfig() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [form, setForm] = useState({
-    nome_agente: 'ARIA', ruolo_agente: '', tono: 'professionale', lingua: 'Italiano',
+    nome_agente: '', ruolo_agente: '', tono: '', lingua: '',
     avatar_agente: '#3B6EF8', servizi: '', prezzi: '', cose_da_non_fare: '', faq: '',
     auto_risposta: true, auto_commenti: false, orario_inizio: '08:00', orario_fine: '20:00',
     giorni_attivi: ['lun','mar','mer','gio','ven'], fuori_orario_attivo: true,
@@ -33,10 +33,10 @@ export default function AgentConfig() {
       const name = business.aria_name || business.nome_agente || business.robot_name || 'ARIA';
       const mood = business.aria_mood || business.robot_mood || 'felice';
       setForm({
-        nome_agente: name,
+        nome_agente: business.aria_name || business.nome_agente || business.robot_name || '',
         ruolo_agente: business.ruolo_agente || '',
-        tono: business.tono || 'professionale',
-        lingua: business.lingua || 'Italiano',
+        tono: business.tono || '',
+        lingua: business.lingua || '',
         avatar_agente: color,
         servizi: business.servizi || '',
         prezzi: business.prezzi || '',
