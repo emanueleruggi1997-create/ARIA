@@ -43,7 +43,7 @@ export default function MetaTestButton({ connection, ariaColor }) {
     <div className="space-y-3">
       <button
         onClick={handleTest}
-        disabled={testing || !connection?.access_token}
+        disabled={testing || !connection?.id}
         className="w-full px-4 py-2.5 rounded-lg font-semibold text-sm transition-all"
         style={{
           background: testing ? 'rgba(255,255,255,0.05)' : `${ariaColor}20`,
