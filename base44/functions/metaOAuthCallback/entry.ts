@@ -89,17 +89,46 @@ Deno.serve(async (req) => {
   const longToken = llData.access_token || shortToken;
   console.log('[metaOAuthCallback] long-lived token:', llData.access_token ? 'OK' : 'fallback a short-lived');
 
-  // 3. Info utente Instagram (con profile_picture_url grazie a instagram_business_basic)
-  const meRes  = await fetch(`https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url,account_type&access_token=${longToken}`);
+  // 3. Info utente Instagram — prova più campi per massimizzare la probabilità di ottenere username
+  const meRes = await fetch(`https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url,account_type&access_token=${longToken}`);
   const meData = await meRes.json();
-  console.log('[metaOAuthCallback] IG user:', JSON.stringify({ id: meData.id, username: meData.username, account_type: meData.account_type }));
+  console.log('[metaOAuthCallback] IG /me response:', JSON.stringify(meData));
+
+  // Se /me non ha username, prova anche con l'ID esplicito
+  let igUsername = '';
+  let igName = '';
+  let igProfilePic = '';
+  let igAccountType = '';
+
+  if (!meData.error) {
+    const rawU = meData.username || '';
+    const rawN = meData.name || '';
+    igUsername = (/^\d+$/.test(rawU) ? '' : rawU);
+    igName     = (/^\d+$/.test(rawN) ? '' : rawN);
+    igProfilePic = meData.profile_picture_url || '';
+    igAccountType = meData.account_type || '';
+  }
+
+  // Se username ancora mancante, tenta con l'id esplicito
+  if (!igUsername) {
+    const uid = meData.id || igUserId;
+    if (uid) {
+      const me2Res = await fetch(`https://graph.instagram.com/v21.0/${uid}?fields=id,name,username,profile_picture_url&access_token=${longToken}`);
+      const me2Data = await me2Res.json();
+      console.log('[metaOAuthCallback] IG /{id} response:', JSON.stringify(me2Data));
+      if (!me2Data.error) {
+        const rawU2 = me2Data.username || '';
+        const rawN2 = me2Data.name || '';
+        if (!igUsername) igUsername = (/^\d+$/.test(rawU2) ? '' : rawU2);
+        if (!igName)     igName     = (/^\d+$/.test(rawN2) ? '' : rawN2);
+        if (!igProfilePic) igProfilePic = me2Data.profile_picture_url || '';
+      }
+    }
+  }
 
   const igAccountId   = meData.id || igUserId || '';
-  // username può essere numerico se il permesso non è concesso — in quel caso usa name
-  const rawUsername = meData.username || '';
-  const igAccountName = (/^\d+$/.test(rawUsername) ? '' : rawUsername) || meData.name || '';
-  const igProfilePic  = meData.profile_picture_url || '';
-  console.log('[metaOAuthCallback] igAccountName resolved:', igAccountName, '| profilePic:', igProfilePic ? 'presente' : 'assente');
+  const igAccountName = igUsername || igName || '';
+  console.log('[metaOAuthCallback] igAccountId:', igAccountId, '| igUsername:', igUsername, '| igName:', igName, '| profilePic:', igProfilePic ? 'sì' : 'no');
 
   // Calcola scadenza token: long-lived = 60 giorni da ora
   const tokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();

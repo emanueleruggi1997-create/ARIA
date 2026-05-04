@@ -14,16 +14,15 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Token o account ID mancante' }, { status: 400 });
   }
 
-  // Prova vari endpoint e campi per trovare l'username
+  // Prova vari endpoint con profile_picture_url incluso
   const attempts = [
-    `https://graph.instagram.com/v21.0/me?fields=id,name,username&access_token=${conn.access_token}`,
-    `https://graph.instagram.com/v21.0/me?fields=id,name&access_token=${conn.access_token}`,
-    `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,name,username&access_token=${conn.access_token}`,
+    `https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url&access_token=${conn.access_token}`,
+    `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,name,username,profile_picture_url&access_token=${conn.access_token}`,
   ];
 
   let resolvedUsername = '';
   let resolvedName = '';
-  let resolvedData = null;
+  let resolvedProfilePic = conn.ig_profile_picture_url || '';
 
   for (const url of attempts) {
     const res = await fetch(url);
@@ -33,13 +32,11 @@ Deno.serve(async (req) => {
       console.log('[resolveIGUsername] error:', JSON.stringify(data.error));
       continue;
     }
-    resolvedData = data;
     const u = data.username || '';
     const n = data.name || '';
-    // Salva separatamente username (non numerico) e name
     if (u && !/^\d+$/.test(u)) resolvedUsername = u;
     if (n && !/^\d+$/.test(n)) resolvedName = n;
-    // Abbiamo almeno qualcosa di utile
+    if (data.profile_picture_url) resolvedProfilePic = data.profile_picture_url;
     if (resolvedUsername || resolvedName) break;
   }
 
@@ -50,13 +47,14 @@ Deno.serve(async (req) => {
     return Response.json({ success: false, resolved: false, message: 'Impossibile recuperare il nome account — riconnetti l\'account Instagram' });
   }
 
-  console.log('[resolveIGUsername] Risolto → username:', resolvedUsername, '| name:', resolvedName);
+  console.log('[resolveIGUsername] Risolto → username:', resolvedUsername, '| name:', resolvedName, '| pic:', resolvedProfilePic ? 'sì' : 'no');
 
-  // Aggiorna DB con username e name separati
+  // Aggiorna DB
   const dbUpdate = {
     ig_account_name: resolvedUsername || resolvedName,
     meta_user_name: resolvedUsername || resolvedName,
   };
+  if (resolvedProfilePic) dbUpdate.ig_profile_picture_url = resolvedProfilePic;
   await base44.asServiceRole.entities.MetaConnection.update(conn.id, dbUpdate);
 
   // Aggiorna anche Business
@@ -66,5 +64,5 @@ Deno.serve(async (req) => {
     });
   }
 
-  return Response.json({ success: true, resolvedName: displayName, username: resolvedUsername, name: resolvedName });
+  return Response.json({ success: true, resolvedName: displayName, username: resolvedUsername, name: resolvedName, profile_pic: resolvedProfilePic });
 });
