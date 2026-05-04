@@ -89,16 +89,20 @@ Deno.serve(async (req) => {
   const longToken = llData.access_token || shortToken;
   console.log('[metaOAuthCallback] long-lived token:', llData.access_token ? 'OK' : 'fallback a short-lived');
 
-  // 3. Info utente Instagram
-  const meRes  = await fetch(`https://graph.instagram.com/v21.0/me?fields=id,name,username&access_token=${longToken}`);
+  // 3. Info utente Instagram (con profile_picture_url grazie a instagram_business_basic)
+  const meRes  = await fetch(`https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url,account_type&access_token=${longToken}`);
   const meData = await meRes.json();
-  console.log('[metaOAuthCallback] IG user:', JSON.stringify({ id: meData.id, username: meData.username }));
+  console.log('[metaOAuthCallback] IG user:', JSON.stringify({ id: meData.id, username: meData.username, account_type: meData.account_type }));
 
   const igAccountId   = meData.id || igUserId || '';
   // username può essere numerico se il permesso non è concesso — in quel caso usa name
   const rawUsername = meData.username || '';
   const igAccountName = (/^\d+$/.test(rawUsername) ? '' : rawUsername) || meData.name || '';
-  console.log('[metaOAuthCallback] igAccountName resolved:', igAccountName, '| meData:', JSON.stringify(meData));
+  const igProfilePic  = meData.profile_picture_url || '';
+  console.log('[metaOAuthCallback] igAccountName resolved:', igAccountName, '| profilePic:', igProfilePic ? 'presente' : 'assente');
+
+  // Calcola scadenza token: long-lived = 60 giorni da ora
+  const tokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
 
   // 4. Se non abbiamo businessId dallo state, cercalo nel DB tramite userId
   const base44 = createClientFromRequest(req);
@@ -117,16 +121,18 @@ Deno.serve(async (req) => {
 
   // 5. Salvataggio su DB
   const payload = {
-    user_id:          userId,
-    business_id:      businessId,
-    access_token:     longToken,
-    meta_user_id:     igAccountId,
-    meta_user_name:   igAccountName,
-    ig_connected:     true,
-    ig_account_id:    igAccountId,
-    ig_account_name:  igAccountName,
-    status:           'connected',
-    connected_at:     new Date().toISOString(),
+    user_id:                  userId,
+    business_id:              businessId,
+    access_token:             longToken,
+    meta_user_id:             igAccountId,
+    meta_user_name:           igAccountName,
+    ig_connected:             true,
+    ig_account_id:            igAccountId,
+    ig_account_name:          igAccountName,
+    ig_profile_picture_url:   igProfilePic,
+    ig_token_expires_at:      tokenExpiresAt,
+    status:                   'connected',
+    connected_at:             new Date().toISOString(),
   };
 
   try {

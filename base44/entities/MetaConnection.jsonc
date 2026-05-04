@@ -55,6 +55,15 @@
     "ig_account_name": {
       "type": "string"
     },
+    "ig_profile_picture_url": {
+      "type": "string",
+      "description": "URL foto profilo Instagram"
+    },
+    "ig_token_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Scadenza token long-lived (60 giorni)"
+    },
     "business_id": {
       "type": "string",
       "description": "ID del business collegato"

@@ -5,10 +5,17 @@ import { useLang } from '@/lib/LanguageContext.jsx';
 
 const IG_COLOR = '#E1306C';
 
-function formatTokenExpiry(connectedAt, lang) {
-  if (!connectedAt) return null;
-  const expiry = new Date(connectedAt);
-  expiry.setDate(expiry.getDate() + 60);
+function formatTokenExpiry(connection, lang) {
+  // Preferisce ig_token_expires_at (preciso), fallback a connected_at + 60gg
+  let expiry;
+  if (connection?.ig_token_expires_at) {
+    expiry = new Date(connection.ig_token_expires_at);
+  } else if (connection?.connected_at) {
+    expiry = new Date(connection.connected_at);
+    expiry.setDate(expiry.getDate() + 60);
+  } else {
+    return null;
+  }
   const now = new Date();
   const daysLeft = Math.round((expiry - now) / (1000 * 60 * 60 * 24));
   if (daysLeft < 0) return { label: lang === 'en' ? 'Token expired' : 'Token scaduto', color: '#EF4444' };
@@ -25,11 +32,12 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
   const pollRef = useRef(null);
 
   const igConnected = connection?.ig_connected && !!connection?.ig_account_id;
-  const tokenInfo = formatTokenExpiry(connection?.connected_at, lang);
+  const tokenInfo = formatTokenExpiry(connection, lang);
   const tokenExpired = tokenInfo?.color === '#EF4444'; // rosso = scaduto
   // Usa ig_account_name se non numerico, altrimenti meta_user_name
   const rawName = connection?.ig_account_name || connection?.meta_user_name || '';
   const igAccountName = (!rawName || /^\d+$/.test(rawName)) ? '' : rawName;
+  const igProfilePic = connection?.ig_profile_picture_url || '';
 
   const startOAuth = async () => {
     if (loading) return;
@@ -113,11 +121,19 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
             )}
           </div>
           {igConnected ? (
-            <div style={{ fontSize: 12, marginTop: 2 }}>
+            <div style={{ fontSize: 12, marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {igProfilePic && (
+                <img src={igProfilePic} alt="profile" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
+              )}
               {igAccountName
                 ? <span style={{ color: '#9CA3AF' }}>{igAccountName.startsWith('@') ? igAccountName : `@${igAccountName}`}</span>
                 : <span style={{ color: '#6B7280', fontStyle: 'italic' }}>ID: {connection?.ig_account_id}</span>
               }
+              {connection?.connected_at && (
+                <span style={{ color: '#4B5563', fontSize: 11, marginLeft: 4 }}>
+                  · {lang === 'en' ? 'since' : 'dal'} {new Date(connection.connected_at).toLocaleDateString(lang === 'en' ? 'en-GB' : 'it-IT')}
+                </span>
+              )}
             </div>
           ) : (
             <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{lang === 'en' ? 'No account connected' : 'Nessun account collegato'}</div>

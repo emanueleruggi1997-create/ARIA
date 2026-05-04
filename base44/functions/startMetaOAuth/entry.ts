@@ -16,13 +16,16 @@ Deno.serve(async (req) => {
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
   const businessId = body.businessId || '';
 
-  const scopes = 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_manage_insights';
+  // Permessi approvati in modalità Live
+  const scopes = 'instagram_business_basic,instagram_business_manage_messages';
   const state = btoa(JSON.stringify({ userId: user.id, businessId }));
 
-  const authUrl = `https://www.instagram.com/oauth/authorize?client_id=${IG_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&state=${encodeURIComponent(state)}&response_type=code`;
+  // Usa Instagram Business OAuth (endpoint corretto per permessi Live approvati)
+  const authUrl = `https://www.instagram.com/oauth/authorize?client_id=${IG_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}&response_type=code&enable_fb_login=0&force_authentication=1`;
 
   console.log('[startMetaOAuth] userId:', user.id, '| businessId:', businessId);
   console.log('[startMetaOAuth] redirectUri:', redirectUri);
+  console.log('[startMetaOAuth] authUrl:', authUrl);
 
   return Response.json({ url: authUrl });
 });

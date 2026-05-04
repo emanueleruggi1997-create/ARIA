@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const VERIFY_TOKEN = 'emaral2026';
 
@@ -226,6 +226,10 @@ async function processMessage({ base44, entryId, senderId, text }) {
   const withinHours = is24h || (currentMinutes >= startMinutes && currentMinutes < endMinutes);
   console.log(`[webhookMeta] Orari: ${business.orario_inizio}–${business.orario_fine} | ora Roma: ${romeHour}:${String(romeMinute).padStart(2,'0')} | currentMin=${currentMinutes} startMin=${startMinutes} endMin=${endMinutes} | is24h=${is24h} withinHours=${withinHours} fuori_orario_attivo=${business.fuori_orario_attivo}`);
 
+  // Detect language for out-of-hours message
+  const dmLangEarly = business.lingua || 'Italiano';
+  const dmIsEn = dmLangEarly.toLowerCase().includes('english') || dmLangEarly.toLowerCase() === 'en';
+
   if (!withinHours && business.fuori_orario_attivo) {
     console.log('[webhookMeta] Outside operating hours, sending out-of-hours message');
     const igToken = conn.access_token;
@@ -362,7 +366,6 @@ async function processMessage({ base44, entryId, senderId, text }) {
 
   // Detect the language the client is actually writing in — always mirror it
   const dmLang = business.lingua || 'Italiano';
-  const dmIsEn = dmLang.toLowerCase().includes('english') || dmLang.toLowerCase() === 'en';
 
   const systemPrompt = `Sei ${business.nome_agente || 'ARIA'}, assistente di "${business.nome}".
 
@@ -590,13 +593,31 @@ Deno.serve(async (req) => {
     const comments = [];
 
     for (const entry of entries) {
-      // DMs — entry.messaging (skip read receipts and echoes)
+      // DMs, postbacks, reactions — entry.messaging
       for (const event of (entry.messaging || [])) {
         if (event.read || event.delivery) continue; // skip read receipts / delivery events
-        if (!event.message || event.message.is_echo) continue;
+        if (event.message?.is_echo) continue; // skip echoes
+
         const senderId = event.sender?.id;
+        if (!senderId) continue;
+
+        // Postbacks (button taps)
+        if (event.postback) {
+          const postbackText = event.postback.title || event.postback.payload || '';
+          if (postbackText) messages.push({ entryId: entry.id, senderId, text: postbackText });
+          continue;
+        }
+
+        // Reactions — log only, no AI reply needed
+        if (event.reaction) {
+          console.log('[webhookMeta] Reaction from:', senderId, '| reaction:', event.reaction.reaction, '| action:', event.reaction.action);
+          continue;
+        }
+
+        // Standard text DM
+        if (!event.message) continue;
         const text = event.message?.text || '';
-        if (!senderId || !text) continue;
+        if (!text) continue;
         messages.push({ entryId: entry.id, senderId, text });
       }
 
