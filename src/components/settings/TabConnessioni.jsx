@@ -161,16 +161,27 @@ export default function TabConnessioni({ form, setForm, onSave, business, metaNo
     if (!business?.id) { setMetaLoading(false); return; }
     try {
       const user = await base44.auth.me();
-      const conns = await base44.entities.MetaConnection.filter({ user_id: user.id });
-      const conn = conns.length > 0 ? conns[0] : null;
+      // Filtra per business_id (univoco per utente) — evita di prendere connessioni di altri utenti
+      const conns = await base44.entities.MetaConnection.filter({ business_id: business.id });
+      // Fallback: cerca per user_id se nessun risultato per business_id
+      let conn = conns.length > 0 ? conns[0] : null;
+      if (!conn) {
+        const byUser = await base44.entities.MetaConnection.filter({ user_id: user.id });
+        conn = byUser.length > 0 ? byUser[0] : null;
+        // Se trovata per user_id ma senza business_id, aggiorna il record
+        if (conn && !conn.business_id) {
+          base44.entities.MetaConnection.update(conn.id, { business_id: business.id }).catch(() => {});
+          conn = { ...conn, business_id: business.id };
+        }
+      }
 
-      // Se il nome è mancante o numerico, risolvi PRIMA di settare lo stato
+      // Se il nome è mancante o numerico, chiamata a resolveIGUsername
       const nameIsMissingOrNumeric = !conn?.ig_account_name || /^\d+$/.test(conn?.ig_account_name);
       if (conn?.ig_connected && conn?.ig_account_id && nameIsMissingOrNumeric) {
         try {
           const res = await base44.functions.invoke('resolveIGUsername', {});
           if (res.data?.resolvedName) {
-            conn.ig_account_name = res.data.resolvedName;
+            conn = { ...conn, ig_account_name: res.data.resolvedName };
           }
         } catch (_) {}
       }

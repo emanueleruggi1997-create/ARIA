@@ -6,7 +6,18 @@ Deno.serve(async (req) => {
   const user = await base44.auth.me();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const conns = await base44.asServiceRole.entities.MetaConnection.filter({ user_id: user.id });
+  // Cerca prima per business (univoco per utente), poi fallback per user_id
+  let conns = [];
+  // Trova il business dell'utente loggato
+  const allBiz = await base44.asServiceRole.entities.Business.filter({});
+  const myBusiness = allBiz.find(b => b.created_by === user.email || b.created_by === user.id);
+  if (myBusiness) {
+    conns = await base44.asServiceRole.entities.MetaConnection.filter({ business_id: myBusiness.id });
+  }
+  if (!conns.length) {
+    conns = await base44.asServiceRole.entities.MetaConnection.filter({ user_id: user.id });
+  }
+  console.log('[resolveIGUsername] user.id:', user.id, '| business:', myBusiness?.id, '| connessioni trovate:', conns.length);
   if (!conns.length) return Response.json({ error: 'Nessuna connessione trovata' }, { status: 404 });
 
   const conn = conns[0];

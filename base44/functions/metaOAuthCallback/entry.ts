@@ -148,7 +148,9 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 5. Salvataggio su DB
+  // 5. Salvataggio su DB — CRITICO: cerca per user_id per non mescolare account diversi
+  console.log('[metaOAuthCallback] Salvo connessione per userId:', userId, '| businessId:', businessId, '| igAccountId:', igAccountId);
+
   const payload = {
     user_id:                  userId,
     business_id:              businessId,
@@ -165,13 +167,15 @@ Deno.serve(async (req) => {
   };
 
   try {
+    // Cerca SOLO per user_id — ogni utente ha la sua connessione separata
     const existing = await base44.asServiceRole.entities.MetaConnection.filter({ user_id: userId });
+    console.log('[metaOAuthCallback] Connessioni esistenti per userId', userId, ':', existing.length);
     if (existing.length > 0) {
       await base44.asServiceRole.entities.MetaConnection.update(existing[0].id, payload);
-      console.log('[metaOAuthCallback] DB aggiornato, id:', existing[0].id);
+      console.log('[metaOAuthCallback] DB aggiornato per user', userId, '| record id:', existing[0].id, '| ig_account_name:', igAccountName);
     } else {
       const created = await base44.asServiceRole.entities.MetaConnection.create(payload);
-      console.log('[metaOAuthCallback] DB creato, id:', created?.id);
+      console.log('[metaOAuthCallback] DB creato per user', userId, '| record id:', created?.id, '| ig_account_name:', igAccountName);
     }
   } catch (dbErr) {
     console.error('[metaOAuthCallback] DB FALLITO:', dbErr.message);
