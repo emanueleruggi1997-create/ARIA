@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Loader2 } from 'lucide-react';
 import { useLang } from '@/lib/LanguageContext.jsx';
+import MetaTestButton from './MetaTestButton';
 
 const IG_COLOR = '#E1306C';
 
@@ -167,24 +168,29 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       )}
 
-      <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
-        {igConnected ? (
-          <>
-            <button onClick={startOAuth} disabled={loading} style={btnStyle('rgba(255,255,255,0.08)', '#9CA3AF', loading)}>
-              {loading ? `⏳ ${lang === 'en' ? 'Opening...' : 'Apertura...'}` : `🔄 ${lang === 'en' ? 'Reconnect' : 'Riconnetti'}`}
-            </button>
-            <button onClick={disconnect} disabled={disconnecting} style={btnStyle('#EF444420', '#EF4444', disconnecting)}>
-              {disconnecting ? '...' : (lang === 'en' ? 'Disconnect' : 'Disconnetti')}
-            </button>
-          </>
-        ) : (
-          <button onClick={startOAuth} disabled={loading} style={btnStyle(`${IG_COLOR}20`, '#F0F4FF', loading, IG_COLOR)}>
-            {loading
-              ? <span>⏳ {lang === 'en' ? 'Opening...' : 'Apertura...'}</span>
-              : <span>📸 {lang === 'en' ? 'Connect Instagram Business' : 'Collega Instagram Business'}</span>
-            }
-          </button>
+      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {igConnected && (
+          <MetaTestButton connection={connection} ariaColor={IG_COLOR} />
         )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {igConnected ? (
+            <>
+              <button onClick={startOAuth} disabled={loading} style={btnStyle('rgba(255,255,255,0.08)', '#9CA3AF', loading)}>
+                {loading ? `⏳ ${lang === 'en' ? 'Opening...' : 'Apertura...'}` : `🔄 ${lang === 'en' ? 'Reconnect' : 'Riconnetti'}`}
+              </button>
+              <button onClick={disconnect} disabled={disconnecting} style={btnStyle('#EF444420', '#EF4444', disconnecting)}>
+                {disconnecting ? '...' : (lang === 'en' ? 'Disconnect' : 'Disconnetti')}
+              </button>
+            </>
+          ) : (
+            <button onClick={startOAuth} disabled={loading} style={btnStyle(`${IG_COLOR}20`, '#F0F4FF', loading, IG_COLOR)}>
+              {loading
+                ? <span>⏳ {lang === 'en' ? 'Opening...' : 'Apertura...'}</span>
+                : <span>📸 {lang === 'en' ? 'Connect Instagram Business' : 'Collega Instagram Business'}</span>
+              }
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
