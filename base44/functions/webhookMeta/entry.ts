@@ -238,15 +238,18 @@ async function processMessage({ base44, entryId, senderId, text }) {
 
   if (!withinHours && business.fuori_orario_attivo) {
     console.log('[webhookMeta] Outside operating hours, sending out-of-hours message');
-    if (pageToken && pageId) {
-      await fetch(`https://graph.facebook.com/v20.0/${pageId}/messages`, {
+    const oohText = business.messaggio_fuori_orario || (dmIsEn ? 'We are currently out of hours. We will reply as soon as possible!' : 'Siamo fuori orario. Ti risponderemo non appena possibile!');
+    if (conn.fb_page_token && conn.fb_page_id) {
+      await fetch(`https://graph.facebook.com/v20.0/${conn.fb_page_id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipient: { id: senderId },
-          message: { text: business.messaggio_fuori_orario || (dmIsEn ? 'We are currently out of hours. We will reply as soon as possible!' : 'Siamo fuori orario. Ti risponderemo non appena possibile!') },
-          access_token: pageToken,
-        }),
+        body: JSON.stringify({ recipient: { id: senderId }, message: { text: oohText }, access_token: conn.fb_page_token }),
+      });
+    } else if (conn.access_token && conn.ig_account_id) {
+      await fetch(`https://graph.instagram.com/v21.0/${conn.ig_account_id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${conn.access_token}` },
+        body: JSON.stringify({ recipient: { id: senderId }, message: { text: oohText } }),
       });
     }
     return;
@@ -454,26 +457,35 @@ ${cancellationHandled ? '\nATTENZIONE: L\'appuntamento è stato già annullato a
   console.log('[webhookMeta] AI reply:', aiReply ? aiReply.slice(0, 120) : 'EMPTY');
   if (!aiReply) { console.error('[webhookMeta] Empty AI reply'); return; }
 
-  // Save AI reply to DB and send message via Facebook Graph API (Page Access Token specifico del cliente)
+  // Save AI reply to DB and send message
+  // Se c'è fb_page_token usa Facebook Graph API, altrimenti fallback su Instagram API (vecchio flusso)
+  const hasFbToken = !!(conn.fb_page_token && conn.fb_page_id);
+  const sendPromise = hasFbToken
+    ? fetch(`https://graph.facebook.com/v20.0/${conn.fb_page_id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient: { id: senderId }, message: { text: aiReply }, access_token: conn.fb_page_token }),
+      }).then(r => r.json()).then(d => {
+        if (d.error) console.error('[webhookMeta] FB Graph API error:', JSON.stringify(d.error));
+        else console.log('[webhookMeta] Reply sent via FB! message_id:', d.message_id);
+      })
+    : conn.access_token && conn.ig_account_id
+      ? fetch(`https://graph.instagram.com/v21.0/${conn.ig_account_id}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${conn.access_token}` },
+          body: JSON.stringify({ recipient: { id: senderId }, message: { text: aiReply } }),
+        }).then(r => r.json()).then(d => {
+          if (d.error) console.error('[webhookMeta] IG API error:', JSON.stringify(d.error));
+          else console.log('[webhookMeta] Reply sent via IG! message_id:', d.message_id);
+        })
+      : Promise.resolve();
+
   await Promise.all([
     base44.asServiceRole.entities.Message.create({
       business_id: businessId, contact_id: contact.id,
       canale: 'instagram', ruolo: 'assistant', testo: aiReply, letto: true,
     }),
-    pageToken && pageId
-      ? fetch(`https://graph.facebook.com/v20.0/${pageId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recipient: { id: senderId },
-            message: { text: aiReply },
-            access_token: pageToken,
-          }),
-        }).then(r => r.json()).then(d => {
-          if (d.error) console.error('[webhookMeta] FB Graph API error:', JSON.stringify(d.error));
-          else console.log('[webhookMeta] Reply sent! message_id:', d.message_id);
-        })
-      : Promise.resolve(),
+    sendPromise,
   ]);
 
   // Detect new appointment creation (post-reply, async — does not block response)
