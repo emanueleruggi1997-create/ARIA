@@ -485,7 +485,7 @@ export default function Homepage() {
           </div>
 
           {/* RIGHT — Orb + live chat */}
-          <div className="slide-up-3" style={{ flex: 1, display: isDesktop ? "flex" : "none", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <div className="slide-up-3" style={{ flex: "1 1 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
             <ARIAOrb mood={mood} />
             <div style={{ width: "100%", maxWidth: 340, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 20, overflow: "hidden" }}>
               <div style={{ background: T.card, padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10 }}>
