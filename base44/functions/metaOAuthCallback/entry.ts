@@ -126,9 +126,13 @@ Deno.serve(async (req) => {
   const igAccountName = igUsername || igName || fbPageName || '';
 
   // 5. Sottoscrizione webhook della pagina del cliente — CRITICO per ricevere i messaggi
-  if (fbPageId && fbPageToken) {
+  let webhookSuccess = false;
+
+  // Tentativo 1: Sottoscrivi tramite IG Business Account se disponibile
+  if (igAccountId && fbPageToken) {
     try {
-      const subRes = await fetch(`https://graph.facebook.com/v20.0/${fbPageId}/subscribed_apps`, {
+      console.log('[metaOAuthCallback] Tentativo sottoscrizione IG Account:', igAccountId);
+      const subRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/subscribed_apps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -137,13 +141,41 @@ Deno.serve(async (req) => {
         }),
       });
       const subData = await subRes.json();
-      console.log('[metaOAuthCallback] Webhook subscription:', JSON.stringify(subData));
-      if (!subData.success) {
-        console.warn('[metaOAuthCallback] Webhook subscription non riuscita:', JSON.stringify(subData));
+      console.log('[metaOAuthCallback] IG webhook subscription response:', JSON.stringify(subData));
+      if (subData.success) {
+        webhookSuccess = true;
+        console.log('[metaOAuthCallback] ✅ IG Account webhook sottoscritto con successo');
       }
     } catch (e) {
-      console.warn('[metaOAuthCallback] Errore webhook subscription:', e.message);
+      console.warn('[metaOAuthCallback] Errore sottoscrizione IG Account:', e.message);
     }
+  }
+
+  // Tentativo 2: Fallback - Sottoscrivi tramite Facebook Page se IG non ha funzionato
+  if (!webhookSuccess && fbPageId && fbPageToken) {
+    try {
+      console.log('[metaOAuthCallback] Tentativo sottoscrizione FB Page:', fbPageId);
+      const subRes = await fetch(`https://graph.facebook.com/v21.0/${fbPageId}/subscribed_apps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscribed_fields: 'messages,messaging_postbacks',
+          access_token: fbPageToken,
+        }),
+      });
+      const subData = await subRes.json();
+      console.log('[metaOAuthCallback] FB Page webhook subscription response:', JSON.stringify(subData));
+      if (subData.success) {
+        webhookSuccess = true;
+        console.log('[metaOAuthCallback] ✅ FB Page webhook sottoscritto con successo');
+      }
+    } catch (e) {
+      console.warn('[metaOAuthCallback] Errore sottoscrizione FB Page:', e.message);
+    }
+  }
+
+  if (!webhookSuccess) {
+    console.error('[metaOAuthCallback] ⚠️ WEBHOOK SUBSCRIPTION FALLITA - Nessun tentativo ha avuto successo');
   }
 
   // 6. Calcola scadenza token Page (long-lived = ~60 giorni, ma in realtà non scadono per le pagine)
