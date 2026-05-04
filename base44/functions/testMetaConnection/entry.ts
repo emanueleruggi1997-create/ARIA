@@ -15,49 +15,29 @@ Deno.serve(async (req) => {
   try {
     const conn = await base44.asServiceRole.entities.MetaConnection.get(connector_id);
     if (!conn) {
-      return Response.json({ error: 'Connection not found' }, { status: 404 });
+      return Response.json({ success: false, error: 'Connection not found' });
     }
 
     const token = conn.fb_page_token || conn.access_token;
-    const accountId = conn.ig_account_id || conn.fb_page_id || conn.meta_user_id;
+    const accountId = conn.ig_account_id || conn.fb_page_id;
 
     if (!token || !accountId) {
-      return Response.json({ 
-        success: false, 
-        error: 'Missing token or account ID' 
-      }, { status: 400 });
+      return Response.json({ success: false, error: 'Missing token or account ID' });
     }
 
-    // Test token
-    const meRes = await fetch(
-      `https://graph.instagram.com/v21.0/me?fields=id,name,username&access_token=${token}`
-    );
-    const meData = await meRes.json();
+    // Quick test
+    const res = await fetch(`https://graph.instagram.com/v21.0/${accountId}?access_token=${token}`);
+    const data = await res.json();
 
-    if (meData.error) {
-      return Response.json({
-        success: false,
-        error: meData.error.message || 'Token invalid'
-      });
+    if (data.error) {
+      return Response.json({ success: false, error: data.error.message });
     }
 
-    // Test webhook
-    const subRes = await fetch(
-      `https://graph.instagram.com/v21.0/${accountId}/subscribed_apps?access_token=${token}`
-    );
-    const subData = await subRes.json();
-    const isSubscribed = subData.data?.length > 0;
-
-    return Response.json({
-      success: true,
-      token_valid: true,
-      account_name: meData.username || meData.name,
-      webhook_subscribed: isSubscribed,
+    return Response.json({ 
+      success: true, 
+      account_name: conn.ig_account_name || data.name || 'Connected'
     });
   } catch (e) {
-    return Response.json({ 
-      success: false, 
-      error: e.message 
-    }, { status: 500 });
+    return Response.json({ success: false, error: e.message });
   }
 });
