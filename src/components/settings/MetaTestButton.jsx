@@ -9,37 +9,29 @@ export default function MetaTestButton({ connection, ariaColor }) {
   const [result, setResult] = useState(null);
 
   const handleTest = async () => {
-    if (testing || !connection?.access_token || !connection?.ig_account_id) return;
+    if (testing || !connection?.id) return;
     
     setTesting(true);
     setResult(null);
 
     try {
-      // 1. Test token validity
-      const meRes = await fetch(
-        `https://graph.instagram.com/v21.0/me?fields=id,name,username&access_token=${connection.access_token}`
-      );
-      const meData = await meRes.json();
-      
-      if (meData.error) {
-        setResult({ success: false, step: 1, error: meData.error.message });
-        setTesting(false);
-        return;
-      }
-
-      // 2. Test webhook subscription
-      const subRes = await fetch(
-        `https://graph.instagram.com/v21.0/${connection.ig_account_id}/subscribed_apps?access_token=${connection.access_token}`
-      );
-      const subData = await subRes.json();
-      const isSubscribed = subData.data?.some(app => app.name?.includes('app') || app.id);
-
-      setResult({
-        success: true,
-        token_valid: true,
-        account_name: meData.username || meData.name,
-        webhook_subscribed: isSubscribed,
+      const res = await base44.functions.invoke('testMetaConnection', {
+        connector_id: connection.id
       });
+      
+      if (res.data?.success) {
+        setResult({
+          success: true,
+          token_valid: true,
+          account_name: res.data.account_name,
+          webhook_subscribed: res.data.webhook_subscribed,
+        });
+      } else {
+        setResult({
+          success: false,
+          error: res.data?.error || 'Test failed'
+        });
+      }
     } catch (e) {
       setResult({ success: false, error: e.message });
     } finally {
