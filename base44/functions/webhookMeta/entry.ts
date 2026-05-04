@@ -110,10 +110,14 @@ COME RISPONDI:
 }
 
 async function processMessage({ base44, entryId, senderId, text }) {
-  // ── Multi-account routing: identifica il business tramite ig_account_id ──
-  console.log('[webhookMeta] processMessage → entryId (ig_account_id):', entryId, '| senderId:', senderId);
+  // ── Multi-account routing: identifica il business tramite ig_account_id o fb_page_id ──
+  console.log('[webhookMeta] processMessage → entryId:', entryId, '| senderId:', senderId);
   let connections = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entryId });
   console.log('[webhookMeta] Connessioni trovate per ig_account_id:', connections.length);
+  if (!connections.length) {
+    connections = await base44.asServiceRole.entities.MetaConnection.filter({ fb_page_id: entryId });
+    console.log('[webhookMeta] Connessioni trovate per fb_page_id:', connections.length);
+  }
   if (!connections.length) {
     connections = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: entryId });
     console.log('[webhookMeta] Connessioni trovate per meta_user_id:', connections.length);
@@ -139,16 +143,16 @@ async function processMessage({ base44, entryId, senderId, text }) {
   if (!businessId) { console.error('[webhookMeta] Could not resolve business_id'); return; }
   conn.business_id = businessId;
 
-  // Fetch sender's Instagram username — usa Authorization: Bearer (nuovo flusso instagram_business_basic)
+  // Fetch sender name — usa il Page Access Token specifico del cliente
+  const pageToken = conn.fb_page_token || conn.access_token;
+  const pageId    = conn.fb_page_id || conn.ig_account_id;
   let senderName = `IG_${senderId}`;
   try {
-    const igToken = conn.access_token;
-    const profileRes = await fetch(`https://graph.instagram.com/v21.0/${senderId}?fields=name,username`, {
-      headers: { 'Authorization': `Bearer ${igToken}` },
-    });
+    const profileRes = await fetch(
+      `https://graph.facebook.com/v20.0/${senderId}?fields=name&access_token=${pageToken}`
+    );
     const profileData = await profileRes.json();
-    if (profileData.username) senderName = `@${profileData.username}`;
-    else if (profileData.name) senderName = profileData.name;
+    if (profileData.name) senderName = profileData.name;
     console.log('[webhookMeta] Sender name resolved:', senderName);
   } catch (e) {
     console.log('[webhookMeta] Could not fetch sender profile:', e.message);
@@ -234,13 +238,15 @@ async function processMessage({ base44, entryId, senderId, text }) {
 
   if (!withinHours && business.fuori_orario_attivo) {
     console.log('[webhookMeta] Outside operating hours, sending out-of-hours message');
-    const igToken = conn.access_token;
-    const igAccountId = conn.ig_account_id;
-    if (igToken && igAccountId) {
-      await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
+    if (pageToken && pageId) {
+      await fetch(`https://graph.facebook.com/v20.0/${pageId}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${igToken}` },
-        body: JSON.stringify({ recipient: { id: senderId }, message: { text: business.messaggio_fuori_orario || (dmIsEn ? 'We are currently out of hours. We will reply as soon as possible!' : 'Siamo fuori orario. Ti risponderemo non appena possibile!') } }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: { id: senderId },
+          message: { text: business.messaggio_fuori_orario || (dmIsEn ? 'We are currently out of hours. We will reply as soon as possible!' : 'Siamo fuori orario. Ti risponderemo non appena possibile!') },
+          access_token: pageToken,
+        }),
       });
     }
     return;
@@ -448,21 +454,23 @@ ${cancellationHandled ? '\nATTENZIONE: L\'appuntamento è stato già annullato a
   console.log('[webhookMeta] AI reply:', aiReply ? aiReply.slice(0, 120) : 'EMPTY');
   if (!aiReply) { console.error('[webhookMeta] Empty AI reply'); return; }
 
-  // Save AI reply to DB and send IG message in parallel
-  const igToken2 = conn.access_token;
-  const igAccountId2 = conn.ig_account_id;
+  // Save AI reply to DB and send message via Facebook Graph API (Page Access Token specifico del cliente)
   await Promise.all([
     base44.asServiceRole.entities.Message.create({
       business_id: businessId, contact_id: contact.id,
       canale: 'instagram', ruolo: 'assistant', testo: aiReply, letto: true,
     }),
-    igToken2 && igAccountId2
-      ? fetch(`https://graph.instagram.com/v21.0/${igAccountId2}/messages`, {
+    pageToken && pageId
+      ? fetch(`https://graph.facebook.com/v20.0/${pageId}/messages`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${igToken2}` },
-          body: JSON.stringify({ recipient: { id: senderId }, message: { text: aiReply } }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipient: { id: senderId },
+            message: { text: aiReply },
+            access_token: pageToken,
+          }),
         }).then(r => r.json()).then(d => {
-          if (d.error) console.error('[webhookMeta] IG API error:', JSON.stringify(d.error));
+          if (d.error) console.error('[webhookMeta] FB Graph API error:', JSON.stringify(d.error));
           else console.log('[webhookMeta] Reply sent! message_id:', d.message_id);
         })
       : Promise.resolve(),
