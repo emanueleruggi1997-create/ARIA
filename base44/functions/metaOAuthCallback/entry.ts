@@ -89,12 +89,13 @@ Deno.serve(async (req) => {
   const longToken = llData.access_token || shortToken;
   console.log('[metaOAuthCallback] long-lived token:', llData.access_token ? 'OK' : 'fallback a short-lived');
 
-  // 3. Info utente Instagram — prova più campi per massimizzare la probabilità di ottenere username
-  const meRes = await fetch(`https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url,account_type&access_token=${longToken}`);
+  // 3. Info utente Instagram — usa Authorization: Bearer (nuovo flusso instagram_business_basic)
+  const igHeaders = { 'Authorization': `Bearer ${longToken}` };
+
+  const meRes = await fetch(`https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url,account_type`, { headers: igHeaders });
   const meData = await meRes.json();
   console.log('[metaOAuthCallback] IG /me response:', JSON.stringify(meData));
 
-  // Se /me non ha username, prova anche con l'ID esplicito
   let igUsername = '';
   let igName = '';
   let igProfilePic = '';
@@ -103,8 +104,8 @@ Deno.serve(async (req) => {
   if (!meData.error) {
     const rawU = meData.username || '';
     const rawN = meData.name || '';
-    igUsername = (/^\d+$/.test(rawU) ? '' : rawU);
-    igName     = (/^\d+$/.test(rawN) ? '' : rawN);
+    igUsername   = (/^\d+$/.test(rawU) ? '' : rawU);
+    igName       = (/^\d+$/.test(rawN) ? '' : rawN);
     igProfilePic = meData.profile_picture_url || '';
     igAccountType = meData.account_type || '';
   }
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
   if (!igUsername) {
     const uid = meData.id || igUserId;
     if (uid) {
-      const me2Res = await fetch(`https://graph.instagram.com/v21.0/${uid}?fields=id,name,username,profile_picture_url&access_token=${longToken}`);
+      const me2Res = await fetch(`https://graph.instagram.com/v21.0/${uid}?fields=id,name,username,profile_picture_url`, { headers: igHeaders });
       const me2Data = await me2Res.json();
       console.log('[metaOAuthCallback] IG /{id} response:', JSON.stringify(me2Data));
       if (!me2Data.error) {

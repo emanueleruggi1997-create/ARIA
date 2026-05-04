@@ -139,11 +139,13 @@ async function processMessage({ base44, entryId, senderId, text }) {
   if (!businessId) { console.error('[webhookMeta] Could not resolve business_id'); return; }
   conn.business_id = businessId;
 
-  // Fetch sender's Instagram username
+  // Fetch sender's Instagram username — usa Authorization: Bearer (nuovo flusso instagram_business_basic)
   let senderName = `IG_${senderId}`;
   try {
     const igToken = conn.access_token;
-    const profileRes = await fetch(`https://graph.instagram.com/v21.0/${senderId}?fields=name,username&access_token=${igToken}`);
+    const profileRes = await fetch(`https://graph.instagram.com/v21.0/${senderId}?fields=name,username`, {
+      headers: { 'Authorization': `Bearer ${igToken}` },
+    });
     const profileData = await profileRes.json();
     if (profileData.username) senderName = `@${profileData.username}`;
     else if (profileData.name) senderName = profileData.name;

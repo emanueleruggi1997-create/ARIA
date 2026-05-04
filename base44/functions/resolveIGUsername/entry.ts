@@ -25,10 +25,11 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Token o account ID mancante' }, { status: 400 });
   }
 
-  // Prova vari endpoint con profile_picture_url incluso
+  // Usa Authorization: Bearer (nuovo flusso instagram_business_basic)
+  const igHeaders = { 'Authorization': `Bearer ${conn.access_token}` };
   const attempts = [
-    `https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url&access_token=${conn.access_token}`,
-    `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,name,username,profile_picture_url&access_token=${conn.access_token}`,
+    `https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url`,
+    `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,name,username,profile_picture_url`,
   ];
 
   let resolvedUsername = '';
@@ -36,7 +37,7 @@ Deno.serve(async (req) => {
   let resolvedProfilePic = conn.ig_profile_picture_url || '';
 
   for (const url of attempts) {
-    const res = await fetch(url);
+    const res = await fetch(url, { headers: igHeaders });
     const data = await res.json();
     console.log('[resolveIGUsername] attempt:', url.split('?')[0], '→', JSON.stringify(data));
     if (data.error) {
