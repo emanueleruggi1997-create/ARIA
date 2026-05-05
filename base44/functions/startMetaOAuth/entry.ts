@@ -19,9 +19,8 @@ Deno.serve(async (req) => {
 
   const state = btoa(JSON.stringify({ userId: user.id, businessId }));
 
-  // Instagram OAuth con solo scope approvati da Meta
-  const scope = 'instagram_business_basic,instagram_business_manage_messages';
-  const authUrl = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
+  // Instagram OAuth via config_id — gli scope sono gestiti da Meta nella configurazione
+  const authUrl = `https://www.instagram.com/oauth/authorize?client_id=2005884836806776&redirect_uri=https://emaral.it/api/apps/69bfc400a0538988ee3a6cfd/functions/metaOAuthCallback&response_type=code&config_id=989192803616440&state=${encodeURIComponent(state)}`;
 
   console.log('[startMetaOAuth] ════════════════════════════');
   console.log('[startMetaOAuth] REDIRECT_URI:', redirectUri);
