@@ -1,11 +1,17 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClient } from 'npm:@base44/sdk@0.8.25';
 
 const VERIFY_TOKEN = 'emaral2026';
+
+// Service role client — non richiede utente autenticato (webhook chiamato da Meta)
+const base44 = createClient({
+  appId: Deno.env.get('BASE44_APP_ID'),
+  serviceRoleKey: true,
+});
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
 
-  // Webhook verification
+  // Webhook verification (GET da Meta)
   if (req.method === 'GET') {
     const mode = url.searchParams.get('hub.mode');
     const token = url.searchParams.get('hub.verify_token');
@@ -20,45 +26,41 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
   const body = await req.json().catch(() => ({}));
-  const base44 = createClientFromRequest(req);
   const entries = body.entry || [];
 
-  console.log('[webhookMeta] POST received | Entries:', entries.length);
+  console.log('[webhookMeta] ═══ WEBHOOK RICEVUTO ═══');
+  console.log('[webhookMeta] Entry IDs:', entries.map(e => e.id).join(', '));
+  console.log('[webhookMeta] Full body (troncato):', JSON.stringify(body).slice(0, 500));
 
   for (const entry of entries) {
-    // Process DMs
+    // ── Processa DM ──
     for (const event of (entry.messaging || [])) {
+      // Ignora: read receipts, delivery, messaggi echo (inviati DA noi)
       if (event.read || event.delivery || event.message?.is_echo) continue;
-      
+
       const senderId = event.sender?.id;
       const text = event.message?.text || event.postback?.title || '';
       if (!senderId || !text) continue;
 
       (async () => {
         try {
-          // Find connection
+          // Cerca connessione per fb_page_id o ig_account_id
           let conns = await base44.asServiceRole.entities.MetaConnection.filter({ fb_page_id: entry.id });
           if (!conns.length) conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
           if (!conns.length) {
-            console.log('[webhookMeta] No connection for entry:', entry.id);
+            console.log('[webhookMeta] Nessuna connessione per entry:', entry.id);
             return;
           }
 
           const conn = conns[0];
-          let businessId = conn.business_id;
+          const businessId = conn.business_id;
 
-          // Resolve business_id
-          if (!businessId && conn.user_id) {
-            const bizList = await base44.asServiceRole.entities.Business.filter({});
-            const biz = bizList.find(b => b.created_by === conn.user_id);
-            if (biz) {
-              businessId = biz.id;
-              await base44.asServiceRole.entities.MetaConnection.update(conn.id, { business_id: businessId });
-            }
+          if (!businessId) {
+            console.log('[webhookMeta] business_id mancante per connessione:', conn.id, '— skip');
+            return;
           }
-          if (!businessId) return;
 
-          // Get or create contact
+          // Ottieni o crea contatto
           let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
           let contact = contacts[0];
           if (!contact) {
@@ -71,7 +73,7 @@ Deno.serve(async (req) => {
             });
           }
 
-          // Save message
+          // Salva messaggio
           await base44.asServiceRole.entities.Message.create({
             business_id: businessId,
             contact_id: contact.id,
@@ -81,7 +83,7 @@ Deno.serve(async (req) => {
             letto: false,
           });
 
-          // Create lead if new
+          // Crea lead se nuovo
           const leads = await base44.asServiceRole.entities.Lead.filter({ business_id: businessId, contact_id: contact.id });
           if (!leads.length) {
             await base44.asServiceRole.entities.Lead.create({
@@ -93,14 +95,14 @@ Deno.serve(async (req) => {
             });
           }
 
-          console.log('[webhookMeta] ✅ Message saved | Contact:', contact.nome);
+          console.log('[webhookMeta] ✅ Messaggio salvato | Contatto:', contact.nome);
         } catch (e) {
-          console.error('[webhookMeta] Error:', e.message);
+          console.error('[webhookMeta] Errore DM:', e.message);
         }
       })();
     }
 
-    // Process comments
+    // ── Processa Commenti ──
     for (const change of (entry.changes || [])) {
       if (change.field !== 'comments') continue;
       const val = change.value || {};
@@ -113,17 +115,15 @@ Deno.serve(async (req) => {
 
       (async () => {
         try {
-          let conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
+          const conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
           const conn = conns[0];
           if (!conn) return;
 
-          let businessId = conn.business_id;
-          if (!businessId && conn.user_id) {
-            const bizList = await base44.asServiceRole.entities.Business.filter({});
-            const biz = bizList.find(b => b.created_by === conn.user_id);
-            if (biz) businessId = biz.id;
+          const businessId = conn.business_id;
+          if (!businessId) {
+            console.log('[webhookMeta] business_id mancante per commento, connessione:', conn.id, '— skip');
+            return;
           }
-          if (!businessId) return;
 
           let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
           let contact = contacts[0];
@@ -147,9 +147,9 @@ Deno.serve(async (req) => {
             tipo: 'commento',
           });
 
-          console.log('[webhookMeta] ✅ Comment saved | Contact:', senderName);
+          console.log('[webhookMeta] ✅ Commento salvato | Contatto:', senderName);
         } catch (e) {
-          console.error('[webhookMeta] Comment error:', e.message);
+          console.error('[webhookMeta] Errore commento:', e.message);
         }
       })();
     }
