@@ -23,9 +23,11 @@ Deno.serve(async (req) => {
   // inclusi pages_manage_metadata, instagram_manage_messages, ecc.
   const authUrl = `https://www.facebook.com/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&config_id=${CONFIG_ID}&state=${encodeURIComponent(state)}&response_type=code`;
 
+  console.log('[startMetaOAuth] ════════════════════════════');
+  console.log('[startMetaOAuth] REDIRECT_URI:', redirectUri);
   console.log('[startMetaOAuth] userId:', user.id, '| businessId:', businessId);
-  console.log('[startMetaOAuth] redirectUri:', redirectUri);
-  console.log('[startMetaOAuth] authUrl (FB Login for Business):', authUrl);
+  console.log('[startMetaOAuth] authUrl:', authUrl);
+  console.log('[startMetaOAuth] ════════════════════════════');
 
   return Response.json({ url: authUrl });
 });

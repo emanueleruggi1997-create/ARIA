@@ -19,23 +19,39 @@ Deno.serve(async (req) => {
     }
 
     const token = conn.fb_page_token || conn.access_token;
-    const accountId = conn.ig_account_id || conn.fb_page_id;
+    const igAccountId = conn.ig_account_id;
+    const fbPageId = conn.fb_page_id;
 
-    if (!token || !accountId) {
+    if (!token || (!igAccountId && !fbPageId)) {
       return Response.json({ success: false, error: 'Missing token or account ID' });
     }
 
-    // Quick test
-    const res = await fetch(`https://graph.instagram.com/v21.0/${accountId}?access_token=${token}`);
-    const data = await res.json();
+    // 1. Test token validità
+    const accountId = igAccountId || fbPageId;
+    const testRes = await fetch(`https://graph.instagram.com/v21.0/${accountId}?access_token=${token}`);
+    const testData = await testRes.json();
 
-    if (data.error) {
-      return Response.json({ success: false, error: data.error.message });
+    if (testData.error) {
+      return Response.json({ success: false, error: testData.error.message });
     }
 
-    return Response.json({ 
-      success: true, 
-      account_name: conn.ig_account_name || data.name || 'Connected'
+    // 2. Controlla webhook subscription
+    let webhookSubscribed = false;
+    if (igAccountId) {
+      try {
+        const subRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/subscribed_apps?access_token=${token}`);
+        const subData = await subRes.json();
+        console.log('[testMetaConnection] Webhook subscription status:', JSON.stringify(subData));
+        webhookSubscribed = !!(subData.data && subData.data.length > 0);
+      } catch (e) {
+        console.log('[testMetaConnection] Errore check webhook:', e.message);
+      }
+    }
+
+    return Response.json({
+      success: true,
+      account_name: conn.ig_account_name || testData.name || 'Connected',
+      webhook_subscribed: webhookSubscribed,
     });
   } catch (e) {
     return Response.json({ success: false, error: e.message });

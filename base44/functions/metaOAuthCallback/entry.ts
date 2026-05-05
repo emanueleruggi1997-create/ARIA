@@ -125,57 +125,61 @@ Deno.serve(async (req) => {
 
   const igAccountName = igUsername || igName || fbPageName || '';
 
-  // 5. Sottoscrizione webhook della pagina del cliente — CRITICO per ricevere i messaggi
+  // 5. Sottoscrizione webhook — CRITICO per ricevere i messaggi
   let webhookSuccess = false;
 
-  // Tentativo 1: Sottoscrivi tramite IG Business Account se disponibile
+  // Tentativo 1: IG Business Account (graph.instagram.com)
   if (igAccountId && fbPageToken) {
     try {
-      console.log('[metaOAuthCallback] Tentativo sottoscrizione IG Account:', igAccountId);
+      console.log('[metaOAuthCallback] ── SUBSCRIBE IG Account:', igAccountId);
       const subRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/subscribed_apps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subscribed_fields: 'messages,messaging_postbacks',
+          subscribed_fields: ['messages', 'messaging_postbacks', 'messaging_optins'],
           access_token: fbPageToken,
         }),
       });
       const subData = await subRes.json();
-      console.log('[metaOAuthCallback] IG webhook subscription response:', JSON.stringify(subData));
+      console.log('[metaOAuthCallback] SUBSCRIBE RESULT (IG):', JSON.stringify(subData));
       if (subData.success) {
         webhookSuccess = true;
-        console.log('[metaOAuthCallback] ✅ IG Account webhook sottoscritto con successo');
+        console.log('[metaOAuthCallback] ✅ Webhook sottoscritto via IG Account');
+      } else {
+        console.log('[metaOAuthCallback] ❌ IG subscribe fallito:', JSON.stringify(subData.error || subData));
       }
     } catch (e) {
-      console.warn('[metaOAuthCallback] Errore sottoscrizione IG Account:', e.message);
+      console.warn('[metaOAuthCallback] Errore subscribe IG:', e.message);
     }
   }
 
-  // Tentativo 2: Fallback - Sottoscrivi tramite Facebook Page se IG non ha funzionato
+  // Tentativo 2: Facebook Page (graph.facebook.com) — fallback
   if (!webhookSuccess && fbPageId && fbPageToken) {
     try {
-      console.log('[metaOAuthCallback] Tentativo sottoscrizione FB Page:', fbPageId);
+      console.log('[metaOAuthCallback] ── SUBSCRIBE FB Page:', fbPageId);
       const subRes = await fetch(`https://graph.facebook.com/v21.0/${fbPageId}/subscribed_apps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          subscribed_fields: 'messages,messaging_postbacks',
+          subscribed_fields: ['messages', 'messaging_postbacks'],
           access_token: fbPageToken,
         }),
       });
       const subData = await subRes.json();
-      console.log('[metaOAuthCallback] FB Page webhook subscription response:', JSON.stringify(subData));
+      console.log('[metaOAuthCallback] SUBSCRIBE RESULT (FB Page):', JSON.stringify(subData));
       if (subData.success) {
         webhookSuccess = true;
-        console.log('[metaOAuthCallback] ✅ FB Page webhook sottoscritto con successo');
+        console.log('[metaOAuthCallback] ✅ Webhook sottoscritto via FB Page');
+      } else {
+        console.log('[metaOAuthCallback] ❌ FB Page subscribe fallito:', JSON.stringify(subData.error || subData));
       }
     } catch (e) {
-      console.warn('[metaOAuthCallback] Errore sottoscrizione FB Page:', e.message);
+      console.warn('[metaOAuthCallback] Errore subscribe FB Page:', e.message);
     }
   }
 
   if (!webhookSuccess) {
-    console.error('[metaOAuthCallback] ⚠️ WEBHOOK SUBSCRIPTION FALLITA - Nessun tentativo ha avuto successo');
+    console.error('[metaOAuthCallback] ⚠️ WEBHOOK SUBSCRIPTION FALLITA su tutti i tentativi');
   }
 
   // 6. Calcola scadenza token Page (long-lived = ~60 giorni, ma in realtà non scadono per le pagine)
