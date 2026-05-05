@@ -22,10 +22,10 @@ Deno.serve(async (req) => {
   const state = btoa(JSON.stringify({ userId: user.id, businessId }));
 
   // Scopes per messaggi DM Instagram Business
+  // NOTA: instagram_business_manage_comments rimosso — non approvato (Not approved)
   const scope = [
     'instagram_business_basic',
     'instagram_business_manage_messages',
-    'instagram_business_manage_comments',
   ].join(',');
 
   // URL OAuth Instagram Direct Login (api.instagram.com)
