@@ -124,16 +124,22 @@ Deno.serve(async (req) => {
             return;
           }
 
-          // Controlla orario
+          // Controlla orario — usa HH:MM in Europe/Rome
           const now = new Date();
-          const oraCorrente = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' });
-          const giornoCorrente = now.toLocaleDateString('it-IT', { weekday: 'long', timeZone: 'Europe/Rome' }).toLowerCase();
-          const giorni = business.giorni_attivi || ['lunedì','martedì','mercoledì','giovedì','venerdì'];
+          const formatter = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome', hour12: false });
+          const parts = formatter.formatToParts(now);
+          const hh = parts.find(p => p.type === 'hour')?.value || '00';
+          const mm = parts.find(p => p.type === 'minute')?.value || '00';
+          const oraCorrente = `${hh}:${mm}`;
+          const giornoCorrente = new Intl.DateTimeFormat('it-IT', { weekday: 'long', timeZone: 'Europe/Rome' }).format(now).toLowerCase();
+          const giorni = business.giorni_attivi || ['lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica'];
 
           const inOrario = (business.orario_inizio && business.orario_fine)
             ? (oraCorrente >= business.orario_inizio && oraCorrente <= business.orario_fine)
             : true;
-          const inGiorno = giorni.includes(giornoCorrente);
+          const inGiorno = giorni.length === 0 ? true : giorni.includes(giornoCorrente);
+
+          console.log('[webhookMeta] Ora:', oraCorrente, '| Giorno:', giornoCorrente, '| inOrario:', inOrario, '| inGiorno:', inGiorno, '| fuori_orario_attivo:', business.fuori_orario_attivo);
 
           if ((!inOrario || !inGiorno) && business.fuori_orario_attivo && business.messaggio_fuori_orario) {
             // Invia messaggio fuori orario
@@ -172,12 +178,12 @@ Regole:
 - Se non sai rispondere, di' che passerai la richiesta a un operatore.
 - Lingua: ${business.lingua || 'Italiano'}.`;
 
-          // Chiama LLM per generare risposta
-          const aiReply = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          // Chiama LLM via SDK (service role)
+          const llmRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
             prompt: `${systemPrompt}\n\n--- Conversazione precedente ---\n${storicoTesto}\n\nCliente: ${text}\n\nRispondi come ${business.nome_agente || 'ARIA'}:`,
           });
 
-          const replyText = typeof aiReply === 'string' ? aiReply : (aiReply?.text || '');
+          const replyText = typeof llmRes === 'string' ? llmRes : (llmRes?.text || llmRes?.response || '');
           if (!replyText) {
             console.log('[webhookMeta] LLM non ha generato risposta');
             return;
