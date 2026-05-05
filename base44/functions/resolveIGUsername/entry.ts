@@ -25,11 +25,13 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Token o account ID mancante' }, { status: 400 });
   }
 
-  // Usa Authorization: Bearer (nuovo flusso instagram_business_basic)
+  // Instagram Platform API: Authorization: Bearer SEMPRE, no ?access_token=
   const igHeaders = { 'Authorization': `Bearer ${conn.access_token}` };
   const attempts = [
     `https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url`,
     `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,name,username,profile_picture_url`,
+    // Fallback: api.instagram.com
+    `https://api.instagram.com/v1/me?fields=id,name,username`,
   ];
 
   let resolvedUsername = '';

@@ -328,7 +328,10 @@ async function sendIGReply(conn, recipientId, text) {
   try {
     const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
       body: JSON.stringify({
         recipient: { id: recipientId },
         message: { text },

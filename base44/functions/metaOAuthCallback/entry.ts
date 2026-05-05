@@ -75,27 +75,30 @@ Deno.serve(async (req) => {
   const igUserId   = tokenData.user_id ? String(tokenData.user_id) : '';
 
   // 3. Scambio short-lived → Long-lived Token (60 giorni)
-  // CRITICO: usa graph.instagram.com con grant_type=ig_exchange_token
-  console.log('[metaOAuthCallback] ── STEP 2: Long-lived token su graph.instagram.com');
-  const llRes = await fetch(
-    `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${IG_APP_SECRET}&access_token=${shortToken}`
-  );
+  // Instagram Platform API: usa api.instagram.com con grant_type=ig_exchange_token
+  console.log('[metaOAuthCallback] ── STEP 2: Long-lived token su api.instagram.com');
+  const llRes = await fetch('https://graph.instagram.com/access_token?' + new URLSearchParams({
+    grant_type: 'ig_exchange_token',
+    client_secret: IG_APP_SECRET,
+    access_token: shortToken,
+  }));
   const llData = await llRes.json();
   console.log('[metaOAuthCallback] Long-lived token result:', JSON.stringify(llData));
 
   const longToken    = llData.access_token || shortToken;
-  const expiresIn    = llData.expires_in || (60 * 24 * 60 * 60); // 60 giorni default
+  const expiresIn    = llData.expires_in || (60 * 24 * 60 * 60);
   const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-  // 4. Recupera info account Instagram via graph.instagram.com/me
-  console.log('[metaOAuthCallback] ── STEP 3: Info account da graph.instagram.com/me');
-  const igRes = await fetch(
-    `https://graph.instagram.com/me?fields=id,username,name,profile_picture_url,account_type&access_token=${longToken}`
-  );
+  // 4. Recupera info account via api.instagram.com/me con Authorization: Bearer
+  console.log('[metaOAuthCallback] ── STEP 3: Info account da api.instagram.com/me');
+  const igRes = await fetch('https://graph.instagram.com/v21.0/me?fields=id,username,name,profile_picture_url,account_type', {
+    headers: { 'Authorization': `Bearer ${longToken}` },
+  });
   const igData = await igRes.json();
   console.log('[metaOAuthCallback] IG account info:', JSON.stringify(igData));
 
-  const igAccountId   = igData.id || igUserId || '';
+  // Fallback: usa user_id dal token exchange se /me non restituisce id
+  const igAccountId   = igData.id || String(igUserId) || '';
   const igUsername    = igData.username || '';
   const igName        = igData.name || igUsername;
   const igProfilePic  = igData.profile_picture_url || '';
@@ -106,16 +109,18 @@ Deno.serve(async (req) => {
     return Response.redirect(ERROR_URL, 302);
   }
 
-  // 5. Sottoscrizione webhook per ricevere messaggi DM
+  // 5. Sottoscrizione webhook — usa Authorization: Bearer
   console.log('[metaOAuthCallback] ── STEP 4: Webhook subscription per', igAccountId);
   let webhookSuccess = false;
   try {
     const subRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/subscribed_apps`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        'Authorization': `Bearer ${longToken}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
       body: new URLSearchParams({
         subscribed_fields: 'messages,messaging_postbacks',
-        access_token: longToken,
       }),
     });
     const subData = await subRes.json();

@@ -21,10 +21,12 @@ Deno.serve(async (req) => {
   try {
     const subRes = await fetch(`https://graph.instagram.com/v21.0/${ig_account_id}/subscribed_apps`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
         subscribed_fields: 'messages,messaging_postbacks',
-        access_token: access_token,
       }),
     });
     const subData = await subRes.json();
