@@ -56,10 +56,11 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
   const igConnected = connection?.ig_connected && !!connection?.ig_account_id;
   const tokenInfo = formatTokenExpiry(connection, lang);
   const tokenExpired = tokenInfo?.color === '#EF4444'; // rosso = scaduto
-  // Usa ig_account_name se non numerico, altrimenti meta_user_name
+  // Usa ig_account_name se disponibile, altrimenti mostra l'ID numerico (account comunque funzionante)
   const rawName = connection?.ig_account_name || connection?.meta_user_name || '';
-  const igAccountName = (!rawName || /^\d+$/.test(rawName)) ? '' : rawName;
+  const igAccountName = rawName && !/^\d+$/.test(rawName) ? rawName : (connection?.ig_account_id || '');
   const igProfilePic = connection?.ig_profile_picture_url || '';
+  const usernameIsNumeric = igAccountName && /^\d+$/.test(igAccountName);
 
   const startOAuth = async () => {
     if (loading) return;
@@ -147,7 +148,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
               {igProfilePic && (
                 <img src={igProfilePic} alt="profile" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
               )}
-              {igAccountName
+              {igAccountName && !usernameIsNumeric
                 ? <span style={{ color: '#9CA3AF' }}>{igAccountName.startsWith('@') ? igAccountName : `@${igAccountName}`}</span>
                 : <span style={{ color: '#6B7280', fontStyle: 'italic' }}>ID: {connection?.ig_account_id}</span>
               }
@@ -170,30 +171,16 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       )}
 
-      {igConnected && !tokenExpired && !igAccountName && (
-        <div style={{ marginTop: 10, fontSize: 12, color: '#F59E0B', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '10px 12px' }}>
-          <div style={{ fontWeight: 700, marginBottom: 4 }}>
-            ℹ️ {lang === 'en' ? 'Username not yet synced — ARIA is working normally.' : 'Username non ancora sincronizzato — ARIA funziona normalmente.'}
-          </div>
-          <div style={{ color: '#D97706', lineHeight: 1.5, marginBottom: 8 }}>
-            {lang === 'en'
-              ? 'Click below to retrieve your Instagram username automatically.'
-              : 'Clicca per recuperare automaticamente il tuo username Instagram.'}
-          </div>
-          {resolveMsg && (
-            <div style={{ marginBottom: 8, fontSize: 11, color: resolveMsg.ok ? '#10B981' : '#EF4444' }}>
-              {resolveMsg.text}
-            </div>
-          )}
+      {igConnected && !tokenExpired && usernameIsNumeric && (
+        <div style={{ marginTop: 10, fontSize: 11, color: '#6B7280', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <span>ℹ️ {lang === 'en' ? 'Username not synced — ARIA is working.' : 'Username non sincronizzato — ARIA funziona.'}</span>
           <button
             onClick={resolveUsername}
             disabled={resolvingName}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid #F59E0B50', background: '#F59E0B15', color: '#F59E0B', fontSize: 12, fontWeight: 600, cursor: resolvingName ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#9CA3AF', fontSize: 11, fontWeight: 600, cursor: resolvingName ? 'not-allowed' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
           >
-            {resolvingName ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={13} />}
-            {resolvingName
-              ? (lang === 'en' ? 'Retrieving...' : 'Recupero...')
-              : (lang === 'en' ? 'Sync Username' : 'Sincronizza Username')}
+            {resolvingName ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={11} />}
+            {resolvingName ? '...' : (lang === 'en' ? 'Sync' : 'Sincronizza')}
           </button>
         </div>
       )}
