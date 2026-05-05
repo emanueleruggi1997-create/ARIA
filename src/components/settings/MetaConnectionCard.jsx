@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useLang } from '@/lib/LanguageContext.jsx';
 import MetaTestButton from './MetaTestButton';
 
@@ -28,9 +28,30 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
   const { lang } = useLang();
   const [loading, setLoading] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [resolvingName, setResolvingName] = useState(false);
+  const [resolveMsg, setResolveMsg] = useState(null);
   const [error, setError] = useState(null);
   const popupRef = useRef(null);
   const pollRef = useRef(null);
+
+  const resolveUsername = async () => {
+    if (resolvingName) return;
+    setResolvingName(true);
+    setResolveMsg(null);
+    try {
+      const res = await base44.functions.invoke('resolveIGUsername', {});
+      if (res.data?.success) {
+        setResolveMsg({ ok: true, text: `✅ Username recuperato: @${res.data.resolvedName}` });
+        await onRefresh();
+      } else {
+        setResolveMsg({ ok: false, text: res.data?.message || 'Impossibile recuperare lo username.' });
+      }
+    } catch (e) {
+      setResolveMsg({ ok: false, text: e.message });
+    } finally {
+      setResolvingName(false);
+    }
+  };
 
   const igConnected = connection?.ig_connected && !!connection?.ig_account_id;
   const tokenInfo = formatTokenExpiry(connection, lang);
@@ -152,13 +173,28 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
       {igConnected && !tokenExpired && !igAccountName && (
         <div style={{ marginTop: 10, fontSize: 12, color: '#F59E0B', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '10px 12px' }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>
-            ⚠️ {lang === 'en' ? 'Account not recognized as Business.' : 'Account non riconosciuto come Business.'}
+            ℹ️ {lang === 'en' ? 'Username not yet synced — ARIA is working normally.' : 'Username non ancora sincronizzato — ARIA funziona normalmente.'}
           </div>
-          <div style={{ color: '#D97706', lineHeight: 1.5 }}>
+          <div style={{ color: '#D97706', lineHeight: 1.5, marginBottom: 8 }}>
             {lang === 'en'
-              ? 'For ARIA to work, convert your Instagram profile to a Business account, then click Reconnect.'
-              : 'Per far funzionare ARIA, converti il tuo profilo Instagram in account Business e clicca Riconnetti.'}
+              ? 'Click below to retrieve your Instagram username automatically.'
+              : 'Clicca per recuperare automaticamente il tuo username Instagram.'}
           </div>
+          {resolveMsg && (
+            <div style={{ marginBottom: 8, fontSize: 11, color: resolveMsg.ok ? '#10B981' : '#EF4444' }}>
+              {resolveMsg.text}
+            </div>
+          )}
+          <button
+            onClick={resolveUsername}
+            disabled={resolvingName}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, border: '1px solid #F59E0B50', background: '#F59E0B15', color: '#F59E0B', fontSize: 12, fontWeight: 600, cursor: resolvingName ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+          >
+            {resolvingName ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={13} />}
+            {resolvingName
+              ? (lang === 'en' ? 'Retrieving...' : 'Recupero...')
+              : (lang === 'en' ? 'Sync Username' : 'Sincronizza Username')}
+          </button>
         </div>
       )}
 
@@ -194,6 +230,14 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
       </div>
     </div>
   );
+}
+
+// inject spin keyframe once
+if (typeof document !== 'undefined' && !document.getElementById('meta-card-spin')) {
+  const s = document.createElement('style');
+  s.id = 'meta-card-spin';
+  s.textContent = '@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }';
+  document.head.appendChild(s);
 }
 
 const btnStyle = (bg, color, disabled, borderColor) => ({
