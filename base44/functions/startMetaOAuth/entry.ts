@@ -19,9 +19,9 @@ Deno.serve(async (req) => {
 
   const state = btoa(JSON.stringify({ userId: user.id, businessId }));
 
-  // Facebook Login for Business con config_id — carica automaticamente i permessi corretti
-  // inclusi pages_manage_metadata, instagram_manage_messages, ecc.
-  const authUrl = `https://www.facebook.com/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&config_id=${CONFIG_ID}&state=${encodeURIComponent(state)}&response_type=code`;
+  // Instagram OAuth con solo scope approvati da Meta
+  const scope = 'instagram_business_basic,instagram_business_manage_messages';
+  const authUrl = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&state=${encodeURIComponent(state)}`;
 
   console.log('[startMetaOAuth] ════════════════════════════');
   console.log('[startMetaOAuth] REDIRECT_URI:', redirectUri);
