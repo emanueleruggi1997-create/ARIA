@@ -75,69 +75,80 @@ Deno.serve(async (req) => {
   const igUserId   = tokenData.user_id ? String(tokenData.user_id) : '';
 
   // 3. Scambio short-lived → Long-lived Token (60 giorni)
-  // Instagram Platform API (2024+): usa api.instagram.com con POST, NON graph.instagram.com con GET
-  console.log('[metaOAuthCallback] ── STEP 2: Long-lived token su api.instagram.com (POST)');
-  const llRes = await fetch('https://api.instagram.com/oauth/access_token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'ig_exchange_token',
-      client_id: IG_APP_ID,
-      client_secret: IG_APP_SECRET,
-      access_token: shortToken,
-    }),
-  });
+  // Instagram Business Login: usa graph.instagram.com/access_token con GET + ig_exchange_token
+  console.log('[metaOAuthCallback] ── STEP 2: Long-lived token su graph.instagram.com (GET)');
+  const llRes = await fetch(`https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${IG_APP_SECRET}&access_token=${shortToken}`);
   const llData = await llRes.json();
   console.log('[metaOAuthCallback] Long-lived token result:', JSON.stringify(llData));
 
-  // Se il long-lived token fallisce, usa lo short token (funziona per 1h, meglio di niente)
+  // Se il long-lived token fallisce, usa lo short token
   const longToken    = llData.access_token || shortToken;
   const expiresIn    = llData.expires_in || (60 * 24 * 60 * 60);
   const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-  // 4. Recupera info account: usa igUserId dal token exchange (sempre disponibile)
-  // e opzionalmente arricchisci con /me usando Authorization: Bearer
-  console.log('[metaOAuthCallback] ── STEP 3: Info account | igUserId dal token:', igUserId);
+  // 4. Recupera info account via api.instagram.com (Instagram Business Login usa questa API)
+  console.log('[metaOAuthCallback] ── STEP 3: Info account | igUserId:', igUserId);
   let igData = {};
   try {
-    const igRes = await fetch(`https://graph.instagram.com/v21.0/${igUserId}?fields=id,username,name,profile_picture_url`, {
+    const igRes = await fetch(`https://graph.instagram.com/v21.0/me?fields=user_id,username,name,profile_picture_url`, {
       headers: { 'Authorization': `Bearer ${longToken}` },
     });
     igData = await igRes.json();
-    if (igData.error) igData = {}; // ignora errori, usiamo il fallback
+    console.log('[metaOAuthCallback] /me result:', JSON.stringify(igData));
+    if (igData.error) {
+      // Fallback: usa l'ID numerico dal token exchange direttamente
+      console.warn('[metaOAuthCallback] /me fallito, uso igUserId come fallback:', igUserId);
+      igData = {};
+    }
   } catch (e) {
-    console.warn('[metaOAuthCallback] /me fallito, uso igUserId come fallback');
+    console.warn('[metaOAuthCallback] /me eccezione:', e.message);
   }
-  console.log('[metaOAuthCallback] IG account info:', JSON.stringify(igData));
+  console.log('[metaOAuthCallback] IG account info finale:', JSON.stringify(igData));
 
-  // Fallback: usa user_id dal token exchange se /me non restituisce id
-  const igAccountId   = igData.id || String(igUserId) || '';
+  // igUserId dal token exchange è l'app-scoped ID (quello che arriva come entry.id nel webhook)
+  // igData.id è l'Instagram-scoped ID (può differire)
+  const igAccountId   = String(igUserId) || igData.id || '';
   const igUsername    = igData.username || '';
   const igName        = igData.name || igUsername;
   const igProfilePic  = igData.profile_picture_url || '';
   const igAccountName = igUsername || igName || '';
+  console.log('[metaOAuthCallback] igUserId (app-scoped):', igAccountId, '| igData.id:', igData.id || 'N/A');
 
   if (!igAccountId) {
     console.error('[metaOAuthCallback] Impossibile ottenere IG account ID');
     return Response.redirect(ERROR_URL, 302);
   }
 
-  // 5. Sottoscrizione webhook — usa Authorization: Bearer
+  // 5. Sottoscrizione webhook — Instagram Business Login usa access_token come query param per subscribed_apps
   console.log('[metaOAuthCallback] ── STEP 4: Webhook subscription per', igAccountId);
   let webhookSuccess = false;
   try {
-    const subRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/subscribed_apps`, {
+    // Prova prima con Authorization: Bearer
+    let subRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/subscribed_apps`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${longToken}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        subscribed_fields: 'messages,messaging_postbacks',
-      }),
+      body: new URLSearchParams({ subscribed_fields: 'messages' }),
     });
-    const subData = await subRes.json();
-    console.log('[metaOAuthCallback] Webhook subscription result:', JSON.stringify(subData));
+    let subData = await subRes.json();
+    console.log('[metaOAuthCallback] Webhook subscription result (Bearer):', JSON.stringify(subData));
+
+    // Se fallisce con Bearer, prova con access_token nel body
+    if (!subData.success) {
+      subRes = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/subscribed_apps`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          subscribed_fields: 'messages',
+          access_token: longToken,
+        }),
+      });
+      subData = await subRes.json();
+      console.log('[metaOAuthCallback] Webhook subscription result (body token):', JSON.stringify(subData));
+    }
+
     if (subData.success) {
       webhookSuccess = true;
       console.log('[metaOAuthCallback] ✅ Webhook sottoscritto');

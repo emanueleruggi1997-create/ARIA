@@ -43,25 +43,37 @@ Deno.serve(async (req) => {
 
       (async () => {
         try {
-          // Cerca connessione per ig_account_id (nuovo flusso) o fb_page_id (vecchio flusso)
+          // Cerca connessione per ig_account_id — può essere l'app-scoped ID o il vero IG account ID
+          // Prova tutti i possibili match
           let conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
           if (!conns.length) conns = await base44.asServiceRole.entities.MetaConnection.filter({ fb_page_id: entry.id });
+          if (!conns.length) conns = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: entry.id });
+          // Fallback: prendi tutte le connessioni IG attive se c'è solo un account
+          if (!conns.length) {
+            const allConns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_connected: true });
+            if (allConns.length === 1) conns = allConns;
+          }
           if (!conns.length) {
             console.log('[webhookMeta] Nessuna connessione per entry:', entry.id);
             return;
           }
+          console.log('[webhookMeta] Connessione trovata per entry:', entry.id, '| conn.ig_account_id:', conns[0].ig_account_id);
 
           const conn = conns[0];
           let businessId = conn.business_id;
 
-          // Risolvi businessId se mancante
-          if (!businessId && conn.user_id) {
-            const allBiz = await base44.asServiceRole.entities.Business.filter({});
-            const match = allBiz.find(b => b.created_by === conn.user_id);
-            if (match) {
-              businessId = match.id;
-              await base44.asServiceRole.entities.MetaConnection.update(conn.id, { business_id: businessId });
-              console.log('[webhookMeta] businessId risolto:', businessId);
+          // Risolvi businessId se mancante — cerca per ig_account_id nel business
+          if (!businessId) {
+            try {
+              const allBiz = await base44.asServiceRole.entities.Business.filter({ ig_connesso: true });
+              const match = allBiz.find(b => b.created_by === conn.user_id || b.ig_username === conn.ig_account_name);
+              if (match) {
+                businessId = match.id;
+                await base44.asServiceRole.entities.MetaConnection.update(conn.id, { business_id: businessId });
+                console.log('[webhookMeta] businessId risolto:', businessId);
+              }
+            } catch(e) {
+              console.log('[webhookMeta] Errore risoluzione businessId:', e.message);
             }
           }
 
@@ -283,7 +295,12 @@ RICHIESTA DI PARLARE CON PERSONA REALE:
 
       (async () => {
         try {
-          const conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
+          let conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
+          if (!conns.length) conns = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: entry.id });
+          if (!conns.length) {
+            const allConns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_connected: true });
+            if (allConns.length === 1) conns = allConns;
+          }
           const conn = conns[0];
           if (!conn) return;
 

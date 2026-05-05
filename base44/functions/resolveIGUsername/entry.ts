@@ -28,10 +28,10 @@ Deno.serve(async (req) => {
   // Instagram Platform API: Authorization: Bearer SEMPRE, no ?access_token=
   const igHeaders = { 'Authorization': `Bearer ${conn.access_token}` };
   const attempts = [
-    `https://graph.instagram.com/v21.0/me?fields=id,name,username,profile_picture_url`,
-    `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,name,username,profile_picture_url`,
-    // Fallback: api.instagram.com
-    `https://api.instagram.com/v1/me?fields=id,name,username`,
+    // Instagram Business Login: usa graph.instagram.com/me con fields=user_id,username,name
+    `https://graph.instagram.com/v21.0/me?fields=user_id,username,name,profile_picture_url`,
+    // Fallback con ID esplicito
+    `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=user_id,username,name,profile_picture_url`,
   ];
 
   let resolvedUsername = '';
