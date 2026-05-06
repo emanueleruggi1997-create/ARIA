@@ -187,12 +187,19 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
 
   if (intent === 'appointment_request' && parsed.create_appointment && parsed.appointment_data) {
     const ad = parsed.appointment_data || {};
+    const adNorm = {
+      ...ad,
+      data: ad.data || ad.data_testo || '',
+      ora:  ad.ora  || ad.ora_testo  || '',
+      email: ad.email || collectedEmail || '',
+      telefono: ad.telefono || collectedPhone || '',
+    };
     const aptPayload = buildSafeAppointmentPayload({
-      ad, businessId, contactId: contact.id,
+      ad: adNorm, businessId, contactId: contact.id,
       contactName: contact.nome, source: 'whatsapp', rawMessage: text,
     });
     const { _requested_date_text, _requested_time_text, _raw_message, _validation_status, ...cleanPayload } = aptPayload;
-    console.log(`[webhookWA] Creating appointment | validation_status=${_validation_status} | date="${aptPayload.data}" | dateText="${_requested_date_text}"`);
+    console.log(`[webhookWA] Creating appointment | validation_status=${_validation_status} | date="${aptPayload.data}" | time="${aptPayload.ora}" | dateText="${_requested_date_text}"`);
     await base44.asServiceRole.entities.Appointment.create(cleanPayload).catch(e => {
       console.error('[webhookWA] Appointment create failed:', e.message);
     });
@@ -228,27 +235,66 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
   console.log('[webhookWA] AI reply sent:', aiReply.slice(0, 100));
 }
 
-// ── Helper: valida e costruisce payload appuntamento sicuro ──
-function buildSafeAppointmentPayload({ ad, businessId, contactId, contactName, source, rawMessage }) {
+// ── Helper: parser data italiana → ISO (Europe/Rome) ──
+function parseItalianDateWA(dateText, timeText) {
+  if (!dateText) return { isoDate: null, isoTime: null };
   const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   const TIME_RE = /^\d{1,2}:\d{2}$/;
+  if (ISO_DATE_RE.test(dateText.trim())) {
+    return { isoDate: dateText.trim(), isoTime: TIME_RE.test((timeText||'').trim()) ? timeText.trim() : null };
+  }
+  const MESI = { gennaio:1,febbraio:2,marzo:3,aprile:4,maggio:5,giugno:6,luglio:7,agosto:8,settembre:9,ottobre:10,novembre:11,dicembre:12 };
+  const match = dateText.toLowerCase().match(/(\d{1,2})\s+([a-zà-ú]+)\s*(\d{4})?/);
+  if (match) {
+    const day   = parseInt(match[1], 10);
+    const month = MESI[match[2]];
+    const nowRome = new Date();
+    const romeYear = parseInt(new Intl.DateTimeFormat('it-IT', { year: 'numeric', timeZone: 'Europe/Rome' }).format(nowRome), 10);
+    const year  = match[3] ? parseInt(match[3], 10) : romeYear;
+    if (month && day >= 1 && day <= 31) {
+      const isoDate = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const d = new Date(`${isoDate}T12:00:00+02:00`);
+      if (!isNaN(d.getTime())) {
+        let isoTime = null;
+        const tStr = (timeText || '').trim();
+        if (TIME_RE.test(tStr)) { isoTime = tStr; }
+        else {
+          const tMatch = (dateText + ' ' + tStr).match(/(\d{1,2}):(\d{2})/);
+          if (tMatch) isoTime = `${tMatch[1].padStart(2,'0')}:${tMatch[2]}`;
+        }
+        return { isoDate, isoTime };
+      }
+    }
+  }
+  return { isoDate: null, isoTime: TIME_RE.test((timeText||'').trim()) ? timeText.trim() : null };
+}
 
-  const rawDate = (ad.data || '').trim();
-  const rawTime = (ad.ora || '').trim();
+// ── Helper: valida e costruisce payload appuntamento sicuro ──
+function buildSafeAppointmentPayload({ ad, businessId, contactId, contactName, source, rawMessage }) {
+  const now = new Date();
+  const romeNow = new Intl.DateTimeFormat('it-IT', {
+    timeZone: 'Europe/Rome', year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,
+  }).format(now);
 
-  const isValidDate = ISO_DATE_RE.test(rawDate) && !isNaN(new Date(rawDate).getTime());
-  const isValidTime = TIME_RE.test(rawTime);
+  const rawDateText = (ad.data || '').trim();
+  const rawTimeText = (ad.ora || '').trim();
 
-  const safeDate = isValidDate ? rawDate : null;
-  const safeTime = isValidTime ? rawTime : null;
+  const { isoDate, isoTime } = parseItalianDateWA(rawDateText, rawTimeText);
 
-  const naturalDateText = !isValidDate && rawDate ? rawDate : null;
-  const naturalTimeText = !isValidTime && rawTime ? rawTime : null;
+  const naturalDateText = !isoDate && rawDateText ? rawDateText : null;
+  const naturalTimeText = (!isoTime && rawTimeText && rawTimeText !== rawDateText) ? rawTimeText : null;
+
+  console.log('[buildAppointmentWA] server_time:', now.toISOString(), '| business_local_time:', romeNow);
+  console.log('[buildAppointmentWA] user_requested_date:', rawDateText, '| user_requested_time:', rawTimeText);
+  console.log('[buildAppointmentWA] parsed_isoDate:', isoDate, '| parsed_isoTime:', isoTime);
 
   const noteLines = [
     `⏳ DA CONFERMARE — Richiesto via ${source === 'instagram' ? 'Instagram' : 'WhatsApp'}`,
-    naturalDateText ? `Data richiesta: "${naturalDateText}"` : null,
-    naturalTimeText ? `Fascia oraria: "${naturalTimeText}"` : null,
+    rawDateText ? `Data richiesta: "${rawDateText}"` : null,
+    rawTimeText ? `Ora richiesta: "${rawTimeText}"` : null,
+    (ad.email || ad.cliente_email) ? `Email cliente: ${ad.email || ad.cliente_email}` : null,
+    (ad.telefono || ad.cliente_phone) ? `Telefono: ${ad.telefono || ad.cliente_phone}` : null,
     ad.note || null,
   ].filter(Boolean);
 
@@ -257,16 +303,16 @@ function buildSafeAppointmentPayload({ ad, businessId, contactId, contactName, s
     contact_id: contactId,
     contact_nome: String(contactName || '').slice(0, 200) || null,
     titolo: String(ad.servizio || 'Richiesta appuntamento').slice(0, 500),
-    data: safeDate,
-    ora: safeTime,
+    data: isoDate,
+    ora: isoTime,
     tipo: 'servizio',
     stato: 'in_attesa',
     note: noteLines.join('\n').slice(0, 2000),
     canale_origine: source,
-    _requested_date_text: naturalDateText,
-    _requested_time_text: naturalTimeText,
+    _requested_date_text: rawDateText,
+    _requested_time_text: rawTimeText,
     _raw_message: String(rawMessage || '').slice(0, 500),
-    _validation_status: (safeDate && safeTime) ? 'ready_for_review' : 'incomplete',
+    _validation_status: (isoDate && isoTime) ? 'ready_for_review' : 'incomplete',
   };
 }
 
@@ -274,15 +320,29 @@ function buildAriaPromptWA({ business, agentName, history, text, isFirstMsg }) {
   const orari = `${business.orario_inizio || '09:00'}–${business.orario_fine || '18:00'}`;
   const giorni = (business.giorni_attivi || []).join(', ') || 'lun–ven';
 
+  const now = new Date();
+  const romeFormatter = new Intl.DateTimeFormat('it-IT', {
+    timeZone: 'Europe/Rome',
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const romeDatetime = romeFormatter.format(now);
+  const romeDateISO  = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
+
   return `Sei ${agentName}, segretaria AI professionale di "${business.nome}".
-Il tuo obiettivo è gestire la conversazione in autonomia: rispondere, qualificare, raccogliere dati per appuntamenti e gestire richieste senza dipendere dal team per ogni messaggio.
+
+━━━ DATA E ORA ATTUALE ━━━
+Data e ora business (Europe/Rome): ${romeDatetime}
+Data ISO oggi: ${romeDateISO}
+Timezone: Europe/Rome
+⚠️ Usa SEMPRE questa data come riferimento per "domani", "giovedì prossimo", ecc.
 
 ━━━ IDENTITÀ E STILE ━━━
 - Parli come una persona reale: naturale, diretta, calda ma professionale.
 - Risposte brevi: 1–3 frasi al massimo. Mai lunghi elenchi puntati.
 - ${isFirstMsg ? 'È il PRIMO messaggio: presentati brevemente con il tuo nome.' : 'Non ripresentarti, vai al punto.'}
 - Rispondi SEMPRE nella stessa lingua del cliente.
-- Non usare frasi robotiche come "Come posso assisterti?", "Non esitare a contattarci", "Ottima domanda!".
+- Non usare frasi robotiche come "Come posso assisterti?", "Ottima domanda!".
 
 ━━━ BUSINESS ━━━
 ${business.servizi ? `Servizi: ${business.servizi}` : ''}
@@ -292,54 +352,48 @@ ${business.cose_da_non_fare ? `Non fare mai: ${business.cose_da_non_fare}` : ''}
 ${business.ai_prompt ? `Istruzioni aggiuntive: ${business.ai_prompt}` : ''}
 Orari: ${orari}, giorni: ${giorni}
 
-━━━ COME GESTISCI LE RICHIESTE ━━━
+━━━ GESTIONE RICHIESTE ━━━
 
-**INFORMAZIONI** → Rispondi direttamente usando la knowledge base. Non dire "chiedo al team" se la risposta è già disponibile.
+**INFORMAZIONI** → Rispondi direttamente.
 
-**APPUNTAMENTO** → Guida la conversazione raccogliendo: nome, servizio, giorno preferito, fascia oraria, contatto. Chiedi UN dato alla volta solo se manca. Quando hai abbastanza dati, imposta create_appointment=true e usa SOLO questa frase tipo:
-"Perfetto, ho raccolto la tua richiesta per [giorno/fascia]. Ti faremo avere conferma appena possibile."
-MAI dire "appuntamento confermato", "sei prenotato", "ti aspettiamo" o promettere disponibilità. La conferma è sempre del team.
+**APPUNTAMENTO** → Raccogli: nome, servizio (opzionale), data/ora, email o telefono. Un dato alla volta.
+DATI MINIMI per creare richiesta: nome + data/ora + (email o telefono).
 
-**PREVENTIVO** → Fai le domande necessarie per capire il progetto, poi dai un'indicazione se possibile con i dati disponibili. Escala solo se serve approvazione su cifre importanti.
+Quando hai dati minimi → create_appointment=true. Reply PRECISA:
+"Perfetto [nome], ho registrato la tua richiesta per [giorno esteso] alle [ora]. Ti contatteremo per confermare definitivamente."
+MAI frasi vaghe. MAI "ti faremo sapere" se hai i dati. MAI "confermato" o "prenotato".
 
-**SPAM / OFFERTA NON RICHIESTA / COLLABORAZIONE FREDDA** → Rispondi brevemente: "No grazie, al momento non siamo interessati." Imposta intent=spam_or_solicitation. NON creare lead, NON escalare.
+Se mancano dati, chiedi SOLO quello che manca:
+- Nome mancante → "Come ti chiami?"
+- Data/ora mancante → "Che giorno e orario preferisci?"
+- Contatto mancante → "Email o numero per la conferma?"
 
-**RECLAMO / CLIENTE ARRABBIATO** → Mostra comprensione, non scalare subito. Se il problema è serio o si ripete, allora needs_human=true.
-
-**RICHIESTA OPERATORE UMANO** → "Certo, ti passo a un operatore. Intanto dimmi brevemente di cosa hai bisogno così può aiutarti subito." Poi needs_human=true.
-
-**NON SAI** → Fai UNA sola domanda utile o proponi il passo successivo. Non usare "avviso il team" come risposta di default.
-
-━━━ ESCALATION AL TEAM (needs_human=true) SOLO SE ━━━
-- Cliente esplicitamente chiede un operatore umano
-- Reclamo serio o urgenza reale non gestibile
-- Serve una decisione che non puoi prendere (es. sconto importante, accordo contrattuale)
-- Dopo 3+ scambi senza risolvere e il cliente è frustrato
+**SPAM** → "No grazie." intent=spam_or_solicitation.
+**RECLAMO** → Comprensione. Escala solo se grave.
+**OPERATORE** → needs_human=true.
 
 ━━━ FRASI VIETATE ━━━
-MAI usare: "avviso il team", "ti faremo sapere", "inoltro la richiesta", "un operatore ti risponderà", "ho girato la richiesta", "ti ricontatteremo a breve" — A MENO CHE needs_human=true.
+MAI: "avviso il team", "inoltro la richiesta", "un operatore ti risponderà" — SALVO needs_human=true.
+MAI frasi vaghe sull'appuntamento se hai nome+data+ora.
 
-━━━ STORICO CONVERSAZIONE ━━━
+━━━ STORICO ━━━
 ${history || '(nessun messaggio precedente)'}
 
 ━━━ MESSAGGIO CLIENTE ━━━
 ${text}
 
-━━━ RACCOLTA DATI CONTATTO ━━━
-Quando il cliente chiede appuntamento, preventivo o informazioni importanti, DEVI raccogliere almeno uno tra email o telefono prima di chiudere la richiesta.
-Se non li hai ancora, chiedi NATURALMENTE: "Perfetto! Per poterti ricontattare con la conferma, mi lasci un numero di telefono o un'email?"
-Se il cliente li fornisce, estraili e mettili nei campi collected_email / collected_phone del JSON.
-Valida formato email (deve contenere @). Telefono: solo cifre e +.
+━━━ RACCOLTA CONTATTO ━━━
+Raccogli email o telefono per appuntamenti. Chiedi naturalmente.
+Email valida: contiene @. Telefono: cifre e +.
 
-━━━ RISPOSTA RICHIESTA (JSON) ━━━
-Rispondi con un JSON con questi campi:
-- intent: uno tra appointment_request | information_request | quote_request | complaint | urgent_request | spam_or_solicitation | human_request | unknown
-- needs_human: true solo nei casi descritti sopra
-- reply: il testo della risposta da inviare al cliente (in lingua del cliente, max 3 frasi)
-- create_appointment: true se hai raccolto dati sufficienti per creare un appuntamento (nome, servizio, data/preferenza, contatto)
-- appointment_data: { servizio, data, ora, note } (solo se create_appointment=true)
-- collected_email: email del cliente se l'ha fornita in questo messaggio o nel contesto (stringa vuota se non disponibile)
-- collected_phone: telefono del cliente se l'ha fornito (stringa vuota se non disponibile)`;
+━━━ JSON ━━━
+- intent: appointment_request | information_request | quote_request | complaint | urgent_request | spam_or_solicitation | human_request | unknown
+- needs_human: boolean
+- reply: risposta (lingua cliente, max 3 frasi, PRECISA con nome/data/ora)
+- create_appointment: true se dati minimi presenti
+- appointment_data: { servizio, data, ora, data_testo, ora_testo, email, telefono, note } — data=ISO YYYY-MM-DD calcolata da "${romeDateISO}", ora=HH:MM 24h
+- collected_email: stringa vuota se non disponibile
+- collected_phone: stringa vuota se non disponibile`;
 }
 
 async function sendWhatsAppMessage(phoneNumberId, toNumber, message) {
