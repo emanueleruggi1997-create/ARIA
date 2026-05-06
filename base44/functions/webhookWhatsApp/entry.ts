@@ -160,13 +160,23 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
       business_id: businessId,
       contact_id: contact.id,
       contact_nome: contact.nome,
-      titolo: ad.servizio || 'Appuntamento richiesto',
+      titolo: ad.servizio || 'Richiesta appuntamento',
       data: ad.data || '',
       ora: ad.ora || '',
       tipo: 'servizio',
-      stato: 'in_attesa',
-      note: ad.note || 'Richiesto via WhatsApp',
+      stato: 'in_attesa',  // sempre in attesa — la conferma è manuale
+      note: `⏳ DA CONFERMARE — Richiesto via WhatsApp\n${ad.note || ''}`.trim(),
       canale_origine: 'whatsapp',
+    }).catch(() => {});
+    // Notifica team: crea UrgentAction per approvazione
+    await base44.asServiceRole.entities.UrgentAction.create({
+      business_id: businessId,
+      contact_id: contact.id,
+      contact_nome: contact.nome,
+      contact_canale: 'whatsapp',
+      trigger: 'appuntamento',
+      messaggio_originale: `Richiesta appuntamento: ${ad.servizio || ''} — ${ad.data || ''} ${ad.ora || ''}`.trim(),
+      stato: 'nuovo',
     }).catch(() => {});
   }
 
@@ -216,8 +226,9 @@ Orari: ${orari}, giorni: ${giorni}
 
 **INFORMAZIONI** → Rispondi direttamente usando la knowledge base. Non dire "chiedo al team" se la risposta è già disponibile.
 
-**APPUNTAMENTO** → Guida la conversazione raccogliendo: nome, servizio, giorno preferito, fascia oraria, contatto. Chiedi UN dato alla volta solo se manca. Quando hai abbastanza dati, conferma la richiesta e imposta create_appointment=true.
-Esempio: "Certo, ti aiuto a fissare l'appuntamento. Per quale servizio e in che giorno preferisci?"
+**APPUNTAMENTO** → Guida la conversazione raccogliendo: nome, servizio, giorno preferito, fascia oraria, contatto. Chiedi UN dato alla volta solo se manca. Quando hai abbastanza dati, imposta create_appointment=true e usa SOLO questa frase tipo:
+"Perfetto, ho raccolto la tua richiesta per [giorno/fascia]. Ti faremo avere conferma appena possibile."
+MAI dire "appuntamento confermato", "sei prenotato", "ti aspettiamo" o promettere disponibilità. La conferma è sempre del team.
 
 **PREVENTIVO** → Fai le domande necessarie per capire il progetto, poi dai un'indicazione se possibile con i dati disponibili. Escala solo se serve approvazione su cifre importanti.
 
