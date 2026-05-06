@@ -78,7 +78,13 @@ export default function UrgentActionsWidget({ businessId }) {
 
                 {/* Timestamp */}
                 <p className="text-[10px] text-muted-foreground mb-2">
-                  {action.created_date ? format(new Date(action.created_date), 'dd/MM HH:mm') : ''}
+                  {(() => {
+                    if (!action.created_date) return '';
+                    try {
+                      const d = new Date(action.created_date);
+                      return Number.isNaN(d.getTime()) ? '' : format(d, 'dd/MM HH:mm');
+                    } catch { return ''; }
+                  })()}
                 </p>
 
                 {/* Action buttons */}

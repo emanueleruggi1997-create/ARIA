@@ -240,16 +240,27 @@ Deno.serve(async (req) => {
 
           if (intent === 'appointment_request' && parsed.create_appointment && parsed.appointment_data) {
             const ad = parsed.appointment_data;
+
+            // Sanitizza la data: accetta solo formato ISO yyyy-MM-dd
+            // Se il LLM ha restituito testo naturale (es. "domani", "martedì"), lo sposta nelle note
+            const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+            const rawData = ad.data || '';
+            const rawOra  = ad.ora  || '';
+            const isValidDate = ISO_DATE_RE.test(rawData) && !Number.isNaN(new Date(rawData).getTime());
+            const safeData = isValidDate ? rawData : '';
+            const safeOra  = /^\d{1,2}:\d{2}$/.test(rawOra) ? rawOra : '';
+            const dateNote = !isValidDate && rawData ? `Data richiesta: "${rawData}"${rawOra ? `, fascia: "${rawOra}"` : ''}` : '';
+
             await base44.asServiceRole.entities.Appointment.create({
               business_id: businessId,
               contact_id: contact.id,
               contact_nome: contact.nome,
               titolo: ad.servizio || 'Richiesta appuntamento',
-              data: ad.data || '',
-              ora: ad.ora || '',
+              data: safeData,
+              ora: safeOra,
               tipo: 'servizio',
               stato: 'in_attesa',  // sempre in attesa — la conferma è manuale
-              note: `⏳ DA CONFERMARE — Richiesto via Instagram\n${ad.note || ''}`.trim(),
+              note: [`⏳ DA CONFERMARE — Richiesto via Instagram`, dateNote, ad.note || ''].filter(Boolean).join('\n').trim(),
               canale_origine: 'instagram',
             }).catch(() => {});
             // Notifica team: crea UrgentAction per approvazione

@@ -13,7 +13,13 @@ import { useLang } from '@/lib/LanguageContext.jsx';
 function ConfirmModal({ apt, onConfirm, onClose }) {
   const { lang } = useLang();
   const en = lang === 'en';
-  const suggestedDate = apt?.data || format(new Date(), 'yyyy-MM-dd');
+  const suggestedDate = (() => {
+    if (!apt?.data) return format(new Date(), 'yyyy-MM-dd');
+    try {
+      const d = new Date(apt.data);
+      return Number.isNaN(d.getTime()) ? format(new Date(), 'yyyy-MM-dd') : apt.data;
+    } catch { return format(new Date(), 'yyyy-MM-dd'); }
+  })();
   const suggestedTime = apt?.ora || '10:00';
   const [data, setData] = useState(suggestedDate);
   const [ora, setOra] = useState(suggestedTime);
@@ -135,10 +141,13 @@ export default function AppointmentRequests({ businessId }) {
                 <p className="text-sm font-semibold text-foreground">{apt.titolo}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   👤 {apt.contact_nome}
-                  {apt.data && (
-                    <> · 📅 {format(parseISO(apt.data), 'd MMM', { locale: dateLocale })}
-                    {apt.ora && ` ${en ? 'at' : 'ore'} ${apt.ora}`}</>
-                  )}
+                  {apt.data && (() => {
+                    try {
+                      const d = parseISO(apt.data);
+                      if (Number.isNaN(d.getTime())) return <> · 📅 Da confermare</>;
+                      return <> · 📅 {format(d, 'd MMM', { locale: dateLocale })}{apt.ora && ` ${en ? 'at' : 'ore'} ${apt.ora}`}</>;
+                    } catch { return <> · 📅 Da confermare</>; }
+                  })()}
                 </p>
                 {apt.note && (
                   <p className="text-xs text-muted-foreground mt-1 italic truncate">{apt.note}</p>

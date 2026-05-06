@@ -180,11 +180,14 @@ function AppointmentCard({ appt, onClick, onAccept, onReject, onDelete }) {
   const isPending = appt.stato === 'in_attesa';
 
   const dateLabel = () => {
-    if (!appt.data) return '';
-    const d = parseISO(appt.data);
-    if (isToday(d)) return t.todayLabel;
-    if (isTomorrow(d)) return t.tomorrowLabel;
-    return format(d, 'd MMM', { locale: dateLocale });
+    if (!appt.data) return 'Da confermare';
+    try {
+      const d = parseISO(appt.data);
+      if (Number.isNaN(d.getTime())) return 'Da confermare';
+      if (isToday(d)) return t.todayLabel;
+      if (isTomorrow(d)) return t.tomorrowLabel;
+      return format(d, 'd MMM', { locale: dateLocale });
+    } catch { return 'Da confermare'; }
   };
 
   return (
