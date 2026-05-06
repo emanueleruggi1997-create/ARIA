@@ -155,29 +155,16 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
   }
 
   if (intent === 'appointment_request' && parsed.create_appointment && parsed.appointment_data) {
-    const ad = parsed.appointment_data;
-
-    // Sanitizza la data: accetta solo formato ISO yyyy-MM-dd
-    const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    const rawData = ad.data || '';
-    const rawOra  = ad.ora  || '';
-    const isValidDate = ISO_DATE_RE.test(rawData) && !Number.isNaN(new Date(rawData).getTime());
-    const safeData = isValidDate ? rawData : '';
-    const safeOra  = /^\d{1,2}:\d{2}$/.test(rawOra) ? rawOra : '';
-    const dateNote = !isValidDate && rawData ? `Data richiesta: "${rawData}"${rawOra ? `, fascia: "${rawOra}"` : ''}` : '';
-
-    await base44.asServiceRole.entities.Appointment.create({
-      business_id: businessId,
-      contact_id: contact.id,
-      contact_nome: contact.nome,
-      titolo: ad.servizio || 'Richiesta appuntamento',
-      data: safeData,
-      ora: safeOra,
-      tipo: 'servizio',
-      stato: 'in_attesa',  // sempre in attesa — la conferma è manuale
-      note: [`⏳ DA CONFERMARE — Richiesto via WhatsApp`, dateNote, ad.note || ''].filter(Boolean).join('\n').trim(),
-      canale_origine: 'whatsapp',
-    }).catch(() => {});
+    const ad = parsed.appointment_data || {};
+    const aptPayload = buildSafeAppointmentPayload({
+      ad, businessId, contactId: contact.id,
+      contactName: contact.nome, source: 'whatsapp', rawMessage: text,
+    });
+    const { _requested_date_text, _requested_time_text, _raw_message, _validation_status, ...cleanPayload } = aptPayload;
+    console.log(`[webhookWA] Creating appointment | validation_status=${_validation_status} | date="${aptPayload.data}" | dateText="${_requested_date_text}"`);
+    await base44.asServiceRole.entities.Appointment.create(cleanPayload).catch(e => {
+      console.error('[webhookWA] Appointment create failed:', e.message);
+    });
     // Notifica team: crea UrgentAction per approvazione
     await base44.asServiceRole.entities.UrgentAction.create({
       business_id: businessId,
@@ -208,6 +195,48 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
   ]);
 
   console.log('[webhookWA] AI reply sent:', aiReply.slice(0, 100));
+}
+
+// ── Helper: valida e costruisce payload appuntamento sicuro ──
+function buildSafeAppointmentPayload({ ad, businessId, contactId, contactName, source, rawMessage }) {
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const TIME_RE = /^\d{1,2}:\d{2}$/;
+
+  const rawDate = (ad.data || '').trim();
+  const rawTime = (ad.ora || '').trim();
+
+  const isValidDate = ISO_DATE_RE.test(rawDate) && !isNaN(new Date(rawDate).getTime());
+  const isValidTime = TIME_RE.test(rawTime);
+
+  const safeDate = isValidDate ? rawDate : null;
+  const safeTime = isValidTime ? rawTime : null;
+
+  const naturalDateText = !isValidDate && rawDate ? rawDate : null;
+  const naturalTimeText = !isValidTime && rawTime ? rawTime : null;
+
+  const noteLines = [
+    `⏳ DA CONFERMARE — Richiesto via ${source === 'instagram' ? 'Instagram' : 'WhatsApp'}`,
+    naturalDateText ? `Data richiesta: "${naturalDateText}"` : null,
+    naturalTimeText ? `Fascia oraria: "${naturalTimeText}"` : null,
+    ad.note || null,
+  ].filter(Boolean);
+
+  return {
+    business_id: businessId,
+    contact_id: contactId,
+    contact_nome: String(contactName || '').slice(0, 200) || null,
+    titolo: String(ad.servizio || 'Richiesta appuntamento').slice(0, 500),
+    data: safeDate,
+    ora: safeTime,
+    tipo: 'servizio',
+    stato: 'in_attesa',
+    note: noteLines.join('\n').slice(0, 2000),
+    canale_origine: source,
+    _requested_date_text: naturalDateText,
+    _requested_time_text: naturalTimeText,
+    _raw_message: String(rawMessage || '').slice(0, 500),
+    _validation_status: (safeDate && safeTime) ? 'ready_for_review' : 'incomplete',
+  };
 }
 
 function buildAriaPromptWA({ business, agentName, history, text, isFirstMsg }) {

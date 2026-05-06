@@ -16,8 +16,9 @@ import MessagesChartEnhanced from '@/components/dashboard/MessagesChartEnhanced'
 import { MessageSquare, Users, CalendarDays, Zap, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { it as itLocale, enUS } from 'date-fns/locale';
+import { formatSafeTimestamp } from '@/lib/safeDate.js';
 
 function getGreeting(name, lang) {
   const h = new Date().getHours();
@@ -235,7 +236,7 @@ export default function Dashboard() {
                   <p className="text-xs text-muted-foreground">{msg.canale === 'whatsapp' ? '🟢 WhatsApp' : '📸 Instagram'}</p>
                 </div>
                 <span className="text-[10px] text-muted-foreground shrink-0">
-                  {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
+                  {formatSafeTimestamp(msg.created_date, 'HH:mm')}
                 </span>
               </Link>
             )) : (

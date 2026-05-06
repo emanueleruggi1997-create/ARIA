@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, CalendarDays, Clock, User, CheckCircle2, XCircle, Circle, Phone, Video, Briefcase, Trash2 } from 'lucide-react';
-import { format, parseISO, isToday, isTomorrow, isPast } from 'date-fns';
+import { format, parseISO, isToday, isTomorrow } from 'date-fns';
+import { safeDate, safeDateLabel, formatSafeTimestamp } from '@/lib/safeDate.js';
 import { it, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import AvailabilityPanel from '@/components/calendar/AvailabilityPanel';
@@ -179,16 +180,7 @@ function AppointmentCard({ appt, onClick, onAccept, onReject, onDelete }) {
   const dateLocale = lang === 'en' ? enUS : it;
   const isPending = appt.stato === 'in_attesa';
 
-  const dateLabel = () => {
-    if (!appt.data) return 'Da confermare';
-    try {
-      const d = parseISO(appt.data);
-      if (Number.isNaN(d.getTime())) return 'Da confermare';
-      if (isToday(d)) return t.todayLabel;
-      if (isTomorrow(d)) return t.tomorrowLabel;
-      return format(d, 'd MMM', { locale: dateLocale });
-    } catch { return 'Da confermare'; }
-  };
+  const dateLabel = () => safeDateLabel(appt.data, lang, t.todayLabel, t.tomorrowLabel, 'Da confermare');
 
   return (
     <div className={cn(
@@ -376,10 +368,10 @@ export default function Calendar() {
       ) : (
         <div className="space-y-6">
           {sortedDates.map(dateKey => {
-            const d = dateKey !== 'senza_data' ? parseISO(dateKey) : null;
+            const d = dateKey !== 'senza_data' ? safeDate(dateKey) : null;
             const label = d
               ? isToday(d) ? `📅 ${t.todayLabel}` : isTomorrow(d) ? `📅 ${t.tomorrowLabel}` : `📅 ${format(d, 'EEEE d MMMM', { locale: dateLocale })}`
-              : (lang === 'en' ? 'No date' : 'Senza data');
+              : (lang === 'en' ? '📅 No date' : '📅 Senza data');
             return (
               <div key={dateKey}>
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">{label}</h3>

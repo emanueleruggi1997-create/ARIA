@@ -239,30 +239,17 @@ Deno.serve(async (req) => {
           }
 
           if (intent === 'appointment_request' && parsed.create_appointment && parsed.appointment_data) {
-            const ad = parsed.appointment_data;
-
-            // Sanitizza la data: accetta solo formato ISO yyyy-MM-dd
-            // Se il LLM ha restituito testo naturale (es. "domani", "martedì"), lo sposta nelle note
-            const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-            const rawData = ad.data || '';
-            const rawOra  = ad.ora  || '';
-            const isValidDate = ISO_DATE_RE.test(rawData) && !Number.isNaN(new Date(rawData).getTime());
-            const safeData = isValidDate ? rawData : '';
-            const safeOra  = /^\d{1,2}:\d{2}$/.test(rawOra) ? rawOra : '';
-            const dateNote = !isValidDate && rawData ? `Data richiesta: "${rawData}"${rawOra ? `, fascia: "${rawOra}"` : ''}` : '';
-
-            await base44.asServiceRole.entities.Appointment.create({
-              business_id: businessId,
-              contact_id: contact.id,
-              contact_nome: contact.nome,
-              titolo: ad.servizio || 'Richiesta appuntamento',
-              data: safeData,
-              ora: safeOra,
-              tipo: 'servizio',
-              stato: 'in_attesa',  // sempre in attesa — la conferma è manuale
-              note: [`⏳ DA CONFERMARE — Richiesto via Instagram`, dateNote, ad.note || ''].filter(Boolean).join('\n').trim(),
-              canale_origine: 'instagram',
-            }).catch(() => {});
+            const ad = parsed.appointment_data || {};
+            const aptPayload = buildSafeAppointmentPayload({
+              ad, businessId, contactId: contact.id,
+              contactName: contact.nome, source: 'instagram', rawMessage: text,
+            });
+            // Rimuovi campi non in schema prima di salvare
+            const { _requested_date_text, _requested_time_text, _raw_message, _validation_status, ...cleanPayload } = aptPayload;
+            console.log(`[webhookMeta] Creating appointment | validation_status=${_validation_status} | date="${aptPayload.data}" | dateText="${_requested_date_text}"`);
+            await base44.asServiceRole.entities.Appointment.create(cleanPayload).catch(e => {
+              console.error('[webhookMeta] Appointment create failed:', e.message);
+            });
             // Notifica team: crea UrgentAction per approvazione
             await base44.asServiceRole.entities.UrgentAction.create({
               business_id: businessId,
@@ -336,6 +323,50 @@ Deno.serve(async (req) => {
 
   return Response.json({ ok: true });
 });
+
+// ── Helper: valida e costruisce payload appuntamento sicuro ──
+function buildSafeAppointmentPayload({ ad, businessId, contactId, contactName, source, rawMessage }) {
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const TIME_RE = /^\d{1,2}:\d{2}$/;
+
+  const rawDate = (ad.data || '').trim();
+  const rawTime = (ad.ora || '').trim();
+
+  const isValidDate = ISO_DATE_RE.test(rawDate) && !isNaN(new Date(rawDate).getTime());
+  const isValidTime = TIME_RE.test(rawTime);
+
+  const safeDate = isValidDate ? rawDate : null;
+  const safeTime = isValidTime ? rawTime : null;
+
+  // Qualsiasi testo naturale va nelle note, mai in campi Date
+  const naturalDateText = !isValidDate && rawDate ? rawDate : null;
+  const naturalTimeText = !isValidTime && rawTime ? rawTime : null;
+
+  const noteLines = [
+    `⏳ DA CONFERMARE — Richiesto via ${source === 'instagram' ? 'Instagram' : 'WhatsApp'}`,
+    naturalDateText ? `Data richiesta: "${naturalDateText}"` : null,
+    naturalTimeText ? `Fascia oraria: "${naturalTimeText}"` : null,
+    ad.note || null,
+  ].filter(Boolean);
+
+  return {
+    business_id: businessId,
+    contact_id: contactId,
+    contact_nome: String(contactName || '').slice(0, 200) || null,
+    titolo: String(ad.servizio || 'Richiesta appuntamento').slice(0, 500),
+    data: safeDate,           // null se non è ISO valido
+    ora: safeTime,            // null se non è HH:MM valido
+    tipo: 'servizio',
+    stato: 'in_attesa',
+    note: noteLines.join('\n').slice(0, 2000),
+    canale_origine: source,
+    // Campi extra per tracciabilità (salvati in note se non in schema)
+    _requested_date_text: naturalDateText,
+    _requested_time_text: naturalTimeText,
+    _raw_message: String(rawMessage || '').slice(0, 500),
+    _validation_status: (safeDate && safeTime) ? 'ready_for_review' : 'incomplete',
+  };
+}
 
 // ── Helper: costruisce il prompt ARIA segretaria autonoma ──
 function buildAriaPrompt({ business, agentName, history, text, isFirstMsg }) {
