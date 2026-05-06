@@ -13,7 +13,9 @@ Deno.serve(async (req) => {
   const { connector_id } = body;
   if (!connector_id) return Response.json({ error: 'Missing connector_id' }, { status: 400 });
 
-  const conn = await base44.asServiceRole.entities.MetaConnection.get(connector_id);
+  // Usa filter per garantire il record corretto — .get() può restituire un record sbagliato
+  const rows = await base44.asServiceRole.entities.MetaConnection.filter({ id: connector_id });
+  const conn = rows[0];
   if (!conn) return Response.json({ success: false, error: 'Connection not found' });
 
   const token       = conn.access_token;
