@@ -128,6 +128,8 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
         reply: { type: 'string' },
         create_appointment: { type: 'boolean' },
         appointment_data: { type: 'object' },
+        collected_email: { type: 'string' },
+        collected_phone: { type: 'string' },
       },
       required: ['intent', 'needs_human', 'reply'],
     },
@@ -138,6 +140,35 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
   const aiReply = parsed.reply || '';
   const intent  = parsed.intent || 'unknown';
   const needsHuman = !!parsed.needs_human;
+
+  // ── Salva email/telefono raccolti da ARIA ──
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const collectedEmail = (parsed.collected_email || '').trim();
+  const collectedPhone = (parsed.collected_phone || '').replace(/\s/g, '').trim();
+  if (collectedEmail && EMAIL_RE.test(collectedEmail)) {
+    const existingLeads = await base44.asServiceRole.entities.Lead.filter({ business_id: businessId, contact_id: contact.id });
+    if (existingLeads.length > 0) {
+      await base44.asServiceRole.entities.Lead.update(existingLeads[0].id, {
+        email: collectedEmail,
+        stato: existingLeads[0].stato === 'nuovo' ? 'qualificato' : existingLeads[0].stato,
+      }).catch(() => {});
+    }
+    const existing = await base44.asServiceRole.entities.ContactEmail.filter({ business_id: businessId, email: collectedEmail });
+    if (!existing.length) {
+      await base44.asServiceRole.entities.ContactEmail.create({
+        business_id: businessId, nome: contact.nome, email: collectedEmail, fonte: 'whatsapp', stato: 'attivo',
+      }).catch(() => {});
+    }
+  }
+  if (collectedPhone && collectedPhone.length >= 8) {
+    const existingLeads = await base44.asServiceRole.entities.Lead.filter({ business_id: businessId, contact_id: contact.id });
+    if (existingLeads.length > 0) {
+      await base44.asServiceRole.entities.Lead.update(existingLeads[0].id, {
+        phone: collectedPhone,
+        stato: existingLeads[0].stato === 'nuovo' ? 'qualificato' : existingLeads[0].stato,
+      }).catch(() => {});
+    }
+  }
 
   console.log(`[webhookWA] ARIA intent="${intent}" needs_human=${needsHuman} | reply: ${aiReply?.slice(0, 120)}`);
 
@@ -294,13 +325,21 @@ ${history || '(nessun messaggio precedente)'}
 ━━━ MESSAGGIO CLIENTE ━━━
 ${text}
 
+━━━ RACCOLTA DATI CONTATTO ━━━
+Quando il cliente chiede appuntamento, preventivo o informazioni importanti, DEVI raccogliere almeno uno tra email o telefono prima di chiudere la richiesta.
+Se non li hai ancora, chiedi NATURALMENTE: "Perfetto! Per poterti ricontattare con la conferma, mi lasci un numero di telefono o un'email?"
+Se il cliente li fornisce, estraili e mettili nei campi collected_email / collected_phone del JSON.
+Valida formato email (deve contenere @). Telefono: solo cifre e +.
+
 ━━━ RISPOSTA RICHIESTA (JSON) ━━━
 Rispondi con un JSON con questi campi:
 - intent: uno tra appointment_request | information_request | quote_request | complaint | urgent_request | spam_or_solicitation | human_request | unknown
 - needs_human: true solo nei casi descritti sopra
 - reply: il testo della risposta da inviare al cliente (in lingua del cliente, max 3 frasi)
 - create_appointment: true se hai raccolto dati sufficienti per creare un appuntamento (nome, servizio, data/preferenza, contatto)
-- appointment_data: { servizio, data, ora, note } (solo se create_appointment=true)`;
+- appointment_data: { servizio, data, ora, note } (solo se create_appointment=true)
+- collected_email: email del cliente se l'ha fornita in questo messaggio o nel contesto (stringa vuota se non disponibile)
+- collected_phone: telefono del cliente se l'ha fornito (stringa vuota se non disponibile)`;
 }
 
 async function sendWhatsAppMessage(phoneNumberId, toNumber, message) {

@@ -76,8 +76,25 @@ Formato professionale con intestazione, dettagli servizi, prezzi, tempistiche, c
             <div className="bg-secondary rounded-lg p-3">
               <p className="text-xs text-muted-foreground">Budget stimato</p>
               <p className="text-sm font-medium text-foreground mt-0.5">
-                €{lead.budget_min || 0} — €{lead.budget_max || 0}
+                {lead.budget_min || lead.budget_max ? `€${lead.budget_min || 0} — €${lead.budget_max || 0}` : '—'}
               </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-secondary rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                📧 Email
+                {lead.email && <span className="text-green-400 text-[10px]">✓ qualificato</span>}
+              </p>
+              <p className="text-sm font-medium text-foreground">{lead.email || <span className="text-muted-foreground italic text-xs">Non raccolta</span>}</p>
+            </div>
+            <div className="bg-secondary rounded-lg p-3">
+              <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                📞 Telefono
+                {lead.phone && <span className="text-green-400 text-[10px]">✓</span>}
+              </p>
+              <p className="text-sm font-medium text-foreground">{lead.phone || <span className="text-muted-foreground italic text-xs">Non raccolto</span>}</p>
             </div>
           </div>
 

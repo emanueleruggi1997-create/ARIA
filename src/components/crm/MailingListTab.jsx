@@ -43,7 +43,10 @@ export default function MailingListTab({ businessId }) {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['email-contacts', businessId] });
 
-  const filtered = contacts.filter(c => {
+  // Solo contatti con email valida
+  const validContacts = contacts.filter(c => c.email?.includes('@'));
+
+  const filtered = validContacts.filter(c => {
     const matchSegment =
       segment === 'tutti' ||
       (segment === 'attivo' && c.stato === 'attivo') ||
@@ -54,8 +57,9 @@ export default function MailingListTab({ businessId }) {
     return matchSegment && matchSearch;
   });
 
-  const activeCount = contacts.filter(c => c.stato === 'attivo').length;
-  const unsubCount = contacts.filter(c => c.stato === 'disiscritto').length;
+  const activeCount = validContacts.filter(c => c.stato === 'attivo').length;
+  const unsubCount = validContacts.filter(c => c.stato === 'disiscritto').length;
+  const noEmailCount = contacts.length - validContacts.length;
 
   const handleAdd = async () => {
     if (!newContact.email.trim() || saving) return;
@@ -91,9 +95,10 @@ export default function MailingListTab({ businessId }) {
     <div className="space-y-4">
       {/* Stats */}
       <div className="flex flex-wrap gap-3">
-        <span className="text-xs bg-secondary px-2.5 py-1 rounded-lg text-muted-foreground">{contacts.length} totali</span>
+        <span className="text-xs bg-secondary px-2.5 py-1 rounded-lg text-muted-foreground">{validContacts.length} con email</span>
         <span className="text-xs bg-green-500/10 px-2.5 py-1 rounded-lg text-green-400">{activeCount} attivi</span>
         <span className="text-xs bg-red-500/10 px-2.5 py-1 rounded-lg text-red-400">{unsubCount} disiscritti</span>
+        {noEmailCount > 0 && <span className="text-xs bg-yellow-500/10 px-2.5 py-1 rounded-lg text-yellow-400">{noEmailCount} senza email (esclusi)</span>}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">

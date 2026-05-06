@@ -139,10 +139,16 @@ export default function Inbox() {
     return contacts.find(c => c.id === activeConv.contact_id) || null;
   }, [activeConv, contacts]);
 
-  const handleSelect = (conv) => {
+  const handleSelect = async (conv) => {
     setActiveConv(conv);
     setReadIds(prev => new Set([...prev, conv.contact_id]));
     setShowContactInfo(false);
+    // Segna come letti tutti i messaggi non letti di questo contatto
+    const unread = allMessages.filter(m => m?.contact_id === conv.contact_id && !m?.letto && m?.ruolo === 'user');
+    if (unread.length > 0) {
+      await Promise.allSettled(unread.map(m => base44.entities.Message.update(m.id, { letto: true })));
+      queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
+    }
   };
 
   const handleSendMessage = async (text, ruolo) => {

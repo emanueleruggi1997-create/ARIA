@@ -449,6 +449,13 @@ export default function CRM() {
     staleTime: 30_000,
   });
 
+  const { data: messages = [] } = useQuery({
+    queryKey: ['messages-crm', business?.id],
+    queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 500),
+    enabled: !!business?.id,
+    staleTime: 60_000,
+  });
+
   const { data: emailContacts = [] } = useQuery({
     queryKey: ['email-contacts', business?.id],
     queryFn: () => base44.entities.ContactEmail.filter({ business_id: business?.id }),
@@ -560,7 +567,7 @@ export default function CRM() {
 
             {/* KPIs — Upgraded 8-card dashboard */}
             <SafeSection label="CRM KPIs">
-              <CRMDashboardKPIs leads={safeLeads} campaigns={safeCampaigns} emailContacts={safeEmailContacts} isDesktop={isDesktop} />
+              <CRMDashboardKPIs leads={safeLeads} campaigns={safeCampaigns} emailContacts={safeEmailContacts} messages={safeArray(messages)} isDesktop={isDesktop} />
             </SafeSection>
 
             {/* Recent leads + Quick actions */}

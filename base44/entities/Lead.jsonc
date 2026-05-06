@@ -1,0 +1,75 @@
+{
+  "name": "Lead",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string",
+      "description": "ID del business"
+    },
+    "contact_id": {
+      "type": "string",
+      "description": "ID del contatto"
+    },
+    "contact_nome": {
+      "type": "string",
+      "description": "Nome del contatto"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email del lead (necessaria per qualificazione)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefono del lead (necessario per qualificazione)"
+    },
+    "canale": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "instagram",
+        "manual"
+      ],
+      "description": "Canale di provenienza"
+    },
+    "tipo_progetto": {
+      "type": "string",
+      "description": "Servizio o progetto richiesto"
+    },
+    "budget_min": {
+      "type": "number"
+    },
+    "budget_max": {
+      "type": "number"
+    },
+    "valore_stimato": {
+      "type": "number",
+      "description": "Valore stimato opportunit\u00e0"
+    },
+    "stato": {
+      "type": "string",
+      "enum": [
+        "nuovo",
+        "qualificato",
+        "preventivo_inviato",
+        "chiuso_vinto",
+        "chiuso_perso"
+      ],
+      "default": "nuovo"
+    },
+    "marketing_consent": {
+      "type": "boolean",
+      "description": "Consenso email marketing"
+    },
+    "note_ai": {
+      "type": "string",
+      "description": "Note generate da ARIA"
+    },
+    "instagram_username": {
+      "type": "string",
+      "description": "Username Instagram se provenienza IG"
+    }
+  },
+  "required": [
+    "business_id"
+  ]
+}
