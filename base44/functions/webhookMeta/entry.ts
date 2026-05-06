@@ -5,13 +5,13 @@ const VERIFY_TOKEN = 'emaral2026';
 Deno.serve(async (req) => {
   const url = new URL(req.url);
 
-  // ── Webhook verification (GET da Meta) ──
+  // ── Webhook verification (GET) ──
   if (req.method === 'GET') {
-    const mode = url.searchParams.get('hub.mode');
-    const token = url.searchParams.get('hub.verify_token');
+    const mode      = url.searchParams.get('hub.mode');
+    const token     = url.searchParams.get('hub.verify_token');
     const challenge = url.searchParams.get('hub.challenge');
     if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-      console.log('[webhookMeta] Webhook verified ✅');
+      console.log('[webhookMeta] ✅ Webhook verified');
       return new Response(challenge, { status: 200 });
     }
     return new Response('Forbidden', { status: 403 });
@@ -20,167 +20,211 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
   const body = await req.json().catch(() => ({}));
+
+  // ── LOG COMPLETO payload in arrivo ──
+  console.log('[webhookMeta] ═══════════════════════════════');
+  console.log('[webhookMeta] object:', body.object);
+  console.log('[webhookMeta] entry count:', (body.entry || []).length);
+  console.log('[webhookMeta] FULL BODY:', JSON.stringify(body).slice(0, 2000));
+  console.log('[webhookMeta] ═══════════════════════════════');
+
+  // Supporta sia object="instagram" (nuovo) che object="page" (fallback)
+  const supportedObjects = ['instagram', 'page'];
+  if (!supportedObjects.includes(body.object)) {
+    console.log('[webhookMeta] object non supportato:', body.object, '— skip');
+    return Response.json({ ok: true });
+  }
+
+  const base44 = createClientFromRequest(req);
   const entries = body.entry || [];
 
-  console.log('[webhookMeta] ═══ WEBHOOK RICEVUTO ═══');
-  console.log('[webhookMeta] Entry IDs:', entries.map(e => e.id).join(', '));
-  console.log('[webhookMeta] Full body (troncato):', JSON.stringify(body).slice(0, 500));
-
-  // Usa createClientFromRequest — l'unico modo corretto per service role nei webhook
-  const base44 = createClientFromRequest(req);
-
   for (const entry of entries) {
-    // ── Processa DM ──
+    console.log('[webhookMeta] entry.id:', entry.id);
+
+    // ── Processa DM (messaging array) ──
     for (const event of (entry.messaging || [])) {
-      // Ignora: read receipts, delivery, messaggi echo (inviati DA noi)
       if (event.read || event.delivery || event.message?.is_echo) continue;
 
-      const senderId = event.sender?.id;
-      const text = event.message?.text || event.postback?.title || '';
-      if (!senderId || !text) continue;
+      const senderId    = event.sender?.id;
+      const recipientId = event.recipient?.id;
+      const text        = event.message?.text || event.postback?.title || '';
 
-      console.log('[webhookMeta] Messaggio ricevuto da:', senderId, '| testo:', text.slice(0, 100));
+      console.log('[webhookMeta] DM event | sender:', senderId, '| recipient:', recipientId, '| text:', text?.slice(0, 100));
+
+      if (!senderId || !text) {
+        console.log('[webhookMeta] DM skippato: senderId o text mancante');
+        continue;
+      }
 
       (async () => {
         try {
-          // Cerca connessione per ig_account_id — può essere l'app-scoped ID o il vero IG account ID
-          // Prova tutti i possibili match
-          let conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
-          if (!conns.length) conns = await base44.asServiceRole.entities.MetaConnection.filter({ fb_page_id: entry.id });
-          if (!conns.length) conns = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: entry.id });
-          // Fallback: prendi tutte le connessioni IG attive se c'è solo un account
-          if (!conns.length) {
-            const allConns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_connected: true });
-            if (allConns.length === 1) conns = allConns;
-          }
-          if (!conns.length) {
-            console.log('[webhookMeta] Nessuna connessione per entry:', entry.id);
-            return;
-          }
-          console.log('[webhookMeta] Connessione trovata per entry:', entry.id, '| conn.ig_account_id:', conns[0].ig_account_id);
+          // ── Trova MetaConnection ──
+          // Per Instagram Business Login, entry.id = ig_account_id dell'account ricevente
+          // recipient.id = ig_account_id dell'account ricevente
+          const accountId = recipientId || entry.id;
+          console.log('[webhookMeta] Cerco MetaConnection per accountId:', accountId);
 
-          const conn = conns[0];
+          let conn = null;
+
+          // 1. Cerca per ig_account_id (priorità massima — Instagram Business Login)
+          let conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: accountId });
+          if (conns.length) {
+            conn = conns[0];
+            console.log('[webhookMeta] ✅ Trovata per ig_account_id');
+          }
+
+          // 2. Cerca per meta_user_id
+          if (!conn) {
+            conns = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: accountId });
+            if (conns.length) {
+              conn = conns[0];
+              console.log('[webhookMeta] ✅ Trovata per meta_user_id');
+            }
+          }
+
+          // 3. Cerca per fb_page_id (fallback compatibilità)
+          if (!conn) {
+            conns = await base44.asServiceRole.entities.MetaConnection.filter({ fb_page_id: accountId });
+            if (conns.length) {
+              conn = conns[0];
+              console.log('[webhookMeta] ✅ Trovata per fb_page_id (fallback)');
+            }
+          }
+
+          // 4. Ultimo fallback: unica connessione IG attiva
+          if (!conn) {
+            const allConns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_connected: true });
+            if (allConns.length === 1) {
+              conn = allConns[0];
+              console.log('[webhookMeta] ✅ Trovata per fallback unica connessione IG | conn.ig_account_id:', conn.ig_account_id);
+            } else {
+              console.log('[webhookMeta] ❌ MetaConnection NON trovata per accountId:', accountId, '| connessioni IG attive:', allConns.length);
+              return;
+            }
+          }
+
+          console.log('[webhookMeta] MetaConnection trovata | id:', conn.id, '| ig_account_id:', conn.ig_account_id, '| business_id:', conn.business_id);
+
           let businessId = conn.business_id;
 
-          // Risolvi businessId se mancante — cerca per ig_account_id nel business
-          if (!businessId) {
+          // Risolvi businessId se mancante
+          if (!businessId && conn.user_id) {
             try {
               const allBiz = await base44.asServiceRole.entities.Business.filter({ ig_connesso: true });
-              const match = allBiz.find(b => b.created_by === conn.user_id || b.ig_username === conn.ig_account_name);
+              const match  = allBiz.find(b => b.created_by === conn.user_id);
               if (match) {
                 businessId = match.id;
                 await base44.asServiceRole.entities.MetaConnection.update(conn.id, { business_id: businessId });
                 console.log('[webhookMeta] businessId risolto:', businessId);
               }
-            } catch(e) {
+            } catch (e) {
               console.log('[webhookMeta] Errore risoluzione businessId:', e.message);
             }
           }
 
           if (!businessId) {
-            console.log('[webhookMeta] business_id mancante per connessione:', conn.id, '— skip');
+            console.log('[webhookMeta] ❌ businessId mancante — skip');
             return;
           }
 
-          // Ottieni o crea contatto
-          let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
+          // ── Trova o crea contatto ──
+          let contacts = await base44.asServiceRole.entities.Contact.filter({
+            business_id: businessId, numero: senderId, canale: 'instagram',
+          });
           let contact = contacts[0];
           if (!contact) {
             contact = await base44.asServiceRole.entities.Contact.create({
               business_id: businessId,
-              nome: `User_${senderId}`,
+              nome:   `User_${senderId}`,
               numero: senderId,
               canale: 'instagram',
-              stato: 'lead',
+              stato:  'lead',
             });
+            console.log('[webhookMeta] Nuovo contatto creato:', contact.id);
           }
 
           // Salva messaggio in arrivo
           await base44.asServiceRole.entities.Message.create({
             business_id: businessId,
-            contact_id: contact.id,
-            canale: 'instagram',
-            ruolo: 'user',
-            testo: text,
-            letto: false,
+            contact_id:  contact.id,
+            canale:      'instagram',
+            ruolo:       'user',
+            testo:       text,
+            letto:       false,
           });
 
-          // Crea lead se nuovo
+          // Crea lead se non esiste
           const leads = await base44.asServiceRole.entities.Lead.filter({ business_id: businessId, contact_id: contact.id });
           if (!leads.length) {
             await base44.asServiceRole.entities.Lead.create({
-              business_id: businessId,
-              contact_id: contact.id,
-              contact_nome: contact.nome,
-              canale: 'instagram',
-              stato: 'nuovo',
+              business_id: businessId, contact_id: contact.id,
+              contact_nome: contact.nome, canale: 'instagram', stato: 'nuovo',
             });
           }
 
-          console.log('[webhookMeta] ✅ Messaggio salvato | Contatto:', contact.nome);
+          console.log('[webhookMeta] ✅ Messaggio salvato | contatto:', contact.nome);
 
-          // ── ARIA Auto-risposta ──
+          // ── Controlla se AI è disabilitata per questo contatto ──
           if (contact.ai_disabled) {
             console.log('[webhookMeta] AI disabilitata per contatto:', contact.nome);
             return;
           }
 
           const business = await base44.asServiceRole.entities.Business.get(businessId);
-          if (!business) return;
+          if (!business) { console.log('[webhookMeta] Business non trovato:', businessId); return; }
 
           if (!business.auto_risposta || business.stato_agente === 'off') {
             console.log('[webhookMeta] Auto-risposta disattivata per business:', businessId);
             return;
           }
 
-          // ── Controlla orario (minuti totali, same as WhatsApp) ──
+          // ── Controlla orario (Europe/Rome) ──
           const now = new Date();
-          const romeHour = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', hour12: false }).format(now), 10) % 24;
-          const romeMinute = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', minute: '2-digit' }).format(now), 10);
-          const currentMinutes = romeHour * 60 + romeMinute;
-          const [startH, startM] = (business.orario_inizio || '08:00').split(':').map(Number);
-          const [endH, endM] = (business.orario_fine || '20:00').split(':').map(Number);
-          const startMinutes = startH * 60 + startM;
-          const endMinutes = endH * 60 + endM;
-          const is24h = startMinutes === endMinutes || (startMinutes === 0 && endMinutes >= 1439);
-          const withinHours = is24h || (currentMinutes >= startMinutes && currentMinutes < endMinutes);
+          const fmt = (unit) => parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', [unit]: '2-digit', hour12: false }).format(now), 10);
+          const romeHour   = fmt('hour') % 24;
+          const romeMinute = fmt('minute');
+          const currentMin = romeHour * 60 + romeMinute;
+          const [sH, sM]   = (business.orario_inizio || '08:00').split(':').map(Number);
+          const [eH, eM]   = (business.orario_fine   || '20:00').split(':').map(Number);
+          const startMin   = sH * 60 + sM;
+          const endMin     = eH * 60 + eM;
+          const is24h      = startMin === endMin || (startMin === 0 && endMin >= 1439);
+          const withinTime = is24h || (currentMin >= startMin && currentMin < endMin);
           const giornoCorrente = new Intl.DateTimeFormat('it-IT', { weekday: 'long', timeZone: 'Europe/Rome' }).format(now).toLowerCase();
-          const giorni = (business.giorni_attivi || []);
-          const withinDay = giorni.length === 0 ? true : giorni.includes(giornoCorrente);
+          const giorni     = business.giorni_attivi || [];
+          const withinDay  = giorni.length === 0 || giorni.includes(giornoCorrente);
 
-          console.log('[webhookMeta] Ora Roma:', romeHour + ':' + String(romeMinute).padStart(2,'0'), '| withinHours:', withinHours, '| withinDay:', withinDay, '| is24h:', is24h);
+          console.log('[webhookMeta] Ora Roma:', `${romeHour}:${String(romeMinute).padStart(2,'0')}`, '| withinTime:', withinTime, '| withinDay:', withinDay);
 
-          if ((!withinHours || !withinDay) && business.fuori_orario_attivo && business.messaggio_fuori_orario) {
+          if ((!withinTime || !withinDay) && business.fuori_orario_attivo && business.messaggio_fuori_orario) {
             await sendIGReply(conn, senderId, business.messaggio_fuori_orario);
             await base44.asServiceRole.entities.Message.create({
               business_id: businessId, contact_id: contact.id,
-              canale: 'instagram', ruolo: 'assistant',
-              testo: business.messaggio_fuori_orario, letto: true,
+              canale: 'instagram', ruolo: 'assistant', testo: business.messaggio_fuori_orario, letto: true,
             });
             console.log('[webhookMeta] Messaggio fuori orario inviato');
             return;
           }
 
-          if (!withinHours || !withinDay) {
+          if (!withinTime || !withinDay) {
             console.log('[webhookMeta] Fuori orario — nessuna risposta automatica');
             return;
           }
 
-          // ── Pre-detect urgenze (appuntamento, documento, preventivo) ──
+          // ── Pre-detect urgenze ──
           const urgentKeywords = /appuntament|call|telefonat|videochiamata|zoom|meet|colloquio|incontr|documento|visura|file|attestato|certificato|preventivo|prez(zo|zi)|cost(o|i)|collaborar|lavorare insieme|contratto|accordo|partnership/i;
           if (urgentKeywords.test(text)) {
-            let triggerType = 'appuntamento';
-            if (/documento|visura|file|attestato|certificato/i.test(text)) triggerType = 'documento';
-            else if (/preventivo|prezzo|prezzi|costo|costi/i.test(text)) triggerType = 'preventivo';
-            else if (/collaborar|lavorare insieme|contratto|accordo|partnership/i.test(text)) triggerType = 'collaborazione';
+            let trigger = 'appuntamento';
+            if (/documento|visura|file|attestato|certificato/i.test(text)) trigger = 'documento';
+            else if (/preventivo|prezzo|prezzi|costo|costi/i.test(text)) trigger = 'preventivo';
+            else if (/collaborar|lavorare insieme|contratto|accordo|partnership/i.test(text)) trigger = 'collaborazione';
             try {
               await base44.asServiceRole.entities.UrgentAction.create({
                 business_id: businessId, contact_id: contact.id,
                 contact_nome: contact.nome, contact_canale: 'instagram',
-                trigger: triggerType, messaggio_originale: text.slice(0, 500), stato: 'nuovo',
+                trigger, messaggio_originale: text.slice(0, 500), stato: 'nuovo',
               });
-              console.log('[webhookMeta] UrgentAction creata:', triggerType);
-            } catch(e) { console.log('[webhookMeta] UrgentAction error:', e.message); }
+            } catch (e) { console.log('[webhookMeta] UrgentAction error:', e.message); }
           }
 
           // ── Pre-detect: vuole parlare con persona reale ──
@@ -191,84 +235,67 @@ Deno.serve(async (req) => {
               if (!existing.length) {
                 await base44.asServiceRole.entities.HumanRequest.create({
                   business_id: businessId, contact_id: contact.id,
-                  contact_nome: contact.nome, canale: 'instagram',
-                  motivo: text.slice(0, 200), stato: 'nuovo',
+                  contact_nome: contact.nome, canale: 'instagram', motivo: text.slice(0, 200), stato: 'nuovo',
                 });
-                console.log('[webhookMeta] HumanRequest creata per:', contact.nome);
               }
-            } catch(e) { console.log('[webhookMeta] HumanRequest error:', e.message); }
+            } catch (e) { console.log('[webhookMeta] HumanRequest error:', e.message); }
           }
 
-          // ── Storico conversazione (ultimi 10) ──
-          const recentMessages = await base44.asServiceRole.entities.Message.filter(
+          // ── Storico conversazione (ultimi 10 messaggi) ──
+          const recentMsgs = await base44.asServiceRole.entities.Message.filter(
             { business_id: businessId, contact_id: contact.id }, '-created_date', 10
           );
-          const historyText = recentMessages.reverse()
-            .map(m => `${m.ruolo === 'user' ? 'Cliente' : 'ARIA'}: ${m.testo}`)
-            .join('\n');
-          const isFirstMessage = recentMessages.filter(m => m.ruolo === 'assistant').length === 0;
-          const agentName = business.nome_agente || 'ARIA';
+          const historyText  = recentMsgs.reverse().map(m => `${m.ruolo === 'user' ? 'Cliente' : 'ARIA'}: ${m.testo}`).join('\n');
+          const isFirstMsg   = recentMsgs.filter(m => m.ruolo === 'assistant').length === 0;
+          const agentName    = business.nome_agente || 'ARIA';
 
-          // ── Prompt sistema — stesse regole assolute del WhatsApp ──
+          // ── System prompt ARIA ──
           const systemPrompt = `Sei ${agentName}, assistente di "${business.nome}".
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REGOLE ASSOLUTE — NON DEROGABILI MAI
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. NON confermare MAI appuntamenti, call o incontri senza approvazione esplicita del titolare. Quando ti chiedono un appuntamento/call rispondi SEMPRE e SOLO: "Perfetto! Ho preso nota della tua richiesta e la giro subito al team. Ti ricontatteremo entro breve per confermare data e orario. 😊"
-
-2. NON promettere MAI l'invio di documenti, file, visure, attestati o materiali. Rispondi SEMPRE: "Certamente! Giro la richiesta al team che ti contatterà direttamente. 😊"
-
-3. NON dare MAI date, orari specifici o numeri di telefono del titolare al posto del team.
-
-4. Se non sei SICURA al 100% di un'informazione, NON inventare. Di': "Ottima domanda! La giro al team che ti risponderà con precisione. 😊"
-
-5. Non parlare MAI a nome del titolare in prima persona (no "ti chiamerò io", "ti mando io"). Usa sempre "il team ti contatterà".
-
-6. Se il cliente chiede prezzi di servizi non listati → rimanda al team.
-
-7. Non rivelare MAI dati su collaboratori, disponibilità interna, documenti posseduti dall'azienda.
+1. NON confermare MAI appuntamenti senza approvazione titolare. Rispondi: "Ho preso nota e la giro al team. Ti ricontatteremo per confermare. 😊"
+2. NON promettere MAI l'invio di documenti/file. Rispondi: "Giro la richiesta al team che ti contatterà. 😊"
+3. NON dare MAI date/orari specifici o numeri del titolare.
+4. Se non sei sicura al 100%: "Ottima domanda! La giro al team. 😊"
+5. Usa sempre "il team ti contatterà", mai "io ti chiamerò".
+6. Prezzi di servizi non listati → rimanda al team.
+7. Non rivelare MAI dati interni su collaboratori o documenti.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${business.ai_prompt ? business.ai_prompt + '\n' : ''}
-LINGUA: Rileva in che lingua sta scrivendo il cliente e rispondi SEMPRE nella sua stessa lingua.
+LINGUA: Rispondi nella stessa lingua del cliente.
 
 CONTESTO BUSINESS:
 ${business.settore ? `- Settore: ${business.settore}` : ''}
 ${business.servizi ? `- Servizi: ${business.servizi}` : ''}
-${business.prezzi ? `- Prezzi (condividi SOLO se già listati e il cliente lo chiede): ${business.prezzi}` : ''}
+${business.prezzi ? `- Prezzi (solo se già listati): ${business.prezzi}` : ''}
 ${business.faq ? `- FAQ: ${business.faq}` : ''}
-${business.cose_da_non_fare ? `- Non fare mai: ${business.cose_da_non_fare}` : ''}
+${business.cose_da_non_fare ? `- Non fare: ${business.cose_da_non_fare}` : ''}
 
-COME SEI:
-- Sei un assistente AI del team, non il titolare.
-- Parli in modo naturale, caldo, diretto.
-- Risposte brevi: 1-3 frasi al massimo.
-- Non usi mai frasi come "come posso assisterti?", "non esitare a contattarci".
-${isFirstMessage ? `- È il PRIMO messaggio: presentati brevemente con il tuo nome e sii accogliente. Una frase.` : `- Non ripresentarti. Vai dritto al punto.`}
+STILE: Risposte brevi (1-3 frasi), naturali e caldi. ${isFirstMsg ? 'È il PRIMO messaggio: presentati brevemente.' : 'Non ripresentarti.'}
+SE VUOLE PARLARE CON UNA PERSONA: "Certo! Ho avvisato il team — ti risponderemo presto 😊"`;
 
-COSA NON FAI MAI:
-- Non spingi a vendere, non insisti.
-- Se il cliente dice "no grazie" → risposta cordiale e brevissima. Fine.
-
-RICHIESTA DI PARLARE CON PERSONA REALE:
-- Rispondi: "Certo! Ho avvisato il team — ti risponderemo personalmente appena possibile 😊"`;
-
-          // ── Chiama LLM ──
+          // ── LLM call ──
+          console.log('[webhookMeta] Chiamata LLM per:', contact.nome);
           const llmRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `${systemPrompt}\n\nStorico conversazione:\n${historyText}\n\nCliente: ${text}\n${agentName}:`,
-            model: 'gpt_5_mini',
+            prompt: `${systemPrompt}\n\nStorico:\n${historyText}\n\nCliente: ${text}\n${agentName}:`,
+            model:  'gpt_5_mini',
           });
-
           const replyText = typeof llmRes === 'string' ? llmRes : (llmRes?.text || llmRes?.response || '');
+
           if (!replyText) {
-            console.log('[webhookMeta] LLM non ha generato risposta');
+            console.log('[webhookMeta] ❌ LLM non ha generato risposta');
             return;
           }
 
-          // Invia e salva
+          // ── Invia risposta IG ──
           const sent = await sendIGReply(conn, senderId, replyText);
-          if (!sent) { console.error('[webhookMeta] Invio risposta IG fallito'); return; }
+          if (!sent) {
+            console.error('[webhookMeta] ❌ Invio risposta IG fallito');
+            return;
+          }
 
           await base44.asServiceRole.entities.Message.create({
             business_id: businessId, contact_id: contact.id,
@@ -277,7 +304,7 @@ RICHIESTA DI PARLARE CON PERSONA REALE:
 
           console.log('[webhookMeta] ✅ ARIA ha risposto a:', contact.nome, '|', replyText.slice(0, 80));
         } catch (e) {
-          console.error('[webhookMeta] Errore DM:', e.message);
+          console.error('[webhookMeta] ❌ Errore DM:', e.message);
         }
       })();
     }
@@ -287,32 +314,31 @@ RICHIESTA DI PARLARE CON PERSONA REALE:
       if (change.field !== 'comments') continue;
       const val = change.value || {};
       if (val.parent_id || val.from?.id === entry.id) continue;
-
-      const text = val.text || '';
+      const text     = val.text || '';
       const senderId = val.from?.id || '';
       const senderName = val.from?.name || senderId;
       if (!text) continue;
 
+      console.log('[webhookMeta] Commento ricevuto da:', senderName, '| text:', text.slice(0, 100));
+
       (async () => {
         try {
-          let conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: entry.id });
-          if (!conns.length) conns = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: entry.id });
+          const accountId = entry.id;
+          let conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: accountId });
+          if (!conns.length) conns = await base44.asServiceRole.entities.MetaConnection.filter({ meta_user_id: accountId });
           if (!conns.length) {
             const allConns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_connected: true });
             if (allConns.length === 1) conns = allConns;
           }
           const conn = conns[0];
-          if (!conn) return;
+          if (!conn?.business_id) return;
 
           const businessId = conn.business_id;
-          if (!businessId) return;
-
           let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
-          let contact = contacts[0];
+          let contact  = contacts[0];
           if (!contact) {
             contact = await base44.asServiceRole.entities.Contact.create({
-              business_id: businessId, nome: senderName, numero: senderId,
-              canale: 'instagram', stato: 'lead',
+              business_id: businessId, nome: senderName, numero: senderId, canale: 'instagram', stato: 'lead',
             });
           }
 
@@ -321,7 +347,7 @@ RICHIESTA DI PARLARE CON PERSONA REALE:
             canale: 'instagram', ruolo: 'user', testo: text, letto: false, tipo: 'commento',
           });
 
-          console.log('[webhookMeta] ✅ Commento salvato | Contatto:', senderName);
+          console.log('[webhookMeta] ✅ Commento salvato | contatto:', senderName);
         } catch (e) {
           console.error('[webhookMeta] Errore commento:', e.message);
         }
@@ -332,15 +358,17 @@ RICHIESTA DI PARLARE CON PERSONA REALE:
   return Response.json({ ok: true });
 });
 
-// ── Helper: invia messaggio via Instagram Messaging API ──
+// ── Helper: invia DM via Instagram Messaging API ──
 async function sendIGReply(conn, recipientId, text) {
-  const token = conn.access_token || conn.fb_page_token;
+  const token       = conn.access_token;
   const igAccountId = conn.ig_account_id;
 
   if (!token || !igAccountId) {
-    console.error('[sendIGReply] Token o account ID mancante');
+    console.error('[sendIGReply] ❌ Token o ig_account_id mancante | token:', !!token, '| igAccountId:', igAccountId);
     return false;
   }
+
+  console.log('[sendIGReply] Invio a:', recipientId, '| via account:', igAccountId);
 
   try {
     const res = await fetch(`https://graph.instagram.com/v21.0/${igAccountId}/messages`, {
@@ -351,18 +379,18 @@ async function sendIGReply(conn, recipientId, text) {
       },
       body: JSON.stringify({
         recipient: { id: recipientId },
-        message: { text },
+        message:   { text },
       }),
     });
     const data = await res.json();
     if (data.error) {
-      console.error('[sendIGReply] Errore API:', JSON.stringify(data.error));
+      console.error('[sendIGReply] ❌ Errore API Meta:', JSON.stringify(data.error));
       return false;
     }
-    console.log('[sendIGReply] ✅ Messaggio inviato:', data.message_id);
+    console.log('[sendIGReply] ✅ Messaggio inviato | message_id:', data.message_id);
     return true;
   } catch (e) {
-    console.error('[sendIGReply] Eccezione:', e.message);
+    console.error('[sendIGReply] ❌ Eccezione:', e.message);
     return false;
   }
 }

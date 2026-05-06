@@ -8,15 +8,15 @@
     },
     "access_token": {
       "type": "string",
-      "description": "Meta long-lived access token"
+      "description": "Instagram long-lived access token"
     },
     "meta_user_id": {
       "type": "string",
-      "description": "Meta user ID"
+      "description": "Instagram user ID (ig_account_id)"
     },
     "meta_user_name": {
       "type": "string",
-      "description": "Meta user display name"
+      "description": "Instagram username"
     },
     "status": {
       "type": "string",
@@ -31,6 +31,10 @@
       "type": "string",
       "format": "date-time"
     },
+    "granted_scopes": {
+      "type": "string",
+      "description": "Scopes concessi dall'utente (comma-separated)"
+    },
     "fb_connected": {
       "type": "boolean",
       "default": false
@@ -43,17 +47,19 @@
     },
     "fb_page_token": {
       "type": "string",
-      "description": "Page-level access token per Facebook"
+      "description": "Page-level token (solo flusso Facebook, non usato in Instagram Business Login)"
     },
     "ig_connected": {
       "type": "boolean",
       "default": false
     },
     "ig_account_id": {
-      "type": "string"
+      "type": "string",
+      "description": "Instagram Business/Creator account ID"
     },
     "ig_account_name": {
-      "type": "string"
+      "type": "string",
+      "description": "Instagram username (@handle)"
     },
     "ig_profile_picture_url": {
       "type": "string",
