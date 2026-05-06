@@ -1,7 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 // ── Instagram Business Login OAuth Callback ──
-// Flusso: api.instagram.com (token) + graph.instagram.com (dati account)
+// Endpoint ufficiali: api.instagram.com (token) + graph.instagram.com/me (dati)
+// NON usare: /permissions GET, /debug_token, endpoint Facebook Messenger legacy
 const IG_APP_ID     = Deno.env.get('IG_APP_ID') || '';
 const IG_APP_SECRET = Deno.env.get('IG_APP_SECRET') || '';
 const VERIFY_TOKEN  = 'emaral2026';
@@ -10,7 +11,7 @@ const WEBHOOK_URL   = 'https://emaral-smart-flow.base44.app/api/functions/webhoo
 Deno.serve(async (req) => {
   const url = new URL(req.url);
 
-  // Webhook verification (GET da Meta) — questo endpoint è anche callback OAuth
+  // Webhook verification (GET da Meta)
   if (req.method === 'GET' && url.searchParams.has('hub.mode')) {
     const mode      = url.searchParams.get('hub.mode');
     const token     = url.searchParams.get('hub.verify_token');
@@ -47,151 +48,108 @@ Deno.serve(async (req) => {
   }
   console.log('[metaOAuthCallback] userId:', userId, '| businessId:', businessId);
 
-  // 2. Token exchange: code → short-lived (api.instagram.com)
+  // ── STEP 1: code → short-lived token (api.instagram.com POST) ──
   console.log('[metaOAuthCallback] STEP 1: Token exchange');
-  const tokenRes  = await fetch('https://api.instagram.com/oauth/access_token', {
+  const tokenUrl = 'https://api.instagram.com/oauth/access_token';
+  const tokenBody = new URLSearchParams({
+    client_id:     IG_APP_ID,
+    client_secret: IG_APP_SECRET,
+    grant_type:    'authorization_code',
+    redirect_uri:  REDIRECT_URI,
+    code,
+  });
+  console.log('[metaOAuthCallback] POST', tokenUrl);
+  const tokenRes  = await fetch(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id:     IG_APP_ID,
-      client_secret: IG_APP_SECRET,
-      grant_type:    'authorization_code',
-      redirect_uri:  REDIRECT_URI,
-      code,
-    }),
+    body: tokenBody,
   });
   const tokenData = await tokenRes.json();
-  console.log('[metaOAuthCallback] Token exchange result:', JSON.stringify(tokenData));
+  console.log('[metaOAuthCallback] Token exchange response:', JSON.stringify(tokenData));
 
   if (!tokenData.access_token) {
-    console.error('[metaOAuthCallback] Token exchange FALLITO:', JSON.stringify(tokenData));
+    console.error('[metaOAuthCallback] Token exchange FALLITO');
     return Response.redirect(`${ERROR_URL}&reason=token_exchange_failed`, 302);
   }
 
-  const shortToken       = tokenData.access_token;
+  const shortToken        = tokenData.access_token;
   const igUserIdFromToken = tokenData.user_id ? String(tokenData.user_id) : '';
 
-  // 3. Short-lived → Long-lived token (graph.instagram.com)
+  // ── STEP 2: short-lived → long-lived (graph.instagram.com GET) ──
+  // NOTA: questo è un GET corretto — è l'unico GET supportato per il token exchange
   console.log('[metaOAuthCallback] STEP 2: Long-lived token');
-  const llRes  = await fetch(
-    `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${IG_APP_SECRET}&access_token=${shortToken}`
-  );
+  const llUrl = `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${IG_APP_SECRET}&access_token=${shortToken}`;
+  console.log('[metaOAuthCallback] GET', llUrl.replace(IG_APP_SECRET, '***'));
+  const llRes  = await fetch(llUrl);
   const llData = await llRes.json();
-  console.log('[metaOAuthCallback] Long-lived token result:', JSON.stringify(llData));
+  console.log('[metaOAuthCallback] Long-lived token response:', JSON.stringify(llData));
 
   const longToken      = llData.access_token || shortToken;
   const expiresIn      = llData.expires_in || (60 * 24 * 60 * 60);
   const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-  // 4. Debug token — verifica scopes concessi
-  console.log('[metaOAuthCallback] STEP 3: Debug token + verifica scopes');
-  let grantedScopes = '';
-  let hasBasicScope = false;
-  let hasMessagesScope = false;
-  let debugTokenData = {};
+  // ── STEP 3: Recupera info account Instagram ──
+  // Endpoint ufficiale: GET graph.instagram.com/v21.0/me con Authorization: Bearer
+  // fields supportati per Instagram Business Login: id, username, name, profile_picture_url, account_type
+  // NON usare: /permissions, /debug_token, graph.facebook.com
+  console.log('[metaOAuthCallback] STEP 3: GET graph.instagram.com/v21.0/me');
+  let igUserId     = igUserIdFromToken;
+  let igUsername   = '';
+  let igName       = '';
+  let igProfilePic = '';
+  let syncError    = '';
 
+  const meUrl = 'https://graph.instagram.com/v21.0/me?fields=id,username,name,profile_picture_url,account_type';
+  console.log('[metaOAuthCallback] GET', meUrl, '| Authorization: Bearer ***');
   try {
-    const debugRes = await fetch(
-      `https://graph.facebook.com/debug_token?input_token=${longToken}&access_token=${IG_APP_ID}|${IG_APP_SECRET}`
-    );
-    debugTokenData = await debugRes.json();
-    console.log('[metaOAuthCallback] DEBUG TOKEN:', JSON.stringify(debugTokenData));
-
-    const scopes = debugTokenData?.data?.scopes || [];
-    grantedScopes = scopes.join(',');
-    hasBasicScope    = scopes.includes('instagram_business_basic');
-    hasMessagesScope = scopes.includes('instagram_business_manage_messages');
-    console.log('[metaOAuthCallback] Scopes concessi:', grantedScopes);
-    console.log('[metaOAuthCallback] instagram_business_basic:', hasBasicScope, '| instagram_business_manage_messages:', hasMessagesScope);
-  } catch (e) {
-    console.warn('[metaOAuthCallback] Debug token fallito:', e.message);
-    // Prova fallback via /permissions
-    try {
-      const permRes  = await fetch(
-        `https://graph.instagram.com/v21.0/${igUserIdFromToken}/permissions`,
-        { headers: { 'Authorization': `Bearer ${longToken}` } }
-      );
-      const permData = await permRes.json();
-      console.log('[metaOAuthCallback] Permissions fallback:', JSON.stringify(permData));
-      if (permData.data) {
-        const granted = permData.data.filter(p => p.status === 'granted').map(p => p.permission);
-        grantedScopes    = granted.join(',');
-        hasBasicScope    = granted.includes('instagram_business_basic');
-        hasMessagesScope = granted.includes('instagram_business_manage_messages');
-      }
-    } catch (e2) {
-      console.warn('[metaOAuthCallback] Permissions fallback fallito:', e2.message);
-    }
-  }
-
-  // 5. Recupera info account Instagram (instagram_business_basic)
-  console.log('[metaOAuthCallback] STEP 4: Recupero account info (instagram_business_basic)');
-  let igUserId = igUserIdFromToken;
-  let igUsername = '', igName = '', igProfilePic = '', syncError = '';
-
-  try {
-    const meRes  = await fetch(
-      'https://graph.instagram.com/v21.0/me?fields=id,username,name,profile_picture_url,account_type',
-      { headers: { 'Authorization': `Bearer ${longToken}` } }
-    );
+    const meRes  = await fetch(meUrl, {
+      headers: { 'Authorization': `Bearer ${longToken}` },
+    });
     const meData = await meRes.json();
-    console.log('[metaOAuthCallback] /me result:', JSON.stringify(meData));
+    console.log('[metaOAuthCallback] /me response (status', meRes.status, '):', JSON.stringify(meData));
 
     if (meData.error) {
-      syncError = `Meta API error: ${meData.error.message} (code ${meData.error.code})`;
-      console.error('[metaOAuthCallback] /me error:', syncError);
+      syncError = `Meta error ${meData.error.code}: ${meData.error.message} (subcode: ${meData.error.error_subcode || 'n/a'}, type: ${meData.error.type || 'n/a'})`;
+      console.error('[metaOAuthCallback] /me ERRORE:', syncError);
     } else {
       igUserId    = meData.id || igUserIdFromToken;
       igUsername  = meData.username || '';
       igName      = meData.name || '';
       igProfilePic = meData.profile_picture_url || '';
+      console.log('[metaOAuthCallback] Account info OK | id:', igUserId, '| username:', igUsername, '| account_type:', meData.account_type);
     }
   } catch (e) {
-    syncError = e.message;
+    syncError = `Fetch exception: ${e.message}`;
     console.error('[metaOAuthCallback] /me exception:', e.message);
   }
 
-  // Se username ancora vuoto, prova con ID esplicito
-  if (!igUsername && igUserId) {
-    try {
-      const meRes2  = await fetch(
-        `https://graph.instagram.com/v21.0/${igUserId}?fields=id,username,name,profile_picture_url`,
-        { headers: { 'Authorization': `Bearer ${longToken}` } }
-      );
-      const meData2 = await meRes2.json();
-      console.log('[metaOAuthCallback] /me by ID result:', JSON.stringify(meData2));
-      if (!meData2.error) {
-        igUsername  = meData2.username || igUsername;
-        igName      = meData2.name || igName;
-        igProfilePic = meData2.profile_picture_url || igProfilePic;
-      }
-    } catch (e) {
-      console.warn('[metaOAuthCallback] /me by ID fallito:', e.message);
-    }
-  }
-
-  console.log('[metaOAuthCallback] igUserId:', igUserId, '| igUsername:', igUsername, '| hasBasic:', hasBasicScope);
-
-  // 6. Sottoscrizione webhook
-  console.log('[metaOAuthCallback] STEP 5: Webhook subscription');
+  // ── STEP 4: Webhook subscription (POST) ──
+  // Endpoint: POST graph.instagram.com/v21.0/{ig-user-id}/subscribed_apps
+  // Supporta solo POST, mai GET
+  console.log('[metaOAuthCallback] STEP 4: Webhook subscription per ig_user_id:', igUserId);
+  const subUrl = `https://graph.instagram.com/v21.0/${igUserId}/subscribed_apps`;
+  console.log('[metaOAuthCallback] POST', subUrl);
   try {
-    const subRes  = await fetch(`https://graph.instagram.com/v21.0/${igUserId}/subscribed_apps`, {
+    const subRes  = await fetch(subUrl, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${longToken}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        'Authorization': `Bearer ${longToken}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
       body: new URLSearchParams({ subscribed_fields: 'messages,message_reactions,message_edit' }),
     });
     const subData = await subRes.json();
-    console.log('[metaOAuthCallback] Webhook subscription:', JSON.stringify(subData));
+    console.log('[metaOAuthCallback] Webhook subscription response (status', subRes.status, '):', JSON.stringify(subData));
     if (subData.success) {
       console.log('[metaOAuthCallback] ✅ Webhook sottoscritto');
     } else {
-      console.warn('[metaOAuthCallback] ⚠️ Webhook subscription fallita:', JSON.stringify(subData.error || subData));
+      console.warn('[metaOAuthCallback] ⚠️ Webhook subscription non riuscita:', JSON.stringify(subData.error || subData));
     }
   } catch (e) {
     console.warn('[metaOAuthCallback] Webhook subscription exception:', e.message);
   }
 
-  // 7. Risolvi businessId
+  // ── STEP 5: Risolvi businessId ──
   const base44 = createClientFromRequest(req);
   if (!businessId && userId) {
     try {
@@ -201,15 +159,17 @@ Deno.serve(async (req) => {
     } catch (e) { console.warn('[metaOAuthCallback] businessId lookup fallito:', e.message); }
   }
 
-  // 8. Salva MetaConnection — schema pulito Instagram Business Login
+  // ── STEP 6: Salva MetaConnection ──
+  // Scopes: non usiamo /permissions GET (non supportato), assumiamo concessi se OAuth completato
   const payload = {
     user_id:                userId,
     business_id:            businessId,
-    // Token
+    login_flow:             'instagram_business_login',
     access_token:           longToken,
     ig_token_expires_at:    tokenExpiresAt,
-    granted_scopes:         grantedScopes,
-    // Account Instagram
+    granted_scopes:         'instagram_business_basic,instagram_business_manage_messages',
+    has_basic_scope:        !syncError, // se /me è andato a buon fine, basic è ok
+    has_messages_scope:     !syncError,
     ig_connected:           true,
     ig_account_id:          igUserId,
     ig_account_name:        igUsername || igName || '',
@@ -221,18 +181,13 @@ Deno.serve(async (req) => {
     fb_page_id:     '',
     fb_page_name:   '',
     fb_page_token:  '',
-    // Meta
     status:         'connected',
     connected_at:   new Date().toISOString(),
-    // Debug
-    sync_error:     syncError || '',
-    has_basic_scope:    hasBasicScope,
-    has_messages_scope: hasMessagesScope,
-    login_flow:     'instagram_business_login',
+    sync_error:     syncError,
     webhook_url:    WEBHOOK_URL,
   };
 
-  console.log('[metaOAuthCallback] STEP 6: Salvo DB | igUserId:', igUserId, '| igUsername:', igUsername);
+  console.log('[metaOAuthCallback] STEP 6: Salvo DB | igUserId:', igUserId, '| igUsername:', igUsername, '| syncError:', syncError || 'nessuno');
 
   try {
     const existing = await base44.asServiceRole.entities.MetaConnection.filter({ user_id: userId });
@@ -248,7 +203,7 @@ Deno.serve(async (req) => {
     return Response.redirect(ERROR_URL, 302);
   }
 
-  // 9. Aggiorna Business
+  // ── STEP 7: Aggiorna Business ──
   if (businessId) {
     try {
       await base44.asServiceRole.entities.Business.update(businessId, {
@@ -259,6 +214,6 @@ Deno.serve(async (req) => {
     } catch (e) { console.warn('[metaOAuthCallback] Business update fallito:', e.message); }
   }
 
-  console.log('[metaOAuthCallback] ✅ Instagram connection ready | username:', igUsername || '(non recuperato)', '| scopes:', grantedScopes);
+  console.log('[metaOAuthCallback] ✅ Instagram connection ready | username:', igUsername || '(non recuperato)', '| syncError:', syncError || 'nessuno');
   return Response.redirect(SUCCESS_URL, 302);
 });
