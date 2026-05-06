@@ -15,6 +15,30 @@ function sanitizeTime(v) {
   return TIME_RE.test(t) ? t : null;
 }
 
+async function sendWAMessage(phoneNumberId, toNumber, text) {
+  const token = Deno.env.get('WHATSAPP_BUSINESS_TOKEN');
+  if (!token || !phoneNumberId || !toNumber) return { ok: false, error: 'missing_params' };
+  try {
+    const res = await fetch(`https://graph.instagram.com/v21.0/${phoneNumberId}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: toNumber,
+        type: 'text',
+        text: { body: text },
+      }),
+    });
+    const data = await res.json();
+    if (data.error) { console.error('[confirmAppointment] WA send error:', JSON.stringify(data.error)); return { ok: false }; }
+    return { ok: true };
+  } catch (e) {
+    console.error('[confirmAppointment] WA send exception:', e.message);
+    return { ok: false };
+  }
+}
+
 async function sendIGMessage(conn, recipientId, text) {
   if (!conn?.access_token || !conn?.ig_account_id || !recipientId) return { ok: false, error: 'missing_params' };
   try {
@@ -55,7 +79,7 @@ Deno.serve(async (req) => {
   if (!apt) return Response.json({ error: 'Appointment not found' }, { status: 404 });
   if (!apt.business_id) return Response.json({ error: 'Appointment has no business_id' }, { status: 422 });
 
-  // Fetch related entities (non-blocking failures)
+  // Fetch related entities
   const [contact, business, connections] = await Promise.all([
     apt.contact_id ? base44.asServiceRole.entities.Contact.get(apt.contact_id).catch(() => null) : Promise.resolve(null),
     base44.asServiceRole.entities.Business.get(apt.business_id).catch(() => null),
@@ -63,6 +87,33 @@ Deno.serve(async (req) => {
   ]);
 
   const conn = (connections || []).find(c => c?.ig_connected && c?.ig_account_id) || (connections || [])[0] || null;
+  const canale = contact?.canale || apt.canale_origine || 'instagram';
+
+  // Helper: invia messaggio sul canale giusto e salva in DB
+  async function sendAndSave(text) {
+    if (!contact?.numero) return;
+    let sent = false;
+    if (canale === 'whatsapp') {
+      // Cerca il phoneNumberId dalla MetaConnection o dal business
+      const phoneNumberId = conn?.fb_page_id || business?.wa_number || null;
+      if (phoneNumberId) {
+        const res = await sendWAMessage(phoneNumberId, contact.numero, text);
+        sent = res.ok;
+      }
+    } else {
+      // Instagram
+      if (conn?.access_token && conn?.ig_account_id) {
+        const res = await sendIGMessage(conn, contact.numero, text);
+        sent = res.ok;
+      }
+    }
+    // Salva il messaggio in DB comunque (anche se invio fallito, per storico)
+    await base44.asServiceRole.entities.Message.create({
+      business_id: apt.business_id, contact_id: contact.id,
+      canale, ruolo: 'assistant', testo: text, letto: true,
+    }).catch(e => console.warn('[confirmAppointment] Message save failed:', e.message));
+    console.log(`[confirmAppointment] Notification sent=${sent} via ${canale} to ${contact.numero}`);
+  }
 
   if (action === 'confirm') {
     const safeData = sanitizeDate(data);
@@ -75,25 +126,16 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.Appointment.update(appointmentId, updates);
     console.log(`[confirmAppointment] Confirmed apt:${appointmentId} | date:${safeData} time:${safeOra}`);
 
-    // Send IG confirmation DM — non-blocking
-    if (conn?.access_token && conn?.ig_account_id && contact?.numero) {
-      const businessName = business?.nome || '';
-      const dateStr = safeData ? (() => {
-        try {
-          const [y, m, d] = safeData.split('-').map(Number);
-          return new Date(y, m - 1, d).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-        } catch { return safeData; }
-      })() : (apt.note?.includes('Data richiesta:') ? 'data da concordare' : 'data da definire');
+    const businessName = business?.nome || '';
+    const dateStr = safeData ? (() => {
+      try {
+        const [y, m, d] = safeData.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+      } catch { return safeData; }
+    })() : 'data da concordare';
 
-      const confirmText = `✅ Ottimo, il tuo appuntamento è confermato!\n\n📅 ${dateStr}${safeOra ? ` alle ${safeOra}` : ''}\n\nTi aspettiamo da ${businessName}. Se hai bisogno di cambiare o annullare, scrivici qui. A presto! 👋`;
-      const sendResult = await sendIGMessage(conn, contact.numero, confirmText);
-      if (sendResult.ok && contact?.id) {
-        await base44.asServiceRole.entities.Message.create({
-          business_id: apt.business_id, contact_id: contact.id,
-          canale: 'instagram', ruolo: 'assistant', testo: confirmText, letto: true,
-        }).catch(e => console.warn('[confirmAppointment] Message save failed:', e.message));
-      }
-    }
+    const confirmText = `✅ Il tuo appuntamento è confermato!\n\n📅 ${dateStr}${safeOra ? ` alle ${safeOra}` : ''}\n\nTi aspettiamo da ${businessName}. Per modifiche o cancellazioni, scrivici qui. A presto! 👋`;
+    await sendAndSave(confirmText);
 
     return Response.json({ ok: true, action: 'confirmed' });
   }
@@ -102,16 +144,8 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.Appointment.update(appointmentId, { stato: 'annullato' });
     console.log(`[confirmAppointment] Rejected apt:${appointmentId}`);
 
-    if (conn?.access_token && conn?.ig_account_id && contact?.numero) {
-      const rejectText = `Ciao! Purtroppo non siamo disponibili per la data richiesta. Se vuoi, puoi proporci un'altra data e faremo del nostro meglio per accontentarti. Grazie e a presto! 🙏`;
-      const sendResult = await sendIGMessage(conn, contact.numero, rejectText);
-      if (sendResult.ok && contact?.id) {
-        await base44.asServiceRole.entities.Message.create({
-          business_id: apt.business_id, contact_id: contact.id,
-          canale: 'instagram', ruolo: 'assistant', testo: rejectText, letto: true,
-        }).catch(e => console.warn('[confirmAppointment] Message save failed:', e.message));
-      }
-    }
+    const rejectText = `Ciao! Purtroppo non siamo disponibili per la data richiesta. Se vuoi, proponci un'altra data e faremo del nostro meglio per accontentarti. Grazie e a presto! 🙏`;
+    await sendAndSave(rejectText);
 
     return Response.json({ ok: true, action: 'rejected' });
   }
