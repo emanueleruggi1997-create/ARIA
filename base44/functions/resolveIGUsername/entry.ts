@@ -1,15 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-// Recupera e aggiorna username Instagram per la connessione dell'utente corrente
-// Usa solo GET graph.instagram.com/v21.0/me con Authorization: Bearer
+// Recupera username Instagram per la connessione dell'utente corrente.
+// Instagram Business Login (api.instagram.com) token:
+//   - CORRETTO: GET graph.instagram.com/v25.0/{id}?fields=...&access_token={TOKEN}
+//   - SBAGLIATO: Authorization: Bearer header → errore 100
+//   - SBAGLIATO: /me → non supportato
+//   - SBAGLIATO: /subscribed_apps, /messages, /conversations → non supportati
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
   const user = await base44.auth.me();
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Trova connessione dell'utente
+  // Trova connessione
   let conns = [];
-  const allBiz    = await base44.asServiceRole.entities.Business.filter({});
+  const allBiz = await base44.asServiceRole.entities.Business.filter({});
   const myBusiness = allBiz.find(b => b.created_by === user.email || b.created_by === user.id);
   if (myBusiness) {
     conns = await base44.asServiceRole.entities.MetaConnection.filter({ business_id: myBusiness.id });
@@ -18,28 +22,29 @@ Deno.serve(async (req) => {
     conns = await base44.asServiceRole.entities.MetaConnection.filter({ user_id: user.id });
   }
 
-  console.log('[resolveIGUsername] user.id:', user.id, '| business:', myBusiness?.id, '| conns:', conns.length);
+  console.log('[resolveIGUsername] user.id:', user.id, '| business:', myBusiness?.id, '| conns found:', conns.length);
   if (!conns.length) return Response.json({ error: 'Nessuna connessione trovata' }, { status: 404 });
 
   const conn = conns[0];
   if (!conn.access_token) return Response.json({ error: 'Token mancante' }, { status: 400 });
   if (!conn.ig_account_id) return Response.json({ error: 'ig_account_id mancante — riconnetti Instagram' }, { status: 400 });
 
-  // Con Instagram Business Login (api.instagram.com), /me in GET NON è supportato.
-  // Usare GET graph.instagram.com/v21.0/{user_id} con l'ID numerico dell'account.
-  const userUrl = `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,username,name,profile_picture_url,account_type`;
-  console.log('[resolveIGUsername] GET', userUrl);
+  // ✅ UNICA chiamata corretta per Instagram Business Login:
+  // GET https://graph.instagram.com/v25.0/{id}?fields=id,username,account_type&access_token={TOKEN}
+  // NON usare: /me | /subscribed_apps | /messages | /conversations | Authorization: Bearer header
+  const userUrl = `https://graph.instagram.com/v25.0/${conn.ig_account_id}?fields=id,username,name,profile_picture_url,account_type&access_token=${conn.access_token}`;
+  const logUrl  = `https://graph.instagram.com/v25.0/${conn.ig_account_id}?fields=id,username,name,profile_picture_url,account_type&access_token=***`;
+  console.log('[resolveIGUsername] METHOD: GET');
+  console.log('[resolveIGUsername] URL:', logUrl);
 
-  const meRes  = await fetch(userUrl, {
-    headers: { 'Authorization': `Bearer ${conn.access_token}` },
-  });
+  const meRes  = await fetch(userUrl, { method: 'GET' });
   const meData = await meRes.json();
-  console.log('[resolveIGUsername] /{user_id} response (status', meRes.status, '):', JSON.stringify(meData));
+  console.log('[resolveIGUsername] HTTP status:', meRes.status);
+  console.log('[resolveIGUsername] Response:', JSON.stringify(meData));
 
   if (meData.error) {
     const errMsg = `Meta error ${meData.error.code}: ${meData.error.message}`;
-    console.error('[resolveIGUsername] Errore:', errMsg);
-    // Aggiorna sync_error nel DB
+    console.error('[resolveIGUsername] ❌ Errore API:', errMsg);
     await base44.asServiceRole.entities.MetaConnection.update(conn.id, { sync_error: errMsg });
     return Response.json({ success: false, message: errMsg });
   }
@@ -54,9 +59,8 @@ Deno.serve(async (req) => {
     return Response.json({ success: false, message: 'Username e nome non disponibili nella risposta Meta' });
   }
 
-  console.log('[resolveIGUsername] ✅ Risolto → username:', resolvedUsername, '| name:', resolvedName);
+  console.log('[resolveIGUsername] ✅ Risolto → username:', resolvedUsername, '| name:', resolvedName, '| account_type:', meData.account_type);
 
-  // Aggiorna DB
   await base44.asServiceRole.entities.MetaConnection.update(conn.id, {
     ig_account_id:          resolvedId,
     ig_account_name:        displayName,
@@ -65,12 +69,11 @@ Deno.serve(async (req) => {
     ig_profile_picture_url: resolvedPic,
     sync_error:             '',
     has_basic_scope:        true,
+    has_messages_scope:     true,
   });
 
   if (conn.business_id) {
-    await base44.asServiceRole.entities.Business.update(conn.business_id, {
-      ig_username: displayName,
-    });
+    await base44.asServiceRole.entities.Business.update(conn.business_id, { ig_username: displayName });
   }
 
   return Response.json({
