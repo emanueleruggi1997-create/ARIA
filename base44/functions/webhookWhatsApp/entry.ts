@@ -67,23 +67,38 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
 
   // Check operating hours
   const nowRome = new Date();
-  const romeHour = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', hour12: false }).format(nowRome), 10) % 24;
-  const romeMinute = parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', minute: '2-digit' }).format(nowRome), 10);
-  const currentMinutes = romeHour * 60 + romeMinute;
+  const romeDateStr = new Intl.DateTimeFormat('it-IT', {
+    timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(nowRome);
+  const [romeHour, romeMinute] = romeDateStr.split(':').map(n => parseInt(n, 10));
+  const currentMinutes = (romeHour % 24) * 60 + romeMinute;
 
   const [startH, startM] = (business.orario_inizio || '08:00').split(':').map(Number);
   const startMinutes = startH * 60 + startM;
   const [endH, endM] = (business.orario_fine || '20:00').split(':').map(Number);
   const endMinutes = endH * 60 + endM;
 
-  // is24h: 00:00–23:59, 00:00–00:00, o orario_inizio === orario_fine (tutto il giorno)
+  // is24h: start==end (00:00-00:00) oppure copre tutta la giornata (00:00-23:59)
   const is24h = startMinutes === endMinutes || (startMinutes === 0 && endMinutes >= 1439);
   const withinHours = is24h || (currentMinutes >= startMinutes && currentMinutes < endMinutes);
-  console.log(`[webhookWA] Orari: ${business.orario_inizio}–${business.orario_fine} | ora Roma: ${romeHour}:${String(romeMinute).padStart(2,'0')} | currentMin=${currentMinutes} startMin=${startMinutes} endMin=${endMinutes} | is24h=${is24h} withinHours=${withinHours} fuori_orario_attivo=${business.fuori_orario_attivo}`);
 
-  if (!withinHours && business.fuori_orario_attivo) {
-    console.log('[webhookWA] Outside operating hours, sending out-of-hours message');
+  // Giorno: confronta abbreviazioni ('lun','mar',...) con nome lungo localizzato
+  const giornoLungoWA = new Intl.DateTimeFormat('it-IT', { weekday: 'long', timeZone: 'Europe/Rome' }).format(nowRome).toLowerCase();
+  const abbrMapWA = { 'lunedì': 'lun', 'martedì': 'mar', 'mercoledì': 'mer', 'giovedì': 'gio', 'venerdì': 'ven', 'sabato': 'sab', 'domenica': 'dom' };
+  const giornoAbbrWA = abbrMapWA[giornoLungoWA] || giornoLungoWA.slice(0, 3);
+  const giorniWA = business.giorni_attivi || [];
+  const withinDayWA = giorniWA.length === 0 || giorniWA.includes(giornoAbbrWA) || giorniWA.includes(giornoLungoWA);
+
+  console.log(`[webhookWA] ⏰ ORA ROME: ${romeHour}:${String(romeMinute).padStart(2,'0')} | orario: ${business.orario_inizio}–${business.orario_fine} (${startMinutes}-${endMinutes}) | is24h=${is24h} withinHours=${withinHours} | giorno="${giornoLungoWA}"→"${giornoAbbrWA}" giorni_attivi=${JSON.stringify(giorniWA)} withinDay=${withinDayWA} | fuori_orario_attivo=${business.fuori_orario_attivo}`);
+
+  const outsideHours = !withinHours || !withinDayWA;
+  if (outsideHours && business.fuori_orario_attivo) {
+    console.log(`[webhookWA] Fuori orario — withinHours=${withinHours} withinDay=${withinDayWA} → invio messaggio fuori orario`);
     await sendWhatsAppMessage(phoneNumberId, fromNumber, business.messaggio_fuori_orario || 'Siamo fuori orario. Ti risponderemo non appena possibile!');
+    return;
+  }
+  if (outsideHours && !business.fuori_orario_attivo) {
+    console.log(`[webhookWA] Fuori orario ma fuori_orario_attivo=false → nessuna risposta`);
     return;
   }
 

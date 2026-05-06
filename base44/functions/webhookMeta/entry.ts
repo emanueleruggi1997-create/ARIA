@@ -159,19 +159,33 @@ Deno.serve(async (req) => {
           }
 
           // ── Controllo orario ──
-          const now     = new Date();
-          const fmtTime = (unit) => parseInt(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', [unit]: '2-digit', hour12: false }).format(now), 10);
-          const rH = fmtTime('hour') % 24;
-          const rM = fmtTime('minute');
-          const cur = rH * 60 + rM;
+          const now = new Date();
+
+          // Ora locale Rome
+          const romeDateStr = new Intl.DateTimeFormat('it-IT', {
+            timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hour12: false,
+          }).format(now);
+          const [rH, rM] = romeDateStr.split(':').map(n => parseInt(n, 10));
+          const cur = (rH % 24) * 60 + rM;
+
           const [sH, sM] = (business.orario_inizio || '08:00').split(':').map(Number);
           const [eH, eM] = (business.orario_fine   || '20:00').split(':').map(Number);
-          const sMin = sH * 60 + sM, eMin = eH * 60 + eM;
-          const is24h      = sMin === eMin || (sMin === 0 && eMin >= 1439);
+          const sMin = sH * 60 + sM;
+          const eMin = eH * 60 + eM;
+
+          // 24/7: start==end (es. 00:00-00:00) OPPURE copre tutta la giornata (00:00-23:59)
+          const is24h = sMin === eMin || (sMin === 0 && eMin >= 1439);
           const withinTime = is24h || (cur >= sMin && cur < eMin);
-          const giornoAtt  = new Intl.DateTimeFormat('it-IT', { weekday: 'long', timeZone: 'Europe/Rome' }).format(now).toLowerCase();
-          const giorni     = business.giorni_attivi || [];
-          const withinDay  = giorni.length === 0 || giorni.includes(giornoAtt);
+
+          // Giorno: confronta abbreviazioni ('lun','mar',...) con il nome lungo localizzato
+          const giornoLungo = new Intl.DateTimeFormat('it-IT', { weekday: 'long', timeZone: 'Europe/Rome' }).format(now).toLowerCase();
+          // Mappa nomi lunghi → abbreviazioni usate in giorni_attivi
+          const abbrMap = { 'lunedì': 'lun', 'martedì': 'mar', 'mercoledì': 'mer', 'giovedì': 'gio', 'venerdì': 'ven', 'sabato': 'sab', 'domenica': 'dom' };
+          const giornoAbbr = abbrMap[giornoLungo] || giornoLungo.slice(0, 3);
+          const giorni = business.giorni_attivi || [];
+          const withinDay = giorni.length === 0 || giorni.includes(giornoAbbr) || giorni.includes(giornoLungo);
+
+          console.log(`[webhookMeta] ⏰ ORA ROME: ${rH}:${String(rM).padStart(2,'0')} (cur=${cur}) | orario: ${business.orario_inizio}-${business.orario_fine} (${sMin}-${eMin}) | is24h=${is24h} withinTime=${withinTime} | giorno="${giornoLungo}"→"${giornoAbbr}" giorni_attivi=${JSON.stringify(giorni)} withinDay=${withinDay} | fuori_orario_attivo=${business.fuori_orario_attivo}`);
 
           if ((!withinTime || !withinDay) && business.fuori_orario_attivo && business.messaggio_fuori_orario) {
             await sendIGReply(conn, senderId, business.messaggio_fuori_orario);
