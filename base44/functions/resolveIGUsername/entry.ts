@@ -23,17 +23,18 @@ Deno.serve(async (req) => {
 
   const conn = conns[0];
   if (!conn.access_token) return Response.json({ error: 'Token mancante' }, { status: 400 });
+  if (!conn.ig_account_id) return Response.json({ error: 'ig_account_id mancante — riconnetti Instagram' }, { status: 400 });
 
-  // GET graph.instagram.com/v21.0/me — unico endpoint corretto per Instagram Business Login
-  // NON usare /permissions, /debug_token, o graph.facebook.com
-  const meUrl = 'https://graph.instagram.com/v21.0/me?fields=id,username,name,profile_picture_url,account_type';
-  console.log('[resolveIGUsername] GET', meUrl);
+  // Con Instagram Business Login (api.instagram.com), /me in GET NON è supportato.
+  // Usare GET graph.instagram.com/v21.0/{user_id} con l'ID numerico dell'account.
+  const userUrl = `https://graph.instagram.com/v21.0/${conn.ig_account_id}?fields=id,username,name,profile_picture_url,account_type`;
+  console.log('[resolveIGUsername] GET', userUrl);
 
-  const meRes  = await fetch(meUrl, {
+  const meRes  = await fetch(userUrl, {
     headers: { 'Authorization': `Bearer ${conn.access_token}` },
   });
   const meData = await meRes.json();
-  console.log('[resolveIGUsername] /me response (status', meRes.status, '):', JSON.stringify(meData));
+  console.log('[resolveIGUsername] /{user_id} response (status', meRes.status, '):', JSON.stringify(meData));
 
   if (meData.error) {
     const errMsg = `Meta error ${meData.error.code}: ${meData.error.message}`;

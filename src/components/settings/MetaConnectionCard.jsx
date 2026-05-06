@@ -52,8 +52,11 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
   const igAccountName  = rawName && !/^\d+$/.test(rawName) ? rawName : '';
   const igProfilePic   = connection?.ig_profile_picture_url || '';
   const hasUsername    = !!igAccountName;
-  const hasBasicScope  = connection?.has_basic_scope !== false && igConnected; // undefined = old conn, assume ok
-  const hasMsgScope    = connection?.has_messages_scope !== false && igConnected;
+  // Considera gli scope presenti se: has_basic_scope=true, OPPURE granted_scopes li contiene
+  // (evita falsi negativi quando /me fallisce ma gli scope sono stati concessi)
+  const grantedScopes  = connection?.granted_scopes || '';
+  const hasBasicScope  = igConnected && (connection?.has_basic_scope === true || grantedScopes.includes('instagram_business_basic'));
+  const hasMsgScope    = igConnected && (connection?.has_messages_scope === true || grantedScopes.includes('instagram_business_manage_messages'));
   const syncError      = connection?.sync_error || '';
 
   const startOAuth = async () => {
