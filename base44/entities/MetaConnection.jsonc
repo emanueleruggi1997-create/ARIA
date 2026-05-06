@@ -6,17 +6,75 @@
       "type": "string",
       "description": "ID utente Base44"
     },
+    "business_id": {
+      "type": "string",
+      "description": "ID del business collegato"
+    },
+    "login_flow": {
+      "type": "string",
+      "description": "instagram_business_login",
+      "default": "instagram_business_login"
+    },
     "access_token": {
       "type": "string",
       "description": "Instagram long-lived access token"
     },
+    "ig_token_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Scadenza token (60 giorni)"
+    },
+    "granted_scopes": {
+      "type": "string",
+      "description": "Scopes concessi (comma-separated)"
+    },
+    "has_basic_scope": {
+      "type": "boolean",
+      "default": false,
+      "description": "instagram_business_basic concesso"
+    },
+    "has_messages_scope": {
+      "type": "boolean",
+      "default": false,
+      "description": "instagram_business_manage_messages concesso"
+    },
+    "ig_connected": {
+      "type": "boolean",
+      "default": false
+    },
+    "ig_account_id": {
+      "type": "string",
+      "description": "Instagram user/business account ID"
+    },
+    "ig_account_name": {
+      "type": "string",
+      "description": "Instagram @username"
+    },
+    "ig_profile_picture_url": {
+      "type": "string"
+    },
     "meta_user_id": {
       "type": "string",
-      "description": "Instagram user ID (ig_account_id)"
+      "description": "Alias ig_account_id"
     },
     "meta_user_name": {
       "type": "string",
-      "description": "Instagram username"
+      "description": "Alias ig_account_name"
+    },
+    "fb_connected": {
+      "type": "boolean",
+      "default": false
+    },
+    "fb_page_id": {
+      "type": "string",
+      "description": "Facebook Page ID (solo legacy)"
+    },
+    "fb_page_name": {
+      "type": "string"
+    },
+    "fb_page_token": {
+      "type": "string",
+      "description": "Facebook Page token (solo legacy)"
     },
     "status": {
       "type": "string",
@@ -31,48 +89,13 @@
       "type": "string",
       "format": "date-time"
     },
-    "granted_scopes": {
+    "sync_error": {
       "type": "string",
-      "description": "Scopes concessi dall'utente (comma-separated)"
+      "description": "Ultimo errore di sincronizzazione"
     },
-    "fb_connected": {
-      "type": "boolean",
-      "default": false
-    },
-    "fb_page_id": {
-      "type": "string"
-    },
-    "fb_page_name": {
-      "type": "string"
-    },
-    "fb_page_token": {
+    "webhook_url": {
       "type": "string",
-      "description": "Page-level token (solo flusso Facebook, non usato in Instagram Business Login)"
-    },
-    "ig_connected": {
-      "type": "boolean",
-      "default": false
-    },
-    "ig_account_id": {
-      "type": "string",
-      "description": "Instagram Business/Creator account ID"
-    },
-    "ig_account_name": {
-      "type": "string",
-      "description": "Instagram username (@handle)"
-    },
-    "ig_profile_picture_url": {
-      "type": "string",
-      "description": "URL foto profilo Instagram"
-    },
-    "ig_token_expires_at": {
-      "type": "string",
-      "format": "date-time",
-      "description": "Scadenza token long-lived (60 giorni)"
-    },
-    "business_id": {
-      "type": "string",
-      "description": "ID del business collegato"
+      "description": "URL webhook configurato"
     }
   },
   "required": [

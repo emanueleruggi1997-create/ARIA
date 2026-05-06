@@ -1,7 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-// ── Instagram Business Login (unico flusso supportato) ──
-// Usa api.instagram.com — flusso moderno, NO Facebook Login
+// ── Instagram Business Login (flusso diretto, NO Facebook Login) ──
 const IG_APP_ID    = Deno.env.get('IG_APP_ID') || '';
 const REDIRECT_URI = (Deno.env.get('META_REDIRECT_URI') || '').trim();
 
@@ -17,10 +16,9 @@ Deno.serve(async (req) => {
 
   const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
   const businessId = body.businessId || '';
-
   const state = btoa(JSON.stringify({ userId: user.id, businessId }));
 
-  // Scopes minimi per Instagram Business Login
+  // Scopes Instagram Business Login — instagram_business_manage_comments opzionale (se approvato)
   const scope = 'instagram_business_basic,instagram_business_manage_messages';
 
   const params = new URLSearchParams({

@@ -1,13 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { useLang } from '@/lib/LanguageContext.jsx';
 import MetaTestButton from './MetaTestButton';
 
 const IG_COLOR = '#E1306C';
 
 function formatTokenExpiry(connection, lang) {
-  // Preferisce ig_token_expires_at (preciso), fallback a connected_at + 60gg
   let expiry;
   if (connection?.ig_token_expires_at) {
     expiry = new Date(connection.ig_token_expires_at);
@@ -17,59 +16,54 @@ function formatTokenExpiry(connection, lang) {
   } else {
     return null;
   }
-  const now = new Date();
+  const now      = new Date();
   const daysLeft = Math.round((expiry - now) / (1000 * 60 * 60 * 24));
   if (daysLeft < 0) return { label: lang === 'en' ? 'Token expired' : 'Token scaduto', color: '#EF4444' };
-  if (daysLeft < 7) return { label: lang === 'en' ? `Token expires in ${daysLeft} days` : `Token scade tra ${daysLeft} giorni`, color: '#F59E0B' };
-  return { label: lang === 'en' ? `Token valid until ${expiry.toLocaleDateString('en-GB')}` : `Token valido fino al ${expiry.toLocaleDateString('it-IT')}`, color: '#10B981' };
+  if (daysLeft < 7) return { label: lang === 'en' ? `Expires in ${daysLeft} days` : `Scade tra ${daysLeft} giorni`, color: '#F59E0B' };
+  return { label: lang === 'en' ? `Valid until ${expiry.toLocaleDateString('en-GB')}` : `Valido fino al ${expiry.toLocaleDateString('it-IT')}`, color: '#10B981' };
+}
+
+function StatusRow({ icon, color, label, detail }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 11, color: '#9CA3AF' }}>
+      <span style={{ color, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+      <div>
+        <span style={{ color, fontWeight: 600 }}>{label}</span>
+        {detail && <span style={{ color: '#6B7280', marginLeft: 4 }}>{detail}</span>}
+      </div>
+    </div>
+  );
 }
 
 export default function MetaConnectionCard({ connection, businessId, onRefresh }) {
   const { lang } = useLang();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]           = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [resolvingName, setResolvingName] = useState(false);
-  const [resolveMsg, setResolveMsg] = useState(null);
-  const [error, setError] = useState(null);
+  const [resolveMsg, setResolveMsg]     = useState(null);
+  const [error, setError]               = useState(null);
   const popupRef = useRef(null);
-  const pollRef = useRef(null);
+  const pollRef  = useRef(null);
 
-  const resolveUsername = async () => {
-    if (resolvingName) return;
-    setResolvingName(true);
-    setResolveMsg(null);
-    try {
-      const res = await base44.functions.invoke('resolveIGUsername', {});
-      if (res.data?.success) {
-        setResolveMsg({ ok: true, text: `✅ Username recuperato: @${res.data.resolvedName}` });
-        await onRefresh();
-      } else {
-        setResolveMsg({ ok: false, text: res.data?.message || 'Impossibile recuperare lo username.' });
-      }
-    } catch (e) {
-      setResolveMsg({ ok: false, text: e.message });
-    } finally {
-      setResolvingName(false);
-    }
-  };
-
-  const igConnected = connection?.ig_connected && !!connection?.ig_account_id;
-  const tokenInfo = formatTokenExpiry(connection, lang);
-  const tokenExpired = tokenInfo?.color === '#EF4444'; // rosso = scaduto
-  // Usa ig_account_name se disponibile, altrimenti mostra l'ID numerico (account comunque funzionante)
-  const rawName = connection?.ig_account_name || connection?.meta_user_name || '';
-  const igAccountName = rawName && !/^\d+$/.test(rawName) ? rawName : (connection?.ig_account_id || '');
-  const igProfilePic = connection?.ig_profile_picture_url || '';
-  const usernameIsNumeric = igAccountName && /^\d+$/.test(igAccountName);
+  const igConnected    = connection?.ig_connected && !!connection?.ig_account_id;
+  const tokenInfo      = formatTokenExpiry(connection, lang);
+  const tokenExpired   = tokenInfo?.color === '#EF4444';
+  const rawName        = connection?.ig_account_name || connection?.meta_user_name || '';
+  const igAccountName  = rawName && !/^\d+$/.test(rawName) ? rawName : '';
+  const igProfilePic   = connection?.ig_profile_picture_url || '';
+  const hasUsername    = !!igAccountName;
+  const hasBasicScope  = connection?.has_basic_scope !== false && igConnected; // undefined = old conn, assume ok
+  const hasMsgScope    = connection?.has_messages_scope !== false && igConnected;
+  const syncError      = connection?.sync_error || '';
 
   const startOAuth = async () => {
     if (loading) return;
     setError(null);
     setLoading(true);
     try {
-      const res = await base44.functions.invoke('startMetaOAuth', { type: 'instagram', businessId });
+      const res = await base44.functions.invoke('startMetaOAuth', { businessId });
       if (!res.data?.url) {
-        setError(lang === 'en' ? 'Unable to start connection. Please try again.' : 'Impossibile avviare la connessione. Riprova.');
+        setError('Impossibile avviare la connessione. Riprova.');
         setLoading(false);
         return;
       }
@@ -81,7 +75,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
       setLoading(false);
 
       if (!popup) {
-        setError(lang === 'en' ? 'Popup was blocked. Allow popups for this site and try again.' : 'Il popup è stato bloccato. Consenti i popup per questo sito e riprova.');
+        setError('Popup bloccato. Consenti i popup per questo sito e riprova.');
         return;
       }
       pollRef.current = setInterval(async () => {
@@ -91,9 +85,27 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         }
       }, 800);
     } catch (err) {
-      console.error('[MetaConnectionCard] startOAuth error:', err);
-      setError(lang === 'en' ? 'Connection error. Please try again.' : 'Errore durante la connessione. Riprova.');
+      setError('Errore durante la connessione. Riprova.');
       setLoading(false);
+    }
+  };
+
+  const resolveUsername = async () => {
+    if (resolvingName) return;
+    setResolvingName(true);
+    setResolveMsg(null);
+    try {
+      const res = await base44.functions.invoke('resolveIGUsername', {});
+      if (res.data?.success) {
+        setResolveMsg({ ok: true, text: `✅ @${res.data.resolvedName}` });
+        await onRefresh();
+      } else {
+        setResolveMsg({ ok: false, text: res.data?.message || 'Impossibile recuperare lo username.' });
+      }
+    } catch (e) {
+      setResolveMsg({ ok: false, text: e.message });
+    } finally {
+      setResolvingName(false);
     }
   };
 
@@ -101,24 +113,20 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
     if (disconnecting || !connection?.id) return;
     setDisconnecting(true);
     try {
-      await base44.entities.MetaConnection.update(connection.id, { ig_connected: false });
+      await base44.entities.MetaConnection.update(connection.id, { ig_connected: false, fb_connected: false });
       await onRefresh();
-    } catch (err) {
-      setError(lang === 'en' ? 'Disconnection error.' : 'Errore durante la disconnessione.');
+    } catch {
+      setError('Errore durante la disconnessione.');
     } finally {
       setDisconnecting(false);
     }
   };
 
   return (
-    <div style={{
-      background: '#0F1219',
-      border: `1px solid ${igConnected ? '#10B98140' : 'rgba(255,255,255,0.08)'}`,
-      borderLeft: `3px solid ${IG_COLOR}`,
-      borderRadius: 14, padding: 20,
-    }}>
+    <div style={{ background: '#0F1219', border: `1px solid ${igConnected ? '#10B98140' : 'rgba(255,255,255,0.08)'}`, borderLeft: `3px solid ${IG_COLOR}`, borderRadius: 14, padding: 20 }}>
+
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {/* IG Icon */}
         <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#F58529,#E1306C,#833AB4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <svg viewBox="0 0 24 24" width="22" height="22" fill="white">
             <rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="white" strokeWidth="2"/>
@@ -128,60 +136,105 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#F0F4FF', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#F0F4FF', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             Instagram Business
             {igConnected && !tokenExpired && (
-              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#10B98120', color: '#10B981', border: '1px solid #10B98140', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
-                {lang === 'en' ? 'Connected' : 'Connesso'}
+              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#10B98120', color: '#10B981', border: '1px solid #10B98140' }}>
+                ● {lang === 'en' ? 'Connected' : 'Connesso'}
               </span>
             )}
             {igConnected && tokenExpired && (
-              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#EF444420', color: '#EF4444', border: '1px solid #EF444440', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
-                {lang === 'en' ? 'Token expired' : 'Token scaduto'}
+              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: '#EF444420', color: '#EF4444', border: '1px solid #EF444440' }}>
+                ● {lang === 'en' ? 'Token expired' : 'Token scaduto'}
               </span>
             )}
           </div>
+
           {igConnected ? (
             <div style={{ fontSize: 12, marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
-              {igProfilePic && (
-                <img src={igProfilePic} alt="profile" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
-              )}
-              {igAccountName && !usernameIsNumeric
-                ? <span style={{ color: '#9CA3AF' }}>{igAccountName.startsWith('@') ? igAccountName : `@${igAccountName}`}</span>
+              {igProfilePic && <img src={igProfilePic} alt="" style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)' }} />}
+              {hasUsername
+                ? <span style={{ color: '#9CA3AF' }}>@{igAccountName}</span>
                 : <span style={{ color: '#6B7280', fontStyle: 'italic' }}>ID: {connection?.ig_account_id}</span>
               }
               {connection?.connected_at && (
-                <span style={{ color: '#4B5563', fontSize: 11, marginLeft: 4 }}>
-                  · {lang === 'en' ? 'since' : 'dal'} {new Date(connection.connected_at).toLocaleDateString(lang === 'en' ? 'en-GB' : 'it-IT')}
-                </span>
+                <span style={{ color: '#4B5563', fontSize: 11 }}>· dal {new Date(connection.connected_at).toLocaleDateString('it-IT')}</span>
               )}
             </div>
           ) : (
-            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{lang === 'en' ? 'No account connected' : 'Nessun account collegato'}</div>
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>Nessun account collegato</div>
           )}
         </div>
       </div>
 
+      {/* Token expiry */}
       {igConnected && tokenInfo && (
         <div style={{ marginTop: 10, fontSize: 11, color: tokenInfo.color, background: `${tokenInfo.color}10`, border: `1px solid ${tokenInfo.color}30`, borderRadius: 8, padding: '6px 10px' }}>
-          {tokenExpired ? '⚠️' : '🔑'} {tokenInfo.label}
-          {tokenExpired && <span style={{ display: 'block', marginTop: 2, color: '#9CA3AF' }}>{lang === 'en' ? 'Please reconnect to continue' : 'Riconnetti per continuare'}</span>}
+          🔑 {tokenInfo.label}
+          {tokenExpired && <span style={{ display: 'block', color: '#9CA3AF', marginTop: 2 }}>Riconnetti per continuare</span>}
         </div>
       )}
 
-      {igConnected && !tokenExpired && usernameIsNumeric && (
+      {/* Status checks */}
+      {igConnected && (
+        <div style={{ marginTop: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#4B5563', marginBottom: 2, letterSpacing: 1 }}>STATO CONNESSIONE</div>
+
+          <StatusRow
+            icon={hasUsername ? '✅' : '⚠️'}
+            color={hasUsername ? '#10B981' : '#F59E0B'}
+            label={hasUsername ? `Username: @${igAccountName}` : 'Username non sincronizzato'}
+            detail={!hasUsername && syncError ? `Errore Meta: ${syncError.slice(0, 80)}` : null}
+          />
+
+          <StatusRow
+            icon={hasBasicScope ? '✅' : '❌'}
+            color={hasBasicScope ? '#10B981' : '#EF4444'}
+            label="instagram_business_basic"
+            detail={!hasBasicScope ? '— Riconnetti accettando tutti i permessi' : null}
+          />
+
+          <StatusRow
+            icon={hasMsgScope ? '✅' : '❌'}
+            color={hasMsgScope ? '#10B981' : '#EF4444'}
+            label="instagram_business_manage_messages"
+            detail={!hasMsgScope ? '— Riconnetti accettando tutti i permessi' : null}
+          />
+
+          {connection?.granted_scopes && (
+            <div style={{ fontSize: 10, color: '#374151', marginTop: 2 }}>
+              Scopes: {connection.granted_scopes}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Avvisi specifici */}
+      {igConnected && !hasBasicScope && connection?.has_basic_scope === false && (
+        <div style={{ marginTop: 10, fontSize: 11, color: '#F59E0B', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '8px 12px' }}>
+          ⚠️ Il token non contiene <strong>instagram_business_basic</strong>. Riconnetti Instagram accettando tutti i permessi richiesti.
+        </div>
+      )}
+
+      {igConnected && !hasUsername && !syncError && (
         <div style={{ marginTop: 10, fontSize: 11, color: '#6B7280', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <span>ℹ️ {lang === 'en' ? 'Username not synced — ARIA is working.' : 'Username non sincronizzato — ARIA funziona.'}</span>
-          <button
-            onClick={resolveUsername}
-            disabled={resolvingName}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.06)', color: '#9CA3AF', fontSize: 11, fontWeight: 600, cursor: resolvingName ? 'not-allowed' : 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
-          >
+          <span>Account collegato, username non recuperato.</span>
+          <button onClick={resolveUsername} disabled={resolvingName} style={smallBtn}>
             {resolvingName ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={11} />}
-            {resolvingName ? '...' : (lang === 'en' ? 'Sync' : 'Sincronizza')}
+            {resolvingName ? '...' : 'Sincronizza'}
           </button>
+        </div>
+      )}
+
+      {igConnected && syncError && (
+        <div style={{ marginTop: 10, fontSize: 11, color: '#EF4444', background: '#EF444410', border: '1px solid #EF444430', borderRadius: 8, padding: '8px 12px' }}>
+          ❌ Errore Meta: {syncError}
+        </div>
+      )}
+
+      {resolveMsg && (
+        <div style={{ marginTop: 8, fontSize: 11, color: resolveMsg.ok ? '#10B981' : '#EF4444', background: resolveMsg.ok ? '#10B98110' : '#EF444410', border: `1px solid ${resolveMsg.ok ? '#10B98130' : '#EF444430'}`, borderRadius: 8, padding: '7px 12px' }}>
+          {resolveMsg.text}
         </div>
       )}
 
@@ -191,26 +244,22 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       )}
 
+      {/* Actions */}
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {igConnected && (
-          <MetaTestButton connection={connection} ariaColor={IG_COLOR} />
-        )}
+        {igConnected && <MetaTestButton connection={connection} ariaColor={IG_COLOR} />}
         <div style={{ display: 'flex', gap: 8 }}>
           {igConnected ? (
             <>
               <button onClick={startOAuth} disabled={loading} style={btnStyle('rgba(255,255,255,0.08)', '#9CA3AF', loading)}>
-                {loading ? `⏳ ${lang === 'en' ? 'Opening...' : 'Apertura...'}` : `🔄 ${lang === 'en' ? 'Reconnect' : 'Riconnetti'}`}
+                {loading ? '⏳ Apertura...' : '🔄 Riconnetti'}
               </button>
               <button onClick={disconnect} disabled={disconnecting} style={btnStyle('#EF444420', '#EF4444', disconnecting)}>
-                {disconnecting ? '...' : (lang === 'en' ? 'Disconnect' : 'Disconnetti')}
+                {disconnecting ? '...' : 'Disconnetti'}
               </button>
             </>
           ) : (
             <button onClick={startOAuth} disabled={loading} style={btnStyle(`${IG_COLOR}20`, '#F0F4FF', loading, IG_COLOR)}>
-              {loading
-                ? <span>⏳ {lang === 'en' ? 'Opening...' : 'Apertura...'}</span>
-                : <span>📸 {lang === 'en' ? 'Connect Instagram Business' : 'Collega Instagram Business'}</span>
-              }
+              {loading ? '⏳ Apertura...' : '📸 Collega Instagram Business'}
             </button>
           )}
         </div>
@@ -219,13 +268,21 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
   );
 }
 
-// inject spin keyframe once
 if (typeof document !== 'undefined' && !document.getElementById('meta-card-spin')) {
   const s = document.createElement('style');
   s.id = 'meta-card-spin';
   s.textContent = '@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }';
   document.head.appendChild(s);
 }
+
+const smallBtn = {
+  display: 'flex', alignItems: 'center', gap: 4,
+  padding: '4px 10px', borderRadius: 7,
+  border: '1px solid rgba(255,255,255,0.1)',
+  background: 'rgba(255,255,255,0.06)',
+  color: '#9CA3AF', fontSize: 11, fontWeight: 600,
+  cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+};
 
 const btnStyle = (bg, color, disabled, borderColor) => ({
   flex: 1, padding: '9px 14px', borderRadius: 9,
