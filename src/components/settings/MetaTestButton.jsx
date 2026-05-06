@@ -3,55 +3,40 @@ import { base44 } from '@/api/base44Client';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useLang } from '@/lib/LanguageContext.jsx';
 
-export default function MetaTestButton({ connection, ariaColor }) {
+export default function MetaTestButton({ connection, ariaColor, onTestSuccess }) {
   const { lang } = useLang();
   const [testing, setTesting] = useState(false);
-  const [result, setResult] = useState(null);
+  const [result, setResult]   = useState(null);
 
   const handleTest = async () => {
     if (testing || !connection?.id) return;
-    
     setTesting(true);
     setResult(null);
 
     try {
-      // If token was recently set, show success — full validation happens server-side
-      const lastHour = new Date(Date.now() - 60 * 60 * 1000);
-      const isRecent = connection.connected_at && new Date(connection.connected_at) > lastHour;
-      
-      if (isRecent) {
-        setResult({
-          success: true,
-          token_valid: true,
-          account_name: connection.ig_account_name || 'Connected',
-        });
+      const res = await Promise.race([
+        base44.functions.invoke('testMetaConnection', { connector_id: connection.id }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 12000)),
+      ]);
+
+      const data = res.data || {};
+      if (data.success) {
+        setResult({ success: true, account_name: data.account_name, account_type: data.account_type });
+        // Notifica la card padre: test OK, aggiorna stato runtime
+        if (onTestSuccess) onTestSuccess({ username: data.resolved_username || data.account_name });
       } else {
-        // Try backend test (may time out, so keep try/catch)
-        try {
-          const res = await Promise.race([
-            base44.functions.invoke('testMetaConnection', { connector_id: connection.id }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
-          ]);
-          
-          if (res.data?.success) {
-            setResult({ success: true, token_valid: true, account_name: res.data.account_name });
-          } else {
-            setResult({ success: false, error: res.data?.error || 'Test failed' });
-          }
-        } catch (_) {
-          // Fallback: assume valid if DB record exists and is not expired
-          const expiryDate = connection.ig_token_expires_at ? new Date(connection.ig_token_expires_at) : null;
-          const isExpired = expiryDate && expiryDate < new Date();
-          
-          if (isExpired) {
-            setResult({ success: false, error: 'Token expired — please reconnect' });
-          } else {
-            setResult({ success: true, token_valid: true, account_name: connection.ig_account_name || 'Connected' });
-          }
-        }
+        setResult({ success: false, error: data.error || 'Test fallito' });
       }
     } catch (e) {
-      setResult({ success: false, error: e.message });
+      // Fallback: controlla scadenza token da DB
+      const expiryDate = connection.ig_token_expires_at ? new Date(connection.ig_token_expires_at) : null;
+      const isExpired  = expiryDate && expiryDate < new Date();
+      if (isExpired) {
+        setResult({ success: false, error: 'Token scaduto — riconnetti' });
+      } else {
+        // Non riusciamo a testare (network/timeout) ma il token non è scaduto
+        setResult({ success: null, error: `Test non completato: ${e.message}` });
+      }
     } finally {
       setTesting(false);
     }
@@ -84,33 +69,30 @@ export default function MetaTestButton({ connection, ariaColor }) {
         <div
           className="rounded-lg p-3 text-sm border"
           style={{
-            background: result.success ? '#10B98110' : '#EF444410',
-            border: `1px solid ${result.success ? '#10B98140' : '#EF444440'}`,
-            color: result.success ? '#10B981' : '#EF4444',
+            background: result.success === true ? '#10B98110' : result.success === null ? '#F59E0B10' : '#EF444410',
+            border: `1px solid ${result.success === true ? '#10B98140' : result.success === null ? '#F59E0B40' : '#EF444440'}`,
+            color: result.success === true ? '#10B981' : result.success === null ? '#F59E0B' : '#EF4444',
           }}
         >
           <div className="flex items-start gap-2">
-            {result.success ? (
-              <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            ) : (
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            )}
+            {result.success === true
+              ? <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              : <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            }
             <div>
-              {result.success ? (
+              {result.success === true ? (
                 <div className="space-y-1">
-                  <p className="font-semibold">✅ {lang === 'en' ? 'All checks passed' : 'Tutti i test superati'}</p>
+                  <p className="font-semibold">✅ {lang === 'en' ? 'Connection valid' : 'Connessione valida'}</p>
                   <p className="text-xs opacity-80">
-                    {lang === 'en' ? 'Token valid' : 'Token valido'} • {result.account_name}
+                    {lang === 'en' ? 'Token valid' : 'Token valido'}
+                    {result.account_name ? ` · ${result.account_name}` : ''}
+                    {result.account_type ? ` · ${result.account_type}` : ''}
                   </p>
-                  <p className="text-xs opacity-80">
-                    {result.webhook_subscribed
-                      ? lang === 'en' ? '✓ Webhook subscribed' : '✓ Webhook sottoscritto'
-                      : lang === 'en' ? '⚠ Webhook not subscribed' : '⚠ Webhook non sottoscritto'}
-                  </p>
+                  <p className="text-xs opacity-80">✓ Webhook gestito dal Meta App Dashboard</p>
                 </div>
               ) : (
                 <div>
-                  <p className="font-semibold">{lang === 'en' ? 'Test failed' : 'Test fallito'}</p>
+                  <p className="font-semibold">{result.success === null ? (lang === 'en' ? 'Test incomplete' : 'Test incompleto') : (lang === 'en' ? 'Test failed' : 'Test fallito')}</p>
                   <p className="text-xs opacity-80 mt-1">{result.error}</p>
                 </div>
               )}

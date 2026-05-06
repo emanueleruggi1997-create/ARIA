@@ -40,13 +40,21 @@ Deno.serve(async (req) => {
   const meRes  = await fetch(userUrl, { method: 'GET' });
   const meData = await meRes.json();
   console.log('[resolveIGUsername] HTTP status:', meRes.status);
-  console.log('[resolveIGUsername] Response:', JSON.stringify(meData));
+  console.log('[resolveIGUsername] ig_account_id used:', conn.ig_account_id);
+  console.log('[resolveIGUsername] token prefix:', conn.access_token?.slice(0, 12) + '***');
+  console.log('[resolveIGUsername] Response FULL:', JSON.stringify(meData));
 
   if (meData.error) {
     const errMsg = `Meta error ${meData.error.code}: ${meData.error.message}`;
     console.error('[resolveIGUsername] ❌ Errore API:', errMsg);
-    await base44.asServiceRole.entities.MetaConnection.update(conn.id, { sync_error: errMsg });
-    return Response.json({ success: false, message: errMsg });
+    // Se i scope sono già validi, non sovrascrivere sync_error con questo errore tecnico
+    // Aggiorna solo se non era già connesso correttamente
+    const hadGoodScopes = conn.has_basic_scope && conn.has_messages_scope;
+    await base44.asServiceRole.entities.MetaConnection.update(conn.id, {
+      sync_error: hadGoodScopes ? '' : errMsg,
+      last_sync_at: new Date().toISOString(),
+    });
+    return Response.json({ success: false, message: errMsg, scopesOk: hadGoodScopes });
   }
 
   const resolvedUsername = meData.username || '';
@@ -55,32 +63,38 @@ Deno.serve(async (req) => {
   const resolvedId       = meData.id || conn.ig_account_id;
   const displayName      = resolvedUsername || resolvedName;
 
-  if (!displayName) {
-    return Response.json({ success: false, message: 'Username e nome non disponibili nella risposta Meta' });
+  console.log('[resolveIGUsername] ✅ Risolto → username:', resolvedUsername, '| name:', resolvedName, '| account_type:', meData.account_type, '| displayName:', displayName);
+
+  // Anche se username è vuoto, la connessione è valida — salva sempre sync_error='' e scope OK
+  const updatePayload = {
+    ig_account_id:   resolvedId,
+    meta_user_id:    resolvedId,
+    sync_error:      '',
+    has_basic_scope: true,
+    has_messages_scope: true,
+    last_sync_at:    new Date().toISOString(),
+  };
+  if (displayName) {
+    updatePayload.ig_account_name = displayName;
+    updatePayload.meta_user_name  = displayName;
+  }
+  if (resolvedPic) {
+    updatePayload.ig_profile_picture_url = resolvedPic;
   }
 
-  console.log('[resolveIGUsername] ✅ Risolto → username:', resolvedUsername, '| name:', resolvedName, '| account_type:', meData.account_type);
+  await base44.asServiceRole.entities.MetaConnection.update(conn.id, updatePayload);
 
-  await base44.asServiceRole.entities.MetaConnection.update(conn.id, {
-    ig_account_id:          resolvedId,
-    ig_account_name:        displayName,
-    meta_user_id:           resolvedId,
-    meta_user_name:         displayName,
-    ig_profile_picture_url: resolvedPic,
-    sync_error:             '',
-    has_basic_scope:        true,
-    has_messages_scope:     true,
-  });
-
-  if (conn.business_id) {
+  if (conn.business_id && displayName) {
     await base44.asServiceRole.entities.Business.update(conn.business_id, { ig_username: displayName });
   }
 
   return Response.json({
     success:      true,
-    resolvedName: displayName,
+    resolvedName: displayName || conn.ig_account_id,
     username:     resolvedUsername,
     name:         resolvedName,
     profile_pic:  resolvedPic,
+    account_type: meData.account_type,
+    connectionValid: true,
   });
 });

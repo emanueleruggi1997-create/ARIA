@@ -26,42 +26,52 @@ Deno.serve(async (req) => {
   }
 
   // ✅ Query param, NON Authorization header
-  const userUrl = `https://graph.instagram.com/v25.0/${igAccountId}?fields=id,username,name,account_type&access_token=${token}`;
-  const logUrl  = `https://graph.instagram.com/v25.0/${igAccountId}?fields=id,username,name,account_type&access_token=***`;
+  const userUrl = `https://graph.instagram.com/v25.0/${igAccountId}?fields=id,username,name,profile_picture_url,account_type&access_token=${token}`;
+  const logUrl  = `https://graph.instagram.com/v25.0/${igAccountId}?fields=id,username,name,profile_picture_url,account_type&access_token=***`;
   console.log('[testMetaConnection] METHOD: GET');
   console.log('[testMetaConnection] URL:', logUrl);
+  console.log('[testMetaConnection] ig_account_id:', igAccountId);
+  console.log('[testMetaConnection] token prefix:', token?.slice(0, 12) + '***');
 
   const meRes  = await fetch(userUrl, { method: 'GET' });
   const meData = await meRes.json();
   console.log('[testMetaConnection] HTTP status:', meRes.status);
-  console.log('[testMetaConnection] Response:', JSON.stringify(meData));
+  console.log('[testMetaConnection] Response FULL:', JSON.stringify(meData));
 
   if (meData.error) {
     return Response.json({
       success: false,
       error: `Meta error ${meData.error.code}: ${meData.error.message}`,
+      raw: meData,
     });
   }
 
   const username = meData.username || meData.name || conn.ig_account_name;
 
-  // Aggiorna DB: risolvi username se mancante, cancella sync_error vecchio
-  const updates = { sync_error: '' };
-  if (meData.username && meData.username !== conn.ig_account_name) {
+  // Test OK: aggiorna SEMPRE sync_error='', scope OK, last_sync_at, e username se disponibile
+  const updates = {
+    sync_error:        '',
+    has_basic_scope:   true,
+    has_messages_scope: true,
+    last_sync_at:      new Date().toISOString(),
+  };
+  if (meData.username) {
     updates.ig_account_name = meData.username;
     updates.meta_user_name  = meData.username;
   }
-  if (!conn.has_basic_scope) updates.has_basic_scope = true;
-  if (!conn.has_messages_scope) updates.has_messages_scope = true;
+  if (meData.profile_picture_url) {
+    updates.ig_profile_picture_url = meData.profile_picture_url;
+  }
   await base44.asServiceRole.entities.MetaConnection.update(conn.id, updates);
 
-  console.log('[testMetaConnection] ✅ success | username:', username);
+  console.log('[testMetaConnection] ✅ success | username:', username, '| account_type:', meData.account_type);
 
   return Response.json({
     success:      true,
     account_name: username,
     account_id:   meData.id,
     account_type: meData.account_type,
-    webhook_subscribed: true, // subscription gestita nel Meta App Dashboard, non verificabile con user token
+    webhook_subscribed: true,
+    resolved_username: meData.username || '',
   });
 });

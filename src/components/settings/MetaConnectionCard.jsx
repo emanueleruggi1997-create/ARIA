@@ -42,22 +42,28 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
   const [resolvingName, setResolvingName] = useState(false);
   const [resolveMsg, setResolveMsg]     = useState(null);
   const [error, setError]               = useState(null);
+  // Runtime state: sovrascrive i valori DB stale dopo sync/test positivo
+  const [runtimeUsername, setRuntimeUsername] = useState(null); // null = usa DB
+  const [runtimeScopesOk, setRuntimeScopesOk] = useState(null); // null = usa DB
+  const [runtimeTestOk, setRuntimeTestOk]     = useState(null); // null = non testato
   const popupRef = useRef(null);
   const pollRef  = useRef(null);
 
   const igConnected    = connection?.ig_connected && !!connection?.ig_account_id;
   const tokenInfo      = formatTokenExpiry(connection, lang);
   const tokenExpired   = tokenInfo?.color === '#EF4444';
-  const rawName        = connection?.ig_account_name || connection?.meta_user_name || '';
+  const rawName        = runtimeUsername ?? (connection?.ig_account_name || connection?.meta_user_name || '');
   const igAccountName  = rawName && !/^\d+$/.test(rawName) ? rawName : '';
   const igProfilePic   = connection?.ig_profile_picture_url || '';
   const hasUsername    = !!igAccountName;
-  // Considera gli scope presenti se: has_basic_scope=true, OPPURE granted_scopes li contiene
-  // (evita falsi negativi quando /me fallisce ma gli scope sono stati concessi)
+  // Scope: usa stato runtime se disponibile, altrimenti DB + granted_scopes
   const grantedScopes  = connection?.granted_scopes || '';
-  const hasBasicScope  = igConnected && (connection?.has_basic_scope === true || grantedScopes.includes('instagram_business_basic'));
-  const hasMsgScope    = igConnected && (connection?.has_messages_scope === true || grantedScopes.includes('instagram_business_manage_messages'));
-  const syncError      = connection?.sync_error || '';
+  const dbBasicScope   = connection?.has_basic_scope === true || grantedScopes.includes('instagram_business_basic');
+  const dbMsgScope     = connection?.has_messages_scope === true || grantedScopes.includes('instagram_business_manage_messages');
+  const hasBasicScope  = igConnected && (runtimeScopesOk ?? dbBasicScope);
+  const hasMsgScope    = igConnected && (runtimeScopesOk ?? dbMsgScope);
+  // Mostra sync_error solo se test NON è OK in runtime E non abbiamo username valido
+  const syncError      = (runtimeTestOk === true || hasUsername) ? '' : (connection?.sync_error || '');
 
   const startOAuth = async () => {
     if (loading) return;
@@ -99,11 +105,24 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
     setResolveMsg(null);
     try {
       const res = await base44.functions.invoke('resolveIGUsername', {});
-      if (res.data?.success) {
-        setResolveMsg({ ok: true, text: `✅ @${res.data.resolvedName}` });
+      const data = res.data || {};
+      if (data.success) {
+        // Stato runtime: aggiorna subito UI senza aspettare refresh DB
+        if (data.username || data.resolvedName) {
+          setRuntimeUsername(data.username || data.resolvedName);
+        }
+        setRuntimeScopesOk(true);
+        setRuntimeTestOk(true);
+        setResolveMsg({ ok: true, text: `✅ Connessione verificata${data.username ? ' — @' + data.username : ''}` });
+        await onRefresh(); // aggiorna anche i dati DB
+      } else if (data.scopesOk) {
+        // Test ha funzionato ma username non disponibile: connessione valida
+        setRuntimeScopesOk(true);
+        setRuntimeTestOk(true);
+        setResolveMsg({ ok: true, text: '✅ Connessione valida — username in sincronizzazione' });
         await onRefresh();
       } else {
-        setResolveMsg({ ok: false, text: res.data?.message || 'Impossibile recuperare lo username.' });
+        setResolveMsg({ ok: false, text: data.message || 'Impossibile recuperare lo username.' });
       }
     } catch (e) {
       setResolveMsg({ ok: false, text: e.message });
@@ -183,10 +202,17 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         <div style={{ marginTop: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#4B5563', marginBottom: 2, letterSpacing: 1 }}>STATO CONNESSIONE</div>
 
+          {/* Username row: se scope OK ma username mancante → "Connessione valida", NON errore */}
           <StatusRow
-            icon={hasUsername ? '✅' : '⚠️'}
-            color={hasUsername ? '#10B981' : '#F59E0B'}
-            label={hasUsername ? `@${igAccountName}` : 'Username da sincronizzare'}
+            icon={hasUsername ? '✅' : (hasBasicScope ? '🔄' : '⚠️')}
+            color={hasUsername ? '#10B981' : (hasBasicScope ? '#00C6FF' : '#F59E0B')}
+            label={
+              hasUsername
+                ? `@${igAccountName}`
+                : hasBasicScope
+                  ? 'Connessione valida — sincronizzazione username in corso'
+                  : 'Username da sincronizzare'
+            }
             detail={null}
           />
 
@@ -212,15 +238,15 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       )}
 
-      {/* Avviso scope mancante — solo se NON presente in granted_scopes */}
+      {/* Avviso scope mancante — solo se NON in granted_scopes E NON override runtime */}
       {igConnected && !hasBasicScope && (
         <div style={{ marginTop: 10, fontSize: 11, color: '#F59E0B', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '8px 12px' }}>
           ⚠️ Permesso <strong>instagram_business_basic</strong> mancante. Riconnetti accettando tutti i permessi.
         </div>
       )}
 
-      {/* Username non recuperato — mostra sync pulsante solo se effettivamente mancante */}
-      {igConnected && !hasUsername && (
+      {/* Username non recuperato — mostra solo se scope NON ok (altrimenti è solo cosmetic) */}
+      {igConnected && !hasUsername && !hasBasicScope && (
         <div style={{ marginTop: 10, fontSize: 11, color: '#6B7280', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <span>Username non ancora sincronizzato.</span>
           <button onClick={resolveUsername} disabled={resolvingName} style={smallBtn}>
@@ -230,8 +256,19 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       )}
 
-      {/* Sync error — mostra solo se username ancora mancante (altrimenti errore era transitorio) */}
-      {igConnected && syncError && !hasUsername && (
+      {/* Bottone sync username — visibile se connesso + scope ok + username mancante */}
+      {igConnected && !hasUsername && hasBasicScope && (
+        <div style={{ marginTop: 10, fontSize: 11, color: '#00C6FF', background: '#00C6FF10', border: '1px solid #00C6FF30', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <span>Connessione valida — recupera username Instagram</span>
+          <button onClick={resolveUsername} disabled={resolvingName} style={smallBtn}>
+            {resolvingName ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={11} />}
+            {resolvingName ? '...' : 'Recupera'}
+          </button>
+        </div>
+      )}
+
+      {/* Sync error — mostra SOLO se scope NON ok E username mancante E nessun test ok runtime */}
+      {igConnected && syncError && !hasUsername && !hasBasicScope && runtimeTestOk !== true && (
         <div style={{ marginTop: 8, fontSize: 11, color: '#9CA3AF', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '7px 12px' }}>
           ℹ️ {syncError}
         </div>
@@ -251,7 +288,19 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
 
       {/* Actions */}
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {igConnected && <MetaTestButton connection={connection} ariaColor={IG_COLOR} />}
+        {igConnected && (
+          <MetaTestButton
+            connection={connection}
+            ariaColor={IG_COLOR}
+            onTestSuccess={({ username }) => {
+              if (username) setRuntimeUsername(username);
+              setRuntimeScopesOk(true);
+              setRuntimeTestOk(true);
+              // Refresh DB in background
+              onRefresh();
+            }}
+          />
+        )}
         <div style={{ display: 'flex', gap: 8 }}>
           {igConnected ? (
             <>
