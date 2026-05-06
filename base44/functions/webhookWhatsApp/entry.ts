@@ -115,8 +115,16 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
   const isFirstMessage = recentMessages.filter(m => m.ruolo === 'assistant').length === 0;
   const agentName = business.nome_agente || 'ARIA';
 
+  // ── Profilo cliente (dati già noti) ──
+  const [existingLeadsWA, prevAppointmentsWA] = await Promise.all([
+    base44.asServiceRole.entities.Lead.filter({ business_id: businessId, contact_id: contact.id }),
+    base44.asServiceRole.entities.Appointment.filter({ business_id: businessId, contact_id: contact.id }, '-created_date', 3),
+  ]);
+  const existingLeadWA = existingLeadsWA[0] || {};
+  const customerProfileWA = buildCustomerProfileWA({ contact, lead: existingLeadWA, appointments: prevAppointmentsWA, history: historyText });
+
   // ── Prompt ARIA segretaria autonoma ──
-  const ariaPrompt = buildAriaPromptWA({ business, agentName, history: historyText, text, isFirstMsg: isFirstMessage });
+  const ariaPrompt = buildAriaPromptWA({ business, agentName, history: historyText, text, isFirstMsg: isFirstMessage, customerProfile: customerProfileWA });
 
   const aiRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
     prompt: ariaPrompt,
@@ -325,7 +333,39 @@ function buildSafeAppointmentPayload({ ad, businessId, contactId, contactName, s
   };
 }
 
-function buildAriaPromptWA({ business, agentName, history, text, isFirstMsg }) {
+// ── Helper: profilo cliente WA ──
+function buildCustomerProfileWA({ contact, lead, appointments, history }) {
+  const name = contact?.nome && !contact.nome.startsWith('WA_') ? contact.nome : (lead?.contact_nome || null);
+  const email = lead?.email || null;
+  // Per WA il numero del cliente è già in contact.numero, ma è il senderId
+  const phone = lead?.phone || null;
+
+  let histEmail = email;
+  let histPhone = phone;
+  if (!histEmail || !histPhone) {
+    const emailMatch = (history || '').match(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/);
+    const phoneMatch = (history || '').match(/(\+?[\d\s\-]{8,15})/);
+    if (!histEmail && emailMatch) histEmail = emailMatch[1];
+    if (!histPhone && phoneMatch) histPhone = phoneMatch[1].replace(/\s/g, '');
+  }
+
+  const lastAppt = appointments?.[0];
+  const missing = [];
+  if (!name) missing.push('nome');
+  if (!histEmail && !histPhone) missing.push('email_o_telefono');
+
+  return {
+    name: name || null,
+    email: histEmail || null,
+    phone: histPhone || null,
+    last_service: lastAppt?.titolo || lead?.tipo_progetto || null,
+    missing_fields: missing,
+    is_known: !!name,
+    has_contact: !!(histEmail || histPhone),
+  };
+}
+
+function buildAriaPromptWA({ business, agentName, history, text, isFirstMsg, customerProfile }) {
   const orari = `${business.orario_inizio || '09:00'}–${business.orario_fine || '18:00'}`;
   const giorni = (business.giorni_attivi || []).join(', ') || 'lun–ven';
 
@@ -338,71 +378,89 @@ function buildAriaPromptWA({ business, agentName, history, text, isFirstMsg }) {
   const romeDatetime = romeFormatter.format(now);
   const romeDateISO  = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
 
-  return `Sei ${agentName}, segretaria AI professionale di "${business.nome}".
+  const cp = customerProfile || {};
+  const profileSection = `
+━━━ PROFILO CLIENTE (dati già noti — NON richiedere) ━━━
+Nome: ${cp.name || 'sconosciuto (chiedi solo se necessario per un appuntamento)'}
+Email: ${cp.email || 'non disponibile'}
+Telefono: ${cp.phone || 'non disponibile'}
+Servizio precedente: ${cp.last_service || 'nessuno'}
+Dati mancanti: ${cp.missing_fields?.length ? cp.missing_fields.join(', ') : 'nessuno — hai già tutto'}
+Cliente già conosciuto: ${cp.is_known ? 'SÌ' : 'NO'}
+Contatto già disponibile: ${cp.has_contact ? 'SÌ' : 'NO'}
+
+⚠️ REGOLA CRITICA: Se un dato è già presente sopra, NON chiederlo. Usalo direttamente.
+Se nome è già noto, usalo senza chiedere "come ti chiami?".
+Se email o telefono è già presente, non chiedere — crea subito l'appuntamento.`;
+
+  return `Sei ${agentName}, segretaria AI di "${business.nome}". Gestisci la conversazione in modo naturale e umano.
 
 ━━━ DATA E ORA ATTUALE ━━━
-Data e ora business (Europe/Rome): ${romeDatetime}
+Data e ora (Europe/Rome): ${romeDatetime}
 Data ISO oggi: ${romeDateISO}
-Timezone: Europe/Rome
-⚠️ Usa SEMPRE questa data come riferimento per "domani", "giovedì prossimo", ecc.
+⚠️ Usa questa data per "domani", "giovedì prossimo", ecc.
+${profileSection}
 
-━━━ IDENTITÀ E STILE ━━━
-- Parli come una persona reale: naturale, diretta, calda ma professionale.
-- Risposte brevi: 1–3 frasi al massimo. Mai lunghi elenchi puntati.
-- ${isFirstMsg ? 'È il PRIMO messaggio: presentati brevemente con il tuo nome.' : 'Non ripresentarti, vai al punto.'}
-- Rispondi SEMPRE nella stessa lingua del cliente.
-- Non usare frasi robotiche come "Come posso assisterti?", "Ottima domanda!".
+━━━ STILE E TONO ━━━
+- Parli come una persona reale: calda, diretta, concisa.
+- Max 2–3 frasi per risposta. Mai elenchi puntati.
+- ${isFirstMsg ? 'Primo messaggio: presentati brevemente.' : 'Non ripresentarti. Vai al punto.'}
+- Stessa lingua del cliente.
+- VIETATO: "Come posso assisterti?", "Non esitare a contattarci", "Ottima domanda!", "Ho raccolto la tua richiesta", "Ti faremo sapere al più presto", "Per completare la richiesta", "Mi indichi per favore".
+- USA INVECE: "Perfetto, ci siamo quasi.", "Ottimo, mi manca solo…", "Va bene, segno tutto.", "Grazie, ho già i tuoi dati.", "Perfetto ${cp.name || '[nome]'}, lo metto da confermare subito."
+- Controlla le ultime 3 risposte ARIA nello storico: NON ripetere la stessa struttura o apertura.
 
 ━━━ BUSINESS ━━━
 ${business.servizi ? `Servizi: ${business.servizi}` : ''}
-${business.prezzi ? `Prezzi disponibili: ${business.prezzi}` : ''}
+${business.prezzi ? `Prezzi: ${business.prezzi}` : ''}
 ${business.faq ? `FAQ: ${business.faq}` : ''}
 ${business.cose_da_non_fare ? `Non fare mai: ${business.cose_da_non_fare}` : ''}
 ${business.ai_prompt ? `Istruzioni aggiuntive: ${business.ai_prompt}` : ''}
 Orari: ${orari}, giorni: ${giorni}
 
-━━━ GESTIONE RICHIESTE ━━━
+━━━ GESTIONE APPUNTAMENTI ━━━
+Dati MINIMI: nome + data/ora + (email O telefono).
+Chiedi UN solo dato mancante per volta.
 
-**INFORMAZIONI** → Rispondi direttamente.
+PRIMA di chiedere qualsiasi cosa, controlla il PROFILO CLIENTE:
+- Nome già noto → non chiedere il nome
+- Email/telefono già noto → non chiedere → crea subito l'appuntamento
+- Manca solo data/ora → chiedi solo quello
 
-**APPUNTAMENTO** → Raccogli: nome, servizio (opzionale), data/ora, email o telefono. Un dato alla volta.
-DATI MINIMI per creare richiesta: nome + data/ora + (email o telefono).
+Quando hai i dati minimi → create_appointment=true.
+Reply PRECISA: "Perfetto ${cp.name || '[nome]'}, segno la richiesta per [data estesa] alle [ora]. Appena approvata ti mando la conferma."
+MAI "confermato" o "prenotato".
 
-Quando hai dati minimi → create_appointment=true. Reply PRECISA:
-"Perfetto [nome], ho registrato la tua richiesta per [giorno esteso] alle [ora]. Ti contatteremo per confermare definitivamente."
-MAI frasi vaghe. MAI "ti faremo sapere" se hai i dati. MAI "confermato" o "prenotato".
+Se manca solo telefono (hai email): "Ho già la tua email. Vuoi aggiungere anche un numero? Non è obbligatorio."
+Se manca solo email (hai telefono): "Ho il tuo numero. Vuoi aggiungere un'email? Non è obbligatoria."
+Se il cliente non vuole dare ulteriori contatti: procedi comunque se hai almeno email O telefono.
 
-Se mancano dati, chiedi SOLO quello che manca:
-- Nome mancante → "Come ti chiami?"
-- Data/ora mancante → "Che giorno e orario preferisci?"
-- Contatto mancante → "Email o numero per la conferma?"
+━━━ ALTRE RICHIESTE ━━━
+INFORMAZIONI → Rispondi direttamente.
+SPAM → "No grazie." intent=spam_or_solicitation.
+RECLAMO → Comprensione, escala solo se grave.
+OPERATORE → needs_human=true.
 
-**SPAM** → "No grazie." intent=spam_or_solicitation.
-**RECLAMO** → Comprensione. Escala solo se grave.
-**OPERATORE** → needs_human=true.
+━━━ ESCALATION SOLO SE ━━━
+Cliente chiede esplicitamente operatore / reclamo grave / decisione aziendale.
 
 ━━━ FRASI VIETATE ━━━
-MAI: "avviso il team", "inoltro la richiesta", "un operatore ti risponderà" — SALVO needs_human=true.
-MAI frasi vaghe sull'appuntamento se hai nome+data+ora.
+"avviso il team", "inoltro la richiesta", "un operatore ti risponderà" — SALVO needs_human=true.
 
 ━━━ STORICO ━━━
 ${history || '(nessun messaggio precedente)'}
 
-━━━ MESSAGGIO CLIENTE ━━━
+━━━ MESSAGGIO ATTUALE ━━━
 ${text}
 
-━━━ RACCOLTA CONTATTO ━━━
-Raccogli email o telefono per appuntamenti. Chiedi naturalmente.
-Email valida: contiene @. Telefono: cifre e +.
-
-━━━ JSON ━━━
+━━━ OUTPUT JSON ━━━
 - intent: appointment_request | information_request | quote_request | complaint | urgent_request | spam_or_solicitation | human_request | unknown
 - needs_human: boolean
-- reply: risposta (lingua cliente, max 3 frasi, PRECISA con nome/data/ora)
+- reply: risposta (lingua cliente, max 3 frasi, usa nome se noto, PRECISA su data/ora)
 - create_appointment: true se dati minimi presenti
-- appointment_data: { servizio, data, ora, data_testo, ora_testo, email, telefono, note } — data=ISO YYYY-MM-DD calcolata da "${romeDateISO}", ora=HH:MM 24h
-- collected_email: stringa vuota se non disponibile
-- collected_phone: stringa vuota se non disponibile`;
+- appointment_data: { servizio, data (ISO da ${romeDateISO}), ora (HH:MM), data_testo, ora_testo, email, telefono } — solo se create_appointment=true
+- collected_email: email trovata nel messaggio attuale (stringa vuota se non c'è)
+- collected_phone: telefono trovato nel messaggio attuale (stringa vuota se non c'è)`;
 }
 
 async function sendWhatsAppMessage(phoneNumberId, toNumber, message) {
