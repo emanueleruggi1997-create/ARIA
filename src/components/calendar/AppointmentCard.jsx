@@ -22,8 +22,10 @@ export default function AppointmentCard({ appt, onEdit, onRefresh, lang = 'it' }
   const [loading, setLoading] = useState(null); // 'confirm' | 'cancel' | 'resend'
   const [warning, setWarning] = useState(null);
   const [error, setError] = useState(null);
+  const [optimisticStato, setOptimisticStato] = useState(null);
+  const [messageSent, setMessageSent] = useState(null); // true | false | null
 
-  const stato = appt.stato || 'in_attesa';
+  const stato = optimisticStato || appt.stato || 'in_attesa';
   const cfg = STATI_CONFIG[stato] || STATI_CONFIG.in_attesa;
   const StatoIcon = cfg.icon;
   const TipoIcon = TIPI_ICONS[appt.tipo] || TIPI_ICONS.altro;
@@ -40,17 +42,38 @@ export default function AppointmentCard({ appt, onEdit, onRefresh, lang = 'it' }
     setLoading(action);
     setWarning(null);
     setError(null);
+    setMessageSent(null);
+
+    // Ottimistic update immediato
+    if (action === 'confirm') setOptimisticStato('confermato');
+    if (action === 'cancel') setOptimisticStato('annullato');
+
     try {
       const res = await base44.functions.invoke('confirmAppointmentAction', {
         appointment_id: appt.id,
         action,
       });
       const data = res.data;
-      if (data?.warning) setWarning(data.warning);
-      if (!data?.ok && data?.error) setError(data.error);
+
+      if (action === 'confirm' || action === 'resend') {
+        if (data?.message_sent) {
+          setMessageSent(true);
+        } else {
+          setMessageSent(false);
+          if (data?.warning) setWarning(data.warning);
+          if (data?.error) setError(data.error);
+        }
+      }
+
+      if (!data?.ok && data?.error && action !== 'confirm') {
+        setError(data.error);
+        setOptimisticStato(null); // rollback
+      }
+
       onRefresh?.();
     } catch (e) {
       setError(e.message || 'Errore');
+      setOptimisticStato(null); // rollback
     } finally {
       setLoading(null);
     }
@@ -129,10 +152,16 @@ export default function AppointmentCard({ appt, onEdit, onRefresh, lang = 'it' }
         </div>
       )}
 
-      {/* Confirmed info */}
-      {isConfirmed && appt.confirmation_message_sent && (
+      {/* Confirmed info / message feedback */}
+      {isConfirmed && (messageSent === true || appt.confirmation_message_sent) && (
         <div className="flex items-center gap-2 text-xs text-green-400">
-          <Send className="w-3 h-3" /> Messaggio di conferma inviato
+          <Send className="w-3 h-3" /> Conferma inviata al cliente
+        </div>
+      )}
+      {isConfirmed && messageSent === false && (
+        <div className="flex items-center gap-2 text-xs text-yellow-400 bg-yellow-400/10 rounded-lg px-3 py-2">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          Confermato, ma il messaggio non è stato inviato.
         </div>
       )}
 

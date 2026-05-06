@@ -34,8 +34,8 @@ function ConfirmModal({ apt, onConfirm, onClose }) {
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             {en
-              ? <>Choose date and time for <strong className="text-foreground">{apt?.contact_nome}</strong>.</>
-              : <>Scegli data e ora per <strong className="text-foreground">{apt?.contact_nome}</strong>.</>
+              ? <>Choose date and time for <strong className="text-foreground">{getDisplayName(apt)}</strong>.</>
+              : <>Scegli data e ora per <strong className="text-foreground">{getDisplayName(apt)}</strong>.</>
             }
           </p>
           {/* Show original requested text if no valid date */}
@@ -96,7 +96,7 @@ function AppointmentCard({ apt, onAccept, onReject, actionLoading, lang }) {
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-foreground">{apt.titolo || (en ? 'Appointment' : 'Appuntamento')}</p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          👤 {apt.contact_nome || '—'}
+          👤 {getDisplayName(apt)}
           {' · '}
           📅 {dateLabel}
           {apt.ora && ` ${en ? 'at' : 'ore'} ${apt.ora}`}
@@ -133,6 +133,13 @@ function AppointmentCard({ apt, onAccept, onReject, actionLoading, lang }) {
   );
 }
 
+// ── Priorità nome: evita username auto-generati ──
+function getDisplayName(apt) {
+  const n = apt?.contact_nome || '';
+  if (n && !n.startsWith('User_') && !n.startsWith('WA_')) return n;
+  return 'cliente';
+}
+
 // ── Main widget ────────────────────────────────────────────────────────────────
 export default function AppointmentRequests({ businessId }) {
   const { lang } = useLang();
@@ -141,18 +148,24 @@ export default function AppointmentRequests({ businessId }) {
   const [confirmingApt, setConfirmingApt] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
-  const { data: pendingAppointments = [], isError } = useQuery({
+  // Carica sia pending_confirmation che in_attesa
+  const { data: allPending = [], isError } = useQuery({
     queryKey: ['pending-appointments', businessId],
-    queryFn: () => base44.entities.Appointment.filter(
-      { business_id: businessId, stato: 'in_attesa' },
-      '-created_date',
-      10
-    ),
+    queryFn: async () => {
+      const [p1, p2] = await Promise.all([
+        base44.entities.Appointment.filter({ business_id: businessId, stato: 'pending_confirmation' }, '-created_date', 10),
+        base44.entities.Appointment.filter({ business_id: businessId, stato: 'in_attesa' }, '-created_date', 10),
+      ]);
+      // Deduplica per id
+      const seen = new Set();
+      return [...p1, ...p2].filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
+    },
     enabled: !!businessId,
     refetchInterval: 15_000,
     refetchOnMount: true,
     staleTime: 0,
   });
+  const pendingAppointments = allPending;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['pending-appointments', businessId] });
@@ -162,7 +175,11 @@ export default function AppointmentRequests({ businessId }) {
   const handleConfirm = async (apt, data, ora) => {
     setActionLoading(apt.id);
     try {
-      await base44.functions.invoke('confirmAppointment', { appointmentId: apt.id, action: 'confirm', data, ora });
+      // Aggiorna data/ora se modificate nel modal, poi chiama confirmAppointmentAction
+      if (data && (data !== apt.data || ora !== apt.ora)) {
+        await base44.entities.Appointment.update(apt.id, { data, ora });
+      }
+      await base44.functions.invoke('confirmAppointmentAction', { appointment_id: apt.id, action: 'confirm' });
     } catch (e) {
       console.error('[AppointmentRequests] confirm error:', e.message);
     }
@@ -174,7 +191,7 @@ export default function AppointmentRequests({ businessId }) {
   const handleReject = async (apt) => {
     setActionLoading(apt.id);
     try {
-      await base44.functions.invoke('confirmAppointment', { appointmentId: apt.id, action: 'reject' });
+      await base44.functions.invoke('confirmAppointmentAction', { appointment_id: apt.id, action: 'cancel' });
     } catch (e) {
       console.error('[AppointmentRequests] reject error:', e.message);
     }

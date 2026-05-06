@@ -17,23 +17,33 @@ Deno.serve(async (req) => {
   if (!business) return Response.json({ error: 'Business not found' }, { status: 404 });
 
   // ── FORMAT DATE ──
-  const formatDate = (isoDate, isoTime) => {
+  const formatDate = (isoDate) => {
     const months = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
     if (!isoDate) return appt.requested_date_text || 'data da definire';
     const d = new Date(isoDate + 'T12:00:00');
-    const day = d.getDate();
-    const month = months[d.getMonth()];
-    const year = d.getFullYear();
-    return `${day} ${month} ${year}`;
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
   };
 
   const dateLabel = formatDate(appt.data);
   const timeLabel = appt.ora || appt.requested_time_text || 'orario da definire';
-  const nome = appt.contact_nome || '';
-  const servizio = appt.service_requested || appt.titolo || '';
+
+  // ── PRIORITÀ NOME: nome reale > lead_name > contact_nome > username ──
+  let nome = appt.contact_nome || '';
+  // Rimuovi prefissi auto-generati tipo "User_123" o "@username"
+  if (nome.startsWith('User_') || nome.startsWith('WA_')) nome = '';
+
+  // ── SERVIZIO: evita "Richiesta appuntamento" come testo visibile ──
+  const rawServizio = appt.service_requested || appt.titolo || '';
+  const GENERIC_TITLES = ['richiesta appuntamento', 'appointment request', 'appuntamento'];
+  const servizio = GENERIC_TITLES.includes(rawServizio.toLowerCase().trim()) ? '' : rawServizio;
 
   // ── CONFIRM ──
   if (action === 'confirm') {
+    // ── IDEMPOTENZA: se già confermato e messaggio inviato, ritorna subito ──
+    if (appt.stato === 'confermato' && appt.confirmation_message_sent) {
+      return Response.json({ ok: true, message_sent: true, already_confirmed: true });
+    }
+
     await base44.asServiceRole.entities.Appointment.update(appointment_id, {
       stato: 'confermato',
       needs_human_confirmation: false,
@@ -130,13 +140,12 @@ Deno.serve(async (req) => {
 });
 
 function buildConfirmMessage({ nome, servizio, dateLabel, timeLabel }) {
-  if (nome && servizio) {
-    return `Perfetto ${nome}, il tuo appuntamento per ${servizio} è confermato per il ${dateLabel} alle ${timeLabel}. A presto! 🗓️`;
+  const greeting = nome ? `Perfetto ${nome}` : 'Perfetto';
+  // Usa servizio solo se è un nome reale (non "Richiesta appuntamento")
+  if (servizio) {
+    return `${greeting}, la tua richiesta per ${servizio} è confermata per il ${dateLabel} alle ${timeLabel}. A presto! 🗓️`;
   }
-  if (nome) {
-    return `Perfetto ${nome}, il tuo appuntamento è confermato per il ${dateLabel} alle ${timeLabel}. A presto! 🗓️`;
-  }
-  return `Perfetto, il tuo appuntamento è confermato per il ${dateLabel} alle ${timeLabel}. A presto! 🗓️`;
+  return `${greeting}, il tuo appuntamento è confermato per il ${dateLabel} alle ${timeLabel}. A presto! 🗓️`;
 }
 
 function buildCancelMessage({ dateLabel, timeLabel }) {
