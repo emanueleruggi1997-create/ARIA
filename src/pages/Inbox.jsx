@@ -8,6 +8,8 @@ import ConvRow from '@/components/inbox/ConvRow';
 import NewChatView from '@/components/inbox/NewChatView';
 import ContactInfoPanel from '@/components/inbox/ContactInfoPanel';
 import { MessageSquare } from 'lucide-react';
+import SafeSection from '@/components/ui/SafeSection.jsx';
+import { safeArray } from '@/lib/safeData.js';
 
 const C = {
   bg: '#04080F', surface: '#0D1525', card: '#111C30', border: '#1A2E4A',
@@ -83,13 +85,14 @@ export default function Inbox() {
   });
 
   const conversations = useMemo(() => {
-    return contacts.map(contact => {
-      const msgs = allMessages.filter(m => m.contact_id === contact.id);
+    return safeArray(contacts).map(contact => {
+      if (!contact?.id) return null;
+      const msgs = safeArray(allMessages).filter(m => m?.contact_id === contact.id);
       const lastMsg = msgs[0];
-      const unread = msgs.filter(m => !m.letto && m.ruolo === 'user' && !readIds.has(contact.id));
+      const unread = msgs.filter(m => !m?.letto && m?.ruolo === 'user' && !readIds.has(contact.id));
       return {
         contact_id: contact.id,
-        nome: contact.nome,
+        nome: contact.nome || '—',
         canale: contact.canale,
         stato: contact.stato,
         numero: contact.numero,
@@ -100,7 +103,9 @@ export default function Inbox() {
         unreadCount: unread.length,
         lastResponder: lastMsg?.ruolo,
       };
-    }).sort((a, b) => new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0));
+    }).filter(Boolean).sort((a, b) => {
+      try { return new Date(b.lastMessageTime || 0) - new Date(a.lastMessageTime || 0); } catch { return 0; }
+    });
   }, [contacts, allMessages, readIds]);
 
   const waConvs = conversations.filter(c => c.canale === 'whatsapp');
@@ -126,7 +131,7 @@ export default function Inbox() {
 
   const activeMessages = useMemo(() => {
     if (!activeConv) return [];
-    return allMessages.filter(m => m.contact_id === activeConv.contact_id).reverse();
+    return safeArray(allMessages).filter(m => m?.contact_id === activeConv.contact_id).reverse();
   }, [activeConv, allMessages]);
 
   const activeContact = useMemo(() => {

@@ -4,6 +4,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { useLang } from '@/lib/LanguageContext.jsx';
 import LeadCard from '@/components/crm/LeadCard';
+import { formatSafeTimestamp } from '@/lib/safeDate.js';
+import { safeArray, safeInitials, safeNumber } from '@/lib/safeData.js';
+import SafeSection from '@/components/ui/SafeSection.jsx';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
 import MailingListTab from '@/components/crm/MailingListTab';
 import EmailCampaignsTab from '@/components/crm/EmailCampaignsTab';
@@ -309,7 +312,7 @@ function LeadsSection({ businessId, onOpenAria }) {
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 11, color: C.muted }}>{l.created_date ? new Date(l.created_date).toLocaleDateString(en ? 'en-GB' : 'it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{formatSafeTimestamp(l.created_date, 'dd/MM', '')}</div>
                     <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                       <button onClick={() => setSelectedLead(l)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', color: C.muted, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✏</button>
                       <button onClick={() => handleDelete(l.id)} style={{ background: C.surface, border: `1px solid ${C.danger}44`, borderRadius: 8, padding: '5px 10px', color: C.danger, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
@@ -460,27 +463,32 @@ export default function CRM() {
     staleTime: 60_000,
   });
 
-  useEffect(() => {
-    const t = setInterval(() => setAriaIdx(i => (i + 1) % ARIA_TIPS.length), 4000);
-    return () => clearInterval(t);
-  }, []);
+  const ARIA_TIPS = lang === 'en' ? ARIA_TIPS_EN : ARIA_TIPS_IT;
 
-  const activeLeads = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato)).length;
-  const hotLeads = leads.filter(l => l.stato === 'nuovo').length;
-  const wonLeads = leads.filter(l => l.stato === 'chiuso_vinto').length;
-  const convRate = leads.length > 0 ? Math.round((wonLeads / leads.length) * 100) : 0;
-  const activeContacts = emailContacts.filter(c => c.stato === 'attivo').length;
-  const sentCampaigns = campaigns.filter(c => c.stato === 'inviata').length;
+  useEffect(() => {
+    const interval = setInterval(() => setAriaIdx(i => (i + 1) % ARIA_TIPS.length), 4000);
+    return () => clearInterval(interval);
+  }, [ARIA_TIPS.length]);
+
+  const safeLeads = safeArray(leads);
+  const safeEmailContacts = safeArray(emailContacts);
+  const safeCampaigns = safeArray(campaigns);
+
+  const activeLeads = safeLeads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l?.stato)).length;
+  const hotLeads = safeLeads.filter(l => l?.stato === 'nuovo').length;
+  const wonLeads = safeLeads.filter(l => l?.stato === 'chiuso_vinto').length;
+  const convRate = safeLeads.length > 0 ? Math.round((wonLeads / safeLeads.length) * 100) : 0;
+  const activeContacts = safeEmailContacts.filter(c => c?.stato === 'attivo').length;
+  const sentCampaigns = safeCampaigns.filter(c => c?.stato === 'inviata').length;
   const avgOpen = sentCampaigns > 0
-    ? Math.round(campaigns.filter(c => c.stato === 'inviata').reduce((a, c) => a + (c.destinatari_count > 0 ? Math.round((c.aperture / c.destinatari_count) * 100) : 0), 0) / sentCampaigns)
+    ? Math.round(safeCampaigns.filter(c => c?.stato === 'inviata').reduce((a, c) => a + (safeNumber(c?.destinatari_count) > 0 ? Math.round((safeNumber(c?.aperture) / safeNumber(c?.destinatari_count)) * 100) : 0), 0) / sentCampaigns)
     : 0;
 
-  const stats = { totalLeads: leads.length, activeLeads, emailContacts: activeContacts, campaigns: campaigns.length };
+  const stats = { totalLeads: safeLeads.length, activeLeads, emailContacts: activeContacts, campaigns: safeCampaigns.length };
 
   const TABS = lang === 'en' ? TABS_EN : TABS_IT;
   const KANBAN_COLS = lang === 'en' ? KANBAN_COLS_EN : KANBAN_COLS_IT;
-  const ARIA_TIPS = lang === 'en' ? ARIA_TIPS_EN : ARIA_TIPS_IT;
-  const getInitials = (nome) => (nome || 'NN').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  const getInitials = (nome) => safeInitials(nome, 'NN');
   const colColor = (stato) => KANBAN_COLS.find(c => c.id === stato)?.color || C.muted;
 
   return (
@@ -551,7 +559,9 @@ export default function CRM() {
             </div>
 
             {/* KPIs — Upgraded 8-card dashboard */}
-            <CRMDashboardKPIs leads={leads} campaigns={campaigns} emailContacts={emailContacts} isDesktop={isDesktop} />
+            <SafeSection label="CRM KPIs">
+              <CRMDashboardKPIs leads={safeLeads} campaigns={safeCampaigns} emailContacts={safeEmailContacts} isDesktop={isDesktop} />
+            </SafeSection>
 
             {/* Recent leads + Quick actions */}
             <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr', gap: 16 }}>
@@ -565,7 +575,7 @@ export default function CRM() {
                     <Avatar initials={getInitials(l.contact_nome)} size={30} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l.contact_nome || 'Sconosciuto'}</div>
-                      <div style={{ fontSize: 11, color: C.muted }}>{l.canale || '—'} · {l.created_date ? new Date(l.created_date).toLocaleDateString(lang === 'en' ? 'en-GB' : 'it-IT', { day: '2-digit', month: '2-digit' }) : ''}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{l.canale || '—'} · {formatSafeTimestamp(l.created_date, 'dd/MM', '')}</div>
                     </div>
                     <StatusDot color={colColor(l.stato)} />
                   </div>

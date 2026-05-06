@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, Loader2, Search, MoreVertical, ArrowLeft, X, Check } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { format } from 'date-fns';
-import { it } from 'date-fns/locale';
 import { base44 } from '@/api/base44Client';
+import { formatSafeTimestamp } from '@/lib/safeDate.js';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 
 const C = {
@@ -15,20 +14,30 @@ const C = {
 function groupByDay(messages) {
   const groups = [];
   let lastDay = null;
-  for (const msg of messages) {
-    const day = msg.created_date ? format(new Date(msg.created_date), 'yyyy-MM-dd') : 'unknown';
-    if (day !== lastDay) { groups.push({ type: 'separator', date: msg.created_date, key: `sep-${day}` }); lastDay = day; }
-    groups.push({ type: 'message', msg, key: msg.id });
+  for (const msg of (messages || [])) {
+    const day = formatSafeTimestamp(msg.created_date, 'yyyy-MM-dd', 'unknown');
+    if (day !== lastDay) { groups.push({ type: 'separator', date: msg.created_date, key: `sep-${day}-${msg.id}` }); lastDay = day; }
+    groups.push({ type: 'message', msg, key: msg.id || Math.random() });
   }
   return groups;
 }
 
 function DateSep({ date }) {
-  const d = new Date(date);
-  const now = new Date();
-  let label;
-  if (d.toDateString() === now.toDateString()) label = 'Oggi';
-  else { const y = new Date(now); y.setDate(y.getDate() - 1); label = d.toDateString() === y.toDateString() ? 'Ieri' : format(d, 'd MMMM yyyy', { locale: it }); }
+  let label = 'Data sconosciuta';
+  try {
+    if (date) {
+      const d = new Date(date);
+      const now = new Date();
+      if (!isNaN(d.getTime())) {
+        if (d.toDateString() === now.toDateString()) label = 'Oggi';
+        else {
+          const ieri = new Date(now);
+          ieri.setDate(ieri.getDate() - 1);
+          label = d.toDateString() === ieri.toDateString() ? 'Ieri' : formatSafeTimestamp(date, 'd MMMM yyyy', date);
+        }
+      }
+    }
+  } catch {}
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '12px 0' }}>
       <span style={{ fontSize: 11, color: C.muted, background: `${C.card}`, padding: '3px 12px', borderRadius: 20, border: `1px solid ${C.border}` }}>{label}</span>
@@ -199,7 +208,7 @@ export default function NewChatView({ conversation, messages, onSendMessage, onB
           ) : messages.filter(m => m.ruolo === 'assistant').map(m => (
             <div key={m.id} style={{ marginBottom: 8, padding: '7px 10px', background: C.card, borderRadius: 8, border: `1px solid ${C.accent2}22` }}>
               <div style={{ fontSize: 10, color: C.accent2, marginBottom: 3 }}>
-                {m.created_date ? format(new Date(m.created_date), 'dd/MM HH:mm') : ''}
+                {formatSafeTimestamp(m.created_date, 'dd/MM HH:mm', '')}
               </div>
               <div style={{ fontSize: 12, color: C.text, lineHeight: 1.5 }}>{m.testo}</div>
             </div>
@@ -243,7 +252,7 @@ export default function NewChatView({ conversation, messages, onSendMessage, onB
                 {msg.tipo === 'commento' && <div style={{ fontSize: 9, color: '#f59e0b', fontWeight: 700, marginBottom: 2 }}>💬 COMMENTO IG</div>}
                 <span>{msg.testo || ''}</span>
                 <div style={{ fontSize: 10, color: isRight ? 'rgba(255,255,255,0.4)' : C.muted, marginTop: 3, textAlign: 'right' }}>
-                  {msg.created_date ? format(new Date(msg.created_date), 'HH:mm') : ''}
+                  {formatSafeTimestamp(msg.created_date, 'HH:mm', '')}
                 </div>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/toaster"
 import ErrorBoundary from '@/components/ErrorBoundary';
+import SafeSection from '@/components/ui/SafeSection.jsx';
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
@@ -42,17 +43,17 @@ const AppContent = () => {
 
   return (
     <Routes>
-      <Route path="/aria-chat" element={<AriaChat />} />
+      <Route path="/aria-chat" element={<SafeSection label="AriaChat"><AriaChat /></SafeSection>} />
       <Route element={<AppLayout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/inbox" element={<Inbox />} />
-        <Route path="/crm" element={<CRM />} />
-        <Route path="/calendar" element={<Calendar />} />
-        <Route path="/agent" element={<AgentConfig />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/system-check" element={<SystemCheck />} />
+        <Route path="/dashboard" element={<SafeSection label="Dashboard"><Dashboard /></SafeSection>} />
+        <Route path="/inbox" element={<SafeSection label="Inbox"><Inbox /></SafeSection>} />
+        <Route path="/crm" element={<SafeSection label="CRM"><CRM /></SafeSection>} />
+        <Route path="/calendar" element={<SafeSection label="Calendar"><Calendar /></SafeSection>} />
+        <Route path="/agent" element={<SafeSection label="AgentConfig"><AgentConfig /></SafeSection>} />
+        <Route path="/analytics" element={<SafeSection label="Analytics"><Analytics /></SafeSection>} />
+        <Route path="/settings" element={<SafeSection label="Settings"><Settings /></SafeSection>} />
+        <Route path="/admin" element={<SafeSection label="Admin"><Admin /></SafeSection>} />
+        <Route path="/system-check" element={<SafeSection label="SystemCheck"><SystemCheck /></SafeSection>} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

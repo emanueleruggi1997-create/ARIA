@@ -6,6 +6,7 @@ import AdminBusiness from '@/components/admin/AdminBusiness';
 import AdminPerformance from '@/components/admin/AdminPerformance';
 import AdminLogs from '@/components/admin/AdminLogs';
 import AdminSistema from '@/components/admin/AdminSistema';
+import AdminHealthCheck from '@/components/admin/AdminHealthCheck';
 import { useAuth } from '@/lib/AuthContext';
 
 const TABS = [
@@ -13,6 +14,7 @@ const TABS = [
   { id: 'performance',  label: '⚡ Performance' },
   { id: 'log',          label: '📋 Log' },
   { id: 'sistema',      label: '🔧 Sistema' },
+  { id: 'health',       label: '🛡 Health' },
 ];
 
 export default function Admin() {
@@ -77,6 +79,7 @@ export default function Admin() {
       {activeTab === 'performance' && <AdminPerformance onGoToLogs={() => goToLogs('ERROR')} />}
       {activeTab === 'log' && <AdminLogs key={logFilter} initialFilter={logFilter} />}
       {activeTab === 'sistema' && <AdminSistema businessCount={businesses.length} />}
+      {activeTab === 'health' && <AdminHealthCheck />}
     </div>
   );
 }

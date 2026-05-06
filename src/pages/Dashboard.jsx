@@ -19,6 +19,8 @@ import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { it as itLocale, enUS } from 'date-fns/locale';
 import { formatSafeTimestamp } from '@/lib/safeDate.js';
+import SafeSection from '@/components/ui/SafeSection.jsx';
+import { safeArray, safeString } from '@/lib/safeData.js';
 
 function getGreeting(name, lang) {
   const h = new Date().getHours();
@@ -89,16 +91,22 @@ export default function Dashboard() {
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  const unreadMessages = messages.filter(m => !m.letto && m.ruolo === 'user');
-  const todayMessages = messages.filter(m => {
-    const d = new Date(m.created_date);
-    return d.toDateString() === new Date().toDateString();
+  const safeMessages = safeArray(messages);
+  const safeLeads = safeArray(leads);
+  const safeAppointments = safeArray(appointments);
+
+  const unreadMessages = safeMessages.filter(m => !m?.letto && m?.ruolo === 'user');
+  const todayMessages = safeMessages.filter(m => {
+    try {
+      if (!m?.created_date) return false;
+      return new Date(m.created_date).toDateString() === new Date().toDateString();
+    } catch { return false; }
   });
-  const activeLeads = leads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l.stato));
-  const aiMessages = messages.filter(m => m.ruolo === 'assistant');
-  const aiRate = messages.length > 0 ? Math.round((aiMessages.length / messages.length) * 100) : 0;
-  const upcomingAppointments = appointments.filter(a => a.stato === 'in_attesa' || a.stato === 'confermato');
-  const todayAppointments = appointments.filter(a => a.data === today);
+  const activeLeads = safeLeads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l?.stato));
+  const aiMessages = safeMessages.filter(m => m?.ruolo === 'assistant');
+  const aiRate = safeMessages.length > 0 ? Math.round((aiMessages.length / safeMessages.length) * 100) : 0;
+  const upcomingAppointments = safeAppointments.filter(a => a?.stato === 'in_attesa' || a?.stato === 'confermato');
+  const todayAppointments = safeAppointments.filter(a => a?.data === today);
   const unreadCount = unreadMessages.length;
 
   return (
@@ -139,7 +147,7 @@ export default function Dashboard() {
 
       {/* ARIA proattiva + Cosa fare oggi */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <AriaProactiveWidget business={business} messages={messages} leads={leads} />
+        <SafeSection label="ARIA Proattiva"><AriaProactiveWidget business={business} messages={safeMessages} leads={safeLeads} /></SafeSection>
         <TodayTasks
           unreadMessages={unreadCount}
           pendingLeads={activeLeads.length}
@@ -168,13 +176,13 @@ export default function Dashboard() {
       )}
 
       {/* Azioni urgenti ARIA */}
-      <UrgentActionsWidget businessId={business?.id} />
+      <SafeSection label="Azioni Urgenti"><UrgentActionsWidget businessId={business?.id} /></SafeSection>
 
       {/* Richieste di parlare col titolare */}
-      <HumanRequestsWidget businessId={business?.id} />
+      <SafeSection label="Richieste Umane"><HumanRequestsWidget businessId={business?.id} /></SafeSection>
 
       {/* Appointment Requests */}
-      <AppointmentRequests businessId={business?.id} />
+      <SafeSection label="Richieste Appuntamento"><AppointmentRequests businessId={business?.id} /></SafeSection>
 
       {/* Two column: Leads + Messaggi non letti */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -185,7 +193,7 @@ export default function Dashboard() {
             <Link to="/crm" className="text-xs text-primary hover:underline">{t.seeAll}</Link>
           </div>
           <div className="space-y-2">
-            {leads.slice(0, 5).length > 0 ? leads.slice(0, 5).map(lead => (
+            {safeLeads.slice(0, 5).length > 0 ? safeLeads.slice(0, 5).map(lead => (
               <Link
                 key={lead.id}
                 to="/crm"
