@@ -8,14 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, CalendarDays, Clock, User, CheckCircle2, XCircle, Circle, Phone, Video, Briefcase, Trash2 } from 'lucide-react';
-import { format, parseISO, isToday, isTomorrow } from 'date-fns';
-import { safeDate, safeDateLabel, formatSafeTimestamp } from '@/lib/safeDate.js';
+import { Plus, CalendarDays, Circle, CheckCircle2, XCircle, Phone, Video, Briefcase } from 'lucide-react';
+import { format, isToday, isTomorrow } from 'date-fns';
+import { safeDate } from '@/lib/safeDate.js';
 import { it, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import AvailabilityPanel from '@/components/calendar/AvailabilityPanel';
+import AppointmentCard from '@/components/calendar/AppointmentCard';
 
 const STATI_CONFIG = {
+  pending_confirmation: { color: 'text-orange-400', bg: 'bg-orange-400/10', icon: Circle },
   in_attesa: { color: 'text-yellow-400', bg: 'bg-yellow-400/10', icon: Circle },
   confermato: { color: 'text-green-400', bg: 'bg-green-400/10', icon: CheckCircle2 },
   completato: { color: 'text-blue-400', bg: 'bg-blue-400/10', icon: CheckCircle2 },
@@ -171,83 +173,7 @@ function AppointmentModal({ open, onClose, appointment, businessId, contacts, on
   );
 }
 
-function AppointmentCard({ appt, onClick, onAccept, onReject, onDelete }) {
-  const { t, lang } = useLang();
-  const statoConfig = STATI_CONFIG[appt.stato] || STATI_CONFIG.in_attesa;
-  const TipoIcon = TIPI_ICONS[appt.tipo] || TIPI_ICONS.altro;
-  const StatoIcon = statoConfig.icon;
-  const statoLabel = t[appt.stato === 'in_attesa' ? 'inAttesa' : appt.stato] || appt.stato;
-  const dateLocale = lang === 'en' ? enUS : it;
-  const isPending = appt.stato === 'in_attesa';
 
-  const dateLabel = () => safeDateLabel(appt.data, lang, t.todayLabel, t.tomorrowLabel, 'Da confermare');
-
-  return (
-    <div className={cn(
-      "w-full p-4 rounded-xl border transition-all",
-      appt.stato === 'annullato' ? 'bg-card/50 border-border opacity-60' : 'bg-card border-border',
-      isPending && 'border-yellow-400/30 bg-yellow-400/5'
-    )}>
-      <button onClick={() => onClick(appt)} className="w-full text-left">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-              <TipoIcon className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">{appt.titolo || 'Appuntamento'}</p>
-              {appt.contact_nome && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                  <User className="w-3 h-3" /> {appt.contact_nome}
-                </p>
-              )}
-              <div className="flex items-center gap-3 mt-1.5">
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <CalendarDays className="w-3 h-3" /> {dateLabel()}
-                </span>
-                {appt.ora && (
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {appt.ora}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          <span className={cn('flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full shrink-0', statoConfig.color, statoConfig.bg)}>
-            <StatoIcon className="w-3 h-3" />
-            {statoLabel}
-          </span>
-        </div>
-        {appt.note && <p className="text-xs text-muted-foreground mt-2 truncate">{appt.note}</p>}
-      </button>
-
-      {/* Azioni rapide per richieste in attesa */}
-      {isPending && (
-        <div className="flex gap-2 mt-3 pt-3 border-t border-border">
-          <button
-            onClick={e => { e.stopPropagation(); onAccept(appt); }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-green-500/15 text-green-400 text-xs font-semibold hover:bg-green-500/25 transition-colors"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" /> Accetta
-          </button>
-          <button
-            onClick={e => { e.stopPropagation(); onReject(appt); }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-red-500/15 text-red-400 text-xs font-semibold hover:bg-red-500/25 transition-colors"
-          >
-            <XCircle className="w-3.5 h-3.5" /> Rifiuta
-          </button>
-          <button
-            onClick={e => { e.stopPropagation(); onDelete(appt); }}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-muted-foreground text-xs font-semibold hover:bg-muted transition-colors"
-            title="Elimina senza rispondere"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function Calendar() {
   const { business } = useBusiness();
@@ -256,7 +182,7 @@ export default function Calendar() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState(null);
-  const [filterStato, setFilterStato] = useState('confermato');
+  const [filterStato, setFilterStato] = useState('tutti');
 
   const { data: appointments = [], isLoading } = useQuery({
     queryKey: ['appointments', business?.id],
@@ -274,23 +200,6 @@ export default function Calendar() {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['appointments', business?.id] });
 
-  const handleDelete = async (appt) => {
-    await base44.entities.Appointment.delete(appt.id);
-    refresh();
-    setSelectedAppt(null);
-    setModalOpen(false);
-  };
-
-  const handleAccept = async (appt) => {
-    await base44.entities.Appointment.update(appt.id, { stato: 'confermato' });
-    refresh();
-  };
-
-  const handleReject = async (appt) => {
-    await base44.entities.Appointment.update(appt.id, { stato: 'annullato' });
-    refresh();
-  };
-
   const handleEdit = (appt) => {
     setSelectedAppt(appt);
     setModalOpen(true);
@@ -301,7 +210,12 @@ export default function Calendar() {
     setModalOpen(true);
   };
 
-  const filtered = appointments.filter(a => filterStato === 'tutti' || a.stato === filterStato);
+  const filtered = appointments.filter(a => {
+    if (filterStato === 'tutti') return true;
+    return a.stato === filterStato;
+  });
+
+  const pendingCount = appointments.filter(a => a.stato === 'pending_confirmation').length;
 
   // Group by date
   const grouped = filtered.reduce((acc, appt) => {
@@ -315,6 +229,7 @@ export default function Calendar() {
 
   const today = appointments.filter(a => a.data === format(new Date(), 'yyyy-MM-dd'));
   const upcoming = appointments.filter(a => a.stato !== 'annullato' && a.stato !== 'completato');
+  const pendingConfirm = appointments.filter(a => a.stato === 'pending_confirmation');
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
@@ -322,8 +237,13 @@ export default function Calendar() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t.agenda}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {today.length} {t.todayLabel.toLowerCase()} · {upcoming.length} {lang === 'en' ? 'scheduled' : 'in programma'}
+          <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2">
+            <span>{today.length} {t.todayLabel.toLowerCase()} · {upcoming.length} {lang === 'en' ? 'scheduled' : 'in programma'}</span>
+            {pendingConfirm.length > 0 && (
+              <span className="text-xs font-semibold text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded-full border border-orange-400/30">
+                🔔 {pendingConfirm.length} da confermare
+              </span>
+            )}
           </p>
         </div>
         <Button onClick={handleNew} className="hidden md:flex">
@@ -339,16 +259,22 @@ export default function Calendar() {
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap">
-        {[['tutti', t.filterAll], ['in_attesa', t.filterPending], ['confermato', t.filterConfirmed], ['completato', t.filterCompleted], ['annullato', t.filterCancelled]].map(([val, label]) => (
+        {[['tutti', t.filterAll], ['pending_confirmation', '🔔 Da confermare'], ['in_attesa', t.filterPending], ['confermato', t.filterConfirmed], ['completato', t.filterCompleted], ['annullato', t.filterCancelled]].map(([val, label]) => (
           <button
             key={val}
             onClick={() => setFilterStato(val)}
             className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-              filterStato === val ? 'bg-primary text-white' : 'bg-secondary text-muted-foreground hover:text-foreground'
+              'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5',
+              filterStato === val ? 'bg-primary text-white' : 'bg-secondary text-muted-foreground hover:text-foreground',
+              val === 'pending_confirmation' && pendingCount > 0 && filterStato !== val && 'border border-orange-400/50 text-orange-400 bg-orange-400/10'
             )}
           >
             {label}
+            {val === 'pending_confirmation' && pendingCount > 0 && (
+              <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-full', filterStato === val ? 'bg-white/20' : 'bg-orange-400 text-white')}>
+                {pendingCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -380,10 +306,9 @@ export default function Calendar() {
                     <AppointmentCard
                       key={appt.id}
                       appt={appt}
-                      onClick={handleEdit}
-                      onAccept={handleAccept}
-                      onReject={handleReject}
-                      onDelete={handleDelete}
+                      onEdit={handleEdit}
+                      onRefresh={refresh}
+                      lang={lang}
                     />
                   ))}
                 </div>

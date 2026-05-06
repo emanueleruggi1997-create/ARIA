@@ -275,7 +275,6 @@ Deno.serve(async (req) => {
 
           if (intent === 'appointment_request' && parsed.create_appointment && parsed.appointment_data) {
             const ad = parsed.appointment_data || {};
-            // Usa data_testo/ora_testo come fallback per il parser italiano
             const adNorm = {
               ...ad,
               data: ad.data || ad.data_testo || '',
@@ -287,9 +286,17 @@ Deno.serve(async (req) => {
               ad: adNorm, businessId, contactId: contact.id,
               contactName: contact.nome, source: 'instagram', rawMessage: text,
             });
-            // Rimuovi campi non in schema prima di salvare
             const { _requested_date_text, _requested_time_text, _raw_message, _validation_status, ...cleanPayload } = aptPayload;
-            console.log(`[webhookMeta] Creating appointment | validation_status=${_validation_status} | date="${aptPayload.data}" | dateText="${_requested_date_text}" | time="${aptPayload.ora}"`);
+            // Aggiungi campi canale per invio messaggio automatico alla conferma
+            cleanPayload.customer_channel_id = senderId;
+            cleanPayload.service_requested = ad.servizio || '';
+            cleanPayload.email = adNorm.email || '';
+            cleanPayload.phone = adNorm.telefono || collectedPhone || '';
+            cleanPayload.requested_date_text = _requested_date_text || adNorm.data;
+            cleanPayload.requested_time_text = _requested_time_text || adNorm.ora;
+            cleanPayload.needs_human_confirmation = true;
+            cleanPayload.stato = 'pending_confirmation';
+            console.log(`[webhookMeta] Creating appointment | validation_status=${_validation_status} | date="${aptPayload.data}" | dateText="${_requested_date_text}" | time="${aptPayload.ora}" | customer_channel_id="${senderId}"`);
             await base44.asServiceRole.entities.Appointment.create(cleanPayload).catch(e => {
               console.error('[webhookMeta] Appointment create failed:', e.message);
             });

@@ -45,12 +45,13 @@
     "stato": {
       "type": "string",
       "enum": [
+        "pending_confirmation",
         "in_attesa",
         "confermato",
         "completato",
         "annullato"
       ],
-      "default": "in_attesa"
+      "default": "pending_confirmation"
     },
     "note": {
       "type": "string",
@@ -61,14 +62,70 @@
       "enum": [
         "instagram",
         "whatsapp",
+        "email",
         "manuale"
       ],
       "default": "manuale"
+    },
+    "needs_human_confirmation": {
+      "type": "boolean",
+      "default": true
+    },
+    "customer_channel_id": {
+      "type": "string",
+      "description": "ID Instagram o numero WA del cliente per l'invio messaggio"
+    },
+    "customer_username": {
+      "type": "string",
+      "description": "Username Instagram del cliente"
+    },
+    "service_requested": {
+      "type": "string",
+      "description": "Servizio richiesto"
+    },
+    "requested_date_text": {
+      "type": "string",
+      "description": "Testo originale data richiesta"
+    },
+    "requested_time_text": {
+      "type": "string",
+      "description": "Testo originale ora richiesta"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email cliente"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefono cliente"
+    },
+    "confirmed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Quando confermato"
+    },
+    "confirmed_by": {
+      "type": "string",
+      "description": "Email utente che ha confermato"
+    },
+    "confirmation_message_sent": {
+      "type": "boolean",
+      "default": false
+    },
+    "confirmation_message_sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "confirmation_channel": {
+      "type": "string"
+    },
+    "confirmation_error": {
+      "type": "string",
+      "description": "Errore invio messaggio conferma"
     }
   },
   "required": [
     "business_id",
-    "titolo",
-    "data"
+    "titolo"
   ]
 }

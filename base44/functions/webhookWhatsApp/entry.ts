@@ -199,7 +199,16 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
       contactName: contact.nome, source: 'whatsapp', rawMessage: text,
     });
     const { _requested_date_text, _requested_time_text, _raw_message, _validation_status, ...cleanPayload } = aptPayload;
-    console.log(`[webhookWA] Creating appointment | validation_status=${_validation_status} | date="${aptPayload.data}" | time="${aptPayload.ora}" | dateText="${_requested_date_text}"`);
+    // Aggiungi campi canale per invio messaggio automatico alla conferma
+    cleanPayload.customer_channel_id = fromNumber;
+    cleanPayload.service_requested = ad.servizio || '';
+    cleanPayload.email = adNorm.email || '';
+    cleanPayload.phone = adNorm.telefono || collectedPhone || '';
+    cleanPayload.requested_date_text = _requested_date_text || adNorm.data;
+    cleanPayload.requested_time_text = _requested_time_text || adNorm.ora;
+    cleanPayload.needs_human_confirmation = true;
+    cleanPayload.stato = 'pending_confirmation';
+    console.log(`[webhookWA] Creating appointment | validation_status=${_validation_status} | date="${aptPayload.data}" | time="${aptPayload.ora}" | dateText="${_requested_date_text}" | customer_channel_id="${fromNumber}"`);
     await base44.asServiceRole.entities.Appointment.create(cleanPayload).catch(e => {
       console.error('[webhookWA] Appointment create failed:', e.message);
     });
