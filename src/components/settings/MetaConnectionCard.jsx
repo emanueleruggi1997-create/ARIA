@@ -186,8 +186,8 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
           <StatusRow
             icon={hasUsername ? '✅' : '⚠️'}
             color={hasUsername ? '#10B981' : '#F59E0B'}
-            label={hasUsername ? `Username: @${igAccountName}` : 'Username non sincronizzato'}
-            detail={!hasUsername && syncError ? `Errore Meta: ${syncError.slice(0, 80)}` : null}
+            label={hasUsername ? `@${igAccountName}` : 'Username da sincronizzare'}
+            detail={null}
           />
 
           <StatusRow
@@ -212,16 +212,17 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       )}
 
-      {/* Avvisi specifici */}
-      {igConnected && !hasBasicScope && connection?.has_basic_scope === false && (
+      {/* Avviso scope mancante — solo se NON presente in granted_scopes */}
+      {igConnected && !hasBasicScope && (
         <div style={{ marginTop: 10, fontSize: 11, color: '#F59E0B', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '8px 12px' }}>
-          ⚠️ Il token non contiene <strong>instagram_business_basic</strong>. Riconnetti Instagram accettando tutti i permessi richiesti.
+          ⚠️ Permesso <strong>instagram_business_basic</strong> mancante. Riconnetti accettando tutti i permessi.
         </div>
       )}
 
-      {igConnected && !hasUsername && !syncError && (
+      {/* Username non recuperato — mostra sync pulsante solo se effettivamente mancante */}
+      {igConnected && !hasUsername && (
         <div style={{ marginTop: 10, fontSize: 11, color: '#6B7280', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <span>Account collegato, username non recuperato.</span>
+          <span>Username non ancora sincronizzato.</span>
           <button onClick={resolveUsername} disabled={resolvingName} style={smallBtn}>
             {resolvingName ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={11} />}
             {resolvingName ? '...' : 'Sincronizza'}
@@ -229,9 +230,10 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       )}
 
-      {igConnected && syncError && (
-        <div style={{ marginTop: 10, fontSize: 11, color: '#EF4444', background: '#EF444410', border: '1px solid #EF444430', borderRadius: 8, padding: '8px 12px' }}>
-          ❌ Errore Meta: {syncError}
+      {/* Sync error — mostra solo se username ancora mancante (altrimenti errore era transitorio) */}
+      {igConnected && syncError && !hasUsername && (
+        <div style={{ marginTop: 8, fontSize: 11, color: '#9CA3AF', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '7px 12px' }}>
+          ℹ️ {syncError}
         </div>
       )}
 
