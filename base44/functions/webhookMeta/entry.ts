@@ -194,58 +194,69 @@ Deno.serve(async (req) => {
           }
           if (!withinTime || !withinDay) { console.log('[webhookMeta] Fuori orario — nessuna risposta'); return; }
 
-          // ── Pre-detect urgenze ──
-          const urgentKw = /appuntament|call|telefonat|videochiamata|zoom|meet|colloquio|incontr|documento|visura|file|attestato|certificato|preventivo|prez(zo|zi)|cost(o|i)|collaborar|lavorare insieme|contratto|accordo|partnership/i;
-          if (urgentKw.test(text)) {
-            let trigger = 'appuntamento';
-            if (/documento|visura|file|attestato|certificato/i.test(text)) trigger = 'documento';
-            else if (/preventivo|prezzo|prezzi|costo|costi/i.test(text)) trigger = 'preventivo';
-            else if (/collaborar|lavorare insieme|contratto|accordo|partnership/i.test(text)) trigger = 'collaborazione';
-            await base44.asServiceRole.entities.UrgentAction.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, contact_canale: 'instagram', trigger, messaggio_originale: text.slice(0, 500), stato: 'nuovo' }).catch(() => {});
-          }
-
-          // ── Pre-detect: vuole operatore umano ──
-          const humanKw = /parla(re)? con (te|voi|il titolare|il responsabile|una persona|qualcuno)|voglio (sentire|parlare con) (te|voi|qualcuno|una persona reale)|mettimi in contatto|chiamami|chiamatemi|richiama(temi)?|pass(ami|atemi) (a qualcuno|al titolare)/i;
-          if (humanKw.test(text)) {
-            const ex = await base44.asServiceRole.entities.HumanRequest.filter({ business_id: businessId, contact_id: contact.id, stato: 'nuovo' });
-            if (!ex.length) await base44.asServiceRole.entities.HumanRequest.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, canale: 'instagram', motivo: text.slice(0, 200), stato: 'nuovo' }).catch(() => {});
-          }
-
-          // ── Storico (ultimi 10) ──
-          const msgs = await base44.asServiceRole.entities.Message.filter({ business_id: businessId, contact_id: contact.id }, '-created_date', 10);
+          // ── Storico (ultimi 12 messaggi per contesto) ──
+          const msgs = await base44.asServiceRole.entities.Message.filter({ business_id: businessId, contact_id: contact.id }, '-created_date', 12);
           const history    = msgs.reverse().map(m => `${m.ruolo === 'user' ? 'Cliente' : 'ARIA'}: ${m.testo}`).join('\n');
           const isFirstMsg = msgs.filter(m => m.ruolo === 'assistant').length === 0;
           const agentName  = business.nome_agente || 'ARIA';
 
-          const systemPrompt = `Sei ${agentName}, assistente AI di "${business.nome}".
-
-REGOLE ASSOLUTE:
-1. Non confermare appuntamenti senza approvazione del titolare → "Ho preso nota, il team ti ricontatterà per confermare. 😊"
-2. Non promettere invio di documenti/file → "Giro la richiesta al team. 😊"
-3. Non dare orari/numeri specifici del titolare.
-4. Se non sei sicura → "Ottima domanda, la giro al team. 😊"
-5. Usa sempre "il team", mai "io ti chiamerò".
-6. Prezzi non listati → rimanda al team.
-
-${business.ai_prompt ? business.ai_prompt + '\n' : ''}
-LINGUA: Rispondi nella stessa lingua del cliente.
-${business.servizi ? `Servizi: ${business.servizi}` : ''}
-${business.prezzi ? `Prezzi (solo se già listati): ${business.prezzi}` : ''}
-${business.faq ? `FAQ: ${business.faq}` : ''}
-${business.cose_da_non_fare ? `Non fare: ${business.cose_da_non_fare}` : ''}
-
-STILE: Breve (1-3 frasi), naturale. ${isFirstMsg ? 'Primo messaggio: presentati brevemente.' : 'Non ripresentarti.'}
-SE CHIEDE OPERATORE: "Certo! Ho avvisato il team — ti risponderemo presto 😊"`;
+          // ── Prompt ARIA come segretaria autonoma ──
+          const ariaPrompt = buildAriaPrompt({ business, agentName, history, text, isFirstMsg });
 
           console.log('[webhookMeta] Calling ARIA for:', contact.nome);
           const llmRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `${systemPrompt}\n\nStorico:\n${history}\n\nCliente: ${text}\n${agentName}:`,
-            model:  'gpt_5_mini',
+            prompt: ariaPrompt,
+            response_json_schema: {
+              type: 'object',
+              properties: {
+                intent: { type: 'string' },
+                needs_human: { type: 'boolean' },
+                reply: { type: 'string' },
+                create_appointment: { type: 'boolean' },
+                appointment_data: { type: 'object' },
+              },
+              required: ['intent', 'needs_human', 'reply'],
+            },
+            model: 'gpt_5_mini',
           });
-          const ariaResponse = typeof llmRes === 'string' ? llmRes : (llmRes?.text || llmRes?.response || '');
-          console.log('[webhookMeta] ARIA response:', ariaResponse?.slice(0, 200));
+
+          const parsed     = typeof llmRes === 'object' ? llmRes : {};
+          const ariaResponse = parsed.reply || '';
+          const intent       = parsed.intent || 'unknown';
+          const needsHuman   = !!parsed.needs_human;
+
+          console.log(`[webhookMeta] ARIA intent="${intent}" needs_human=${needsHuman} | reply: ${ariaResponse?.slice(0, 150)}`);
 
           if (!ariaResponse) { console.error('[webhookMeta] ARIA non ha generato risposta'); return; }
+
+          // ── Azioni post-classificazione ──
+          if (needsHuman && intent !== 'spam_or_solicitation') {
+            // Escalation reale: crea HumanRequest
+            const ex = await base44.asServiceRole.entities.HumanRequest.filter({ business_id: businessId, contact_id: contact.id, stato: 'nuovo' });
+            if (!ex.length) {
+              await base44.asServiceRole.entities.HumanRequest.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, canale: 'instagram', motivo: text.slice(0, 200), stato: 'nuovo' }).catch(() => {});
+            }
+          }
+
+          if (intent === 'appointment_request' && parsed.create_appointment && parsed.appointment_data) {
+            const ad = parsed.appointment_data;
+            await base44.asServiceRole.entities.Appointment.create({
+              business_id: businessId,
+              contact_id: contact.id,
+              contact_nome: contact.nome,
+              titolo: ad.servizio || 'Appuntamento richiesto',
+              data: ad.data || '',
+              ora: ad.ora || '',
+              tipo: 'servizio',
+              stato: 'in_attesa',
+              note: ad.note || `Richiesto via Instagram`,
+              canale_origine: 'instagram',
+            }).catch(() => {});
+          }
+
+          if (intent === 'complaint' || (needsHuman && intent === 'urgent_request')) {
+            await base44.asServiceRole.entities.UrgentAction.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, contact_canale: 'instagram', trigger: intent === 'complaint' ? 'reclamo' : 'urgenza', messaggio_originale: text.slice(0, 500), stato: 'nuovo' }).catch(() => {});
+          }
 
           console.log('[webhookMeta] Sending Instagram DM to:', senderId);
           const sent = await sendIGReply(conn, senderId, ariaResponse);
@@ -304,6 +315,70 @@ SE CHIEDE OPERATORE: "Certo! Ho avvisato il team — ti risponderemo presto 😊
 
   return Response.json({ ok: true });
 });
+
+// ── Helper: costruisce il prompt ARIA segretaria autonoma ──
+function buildAriaPrompt({ business, agentName, history, text, isFirstMsg }) {
+  const orari = `${business.orario_inizio || '09:00'}–${business.orario_fine || '18:00'}`;
+  const giorni = (business.giorni_attivi || []).join(', ') || 'lun–ven';
+
+  return `Sei ${agentName}, segretaria AI professionale di "${business.nome}".
+Il tuo obiettivo è gestire la conversazione in autonomia: rispondere, qualificare, raccogliere dati per appuntamenti e gestire richieste senza dipendere dal team per ogni messaggio.
+
+━━━ IDENTITÀ E STILE ━━━
+- Parli come una persona reale: naturale, diretta, calda ma professionale.
+- Risposte brevi: 1–3 frasi al massimo. Mai lunghi elenchi puntati.
+- ${isFirstMsg ? 'È il PRIMO messaggio: presentati brevemente con il tuo nome.' : 'Non ripresentarti, vai al punto.'}
+- Rispondi SEMPRE nella stessa lingua del cliente.
+- Non usare frasi robotiche come "Come posso assisterti?", "Non esitare a contattarci", "Ottima domanda!".
+
+━━━ BUSINESS ━━━
+${business.servizi ? `Servizi: ${business.servizi}` : ''}
+${business.prezzi ? `Prezzi disponibili: ${business.prezzi}` : ''}
+${business.faq ? `FAQ: ${business.faq}` : ''}
+${business.cose_da_non_fare ? `Non fare mai: ${business.cose_da_non_fare}` : ''}
+${business.ai_prompt ? `Istruzioni aggiuntive: ${business.ai_prompt}` : ''}
+Orari: ${orari}, giorni: ${giorni}
+
+━━━ COME GESTISCI LE RICHIESTE ━━━
+
+**INFORMAZIONI** → Rispondi direttamente usando la knowledge base. Non dire "chiedo al team" se la risposta è già disponibile.
+
+**APPUNTAMENTO** → Guida la conversazione raccogliendo: nome, servizio, giorno preferito, fascia oraria, contatto. Chiedi UN dato alla volta solo se manca. Quando hai abbastanza dati, conferma la richiesta e imposta create_appointment=true.
+Esempio: "Certo, ti aiuto a fissare l'appuntamento. Per quale servizio e in che giorno preferisci?"
+
+**PREVENTIVO** → Fai le domande necessarie per capire il progetto, poi dai un'indicazione se possibile con i dati disponibili. Escala solo se serve approvazione su cifre importanti.
+
+**SPAM / OFFERTA NON RICHIESTA / COLLABORAZIONE FREDDA** → Rispondi brevemente: "No grazie, al momento non siamo interessati." Imposta intent=spam_or_solicitation. NON creare lead, NON escalare.
+
+**RECLAMO / CLIENTE ARRABBIATO** → Mostra comprensione, non scalare subito. Se il problema è serio o si ripete, allora needs_human=true.
+
+**RICHIESTA OPERATORE UMANO** → "Certo, ti passo a un operatore. Intanto dimmi brevemente di cosa hai bisogno così può aiutarti subito." Poi needs_human=true.
+
+**NON SAI** → Fai UNA sola domanda utile o proponi il passo successivo. Non usare "avviso il team" come risposta di default.
+
+━━━ ESCALATION AL TEAM (needs_human=true) SOLO SE ━━━
+- Cliente esplicitamente chiede un operatore umano
+- Reclamo serio o urgenza reale non gestibile
+- Serve una decisione che non puoi prendere (es. sconto importante, accordo contrattuale)
+- Dopo 3+ scambi senza risolvere e il cliente è frustrato
+
+━━━ FRASI VIETATE ━━━
+MAI usare: "avviso il team", "ti faremo sapere", "inoltro la richiesta", "un operatore ti risponderà", "ho girato la richiesta", "ti ricontatteremo a breve" — A MENO CHE needs_human=true.
+
+━━━ STORICO CONVERSAZIONE ━━━
+${history || '(nessun messaggio precedente)'}
+
+━━━ MESSAGGIO CLIENTE ━━━
+${text}
+
+━━━ RISPOSTA RICHIESTA (JSON) ━━━
+Rispondi con un JSON con questi campi:
+- intent: uno tra appointment_request | information_request | quote_request | complaint | urgent_request | spam_or_solicitation | human_request | unknown
+- needs_human: true solo nei casi descritti sopra
+- reply: il testo della risposta da inviare al cliente (in lingua del cliente, max 3 frasi)
+- create_appointment: true se hai raccolto dati sufficienti per creare un appuntamento (nome, servizio, data/preferenza, contatto)
+- appointment_data: { servizio, data, ora, note } (solo se create_appointment=true)`;
+}
 
 // ── Helper: invia DM via Instagram Messaging API ──
 async function sendIGReply(conn, recipientId, text) {

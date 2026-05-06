@@ -102,59 +102,11 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
     return;
   }
 
-  // ── Pre-detect: trigger URGENTI (appuntamento, documento, preventivo, collaborazione) ──
-  const urgentKeywords = /appuntament|call|telefonat|videochiamata|zoom|meet|colloquio|incontr|documento|visura|file|attestato|certificato|preventivo|prez(zo|zi)|cost(o|i)|collaborar|lavorare insieme|contratto|accordo|partnership/i;
-  if (urgentKeywords.test(text)) {
-    try {
-      let triggerType = 'appuntamento';
-      if (/documento|visura|file|attestato|certificato/i.test(text)) triggerType = 'documento';
-      else if (/preventivo|prezzo|prezzi|costo|costi/i.test(text)) triggerType = 'preventivo';
-      else if (/collaborar|lavorare insieme|contratto|accordo|partnership/i.test(text)) triggerType = 'collaborazione';
-      await base44.asServiceRole.entities.UrgentAction.create({
-        business_id: businessId,
-        contact_id: contact.id,
-        contact_nome: contact.nome,
-        contact_canale: 'whatsapp',
-        trigger: triggerType,
-        messaggio_originale: text.slice(0, 500),
-        stato: 'nuovo',
-      });
-      console.log('[webhookWA] UrgentAction creata per:', contact.nome, '| trigger:', triggerType);
-    } catch (e) {
-      console.log('[webhookWA] UrgentAction creation error:', e.message);
-    }
-  }
-
-  // ── Pre-detect: vuole parlare col titolare? ──
-  const humanRequestKeywords = /parla(re)? con (te|voi|il titolare|il responsabile|una persona|qualcuno)|voglio (sentire|parlare con) (te|voi|qualcuno|una persona reale)|mettimi in contatto|chiamami|chiamatemi|richiama(temi)?|pass(ami|atemi) (a qualcuno|al titolare)/i;
-  if (humanRequestKeywords.test(text)) {
-    try {
-      const existing = await base44.asServiceRole.entities.HumanRequest.filter({
-        business_id: businessId,
-        contact_id: contact.id,
-        stato: 'nuovo',
-      });
-      if (!existing.length) {
-        await base44.asServiceRole.entities.HumanRequest.create({
-          business_id: businessId,
-          contact_id: contact.id,
-          contact_nome: contact.nome,
-          canale: 'whatsapp',
-          motivo: text.slice(0, 200),
-          stato: 'nuovo',
-        });
-        console.log('[webhookWA] HumanRequest created for:', contact.nome);
-      }
-    } catch (e) {
-      console.log('[webhookWA] HumanRequest creation error:', e.message);
-    }
-  }
-
   // Fetch recent messages for context
   const recentMessages = await base44.asServiceRole.entities.Message.filter(
     { business_id: businessId, contact_id: contact.id },
     '-created_date',
-    10
+    12
   );
   const historyText = recentMessages.reverse()
     .map(m => `${m.ruolo === 'assistant' ? 'ARIA' : 'Cliente'}: ${m.testo}`)
@@ -163,73 +115,63 @@ async function processMessage({ base44, businessId, phoneNumberId, fromNumber, s
   const isFirstMessage = recentMessages.filter(m => m.ruolo === 'assistant').length === 0;
   const agentName = business.nome_agente || 'ARIA';
 
-  // Detect language
-  const allTexts = recentMessages
-    .filter(m => m.ruolo === 'user')
-    .map(m => m.testo)
-    .concat([text])
-    .slice(-3)
-    .join(' ');
-
-  const clientLangDetect = await base44.asServiceRole.integrations.Core.InvokeLLM({
-    prompt: `Detect the language of this text and reply with ONLY the language name in English (e.g. "Italian", "English", "Spanish"). Text: "${allTexts.slice(0, 300)}"`,
-    model: 'gpt_5_mini',
-  });
-  const detectedLang = (typeof clientLangDetect === 'string' ? clientLangDetect : clientLangDetect?.text || '').trim().split('\n')[0];
-
-  const systemPrompt = `Sei ${agentName}, assistente di "${business.nome}".
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REGOLE ASSOLUTE — NON DEROGABILI MAI
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. NON confermare MAI appuntamenti, call o incontri senza approvazione esplicita del titolare. Quando ti chiedono un appuntamento/call rispondi SEMPRE e SOLO: "Perfetto! Ho preso nota della tua richiesta e la giro subito al team. Ti ricontatteremo entro breve per confermare data e orario. 😊"
-
-2. NON promettere MAI l'invio di documenti, file, visure, attestati o materiali. Rispondi SEMPRE: "Certamente! Giro la richiesta al team che ti contatterà direttamente. 😊"
-
-3. NON dare MAI date, orari specifici o numeri di telefono del titolare al posto del team.
-
-4. Se non sei SICURA al 100% di un'informazione, NON inventare. Di': "Ottima domanda! La giro al team che ti risponderà con precisione. 😊"
-
-5. Non parlare MAI a nome del titolare in prima persona (no "ti chiamerò io", "ti mando io"). Usa sempre "il team ti contatterà".
-
-6. Se il cliente chiede prezzi di servizi non listati → rimanda al team.
-
-7. Non rivelare MAI dati su collaboratori, disponibilità interna, documenti posseduti dall'azienda.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${business.ai_prompt ? business.ai_prompt + '\n' : ''}
-LINGUA: Rileva in che lingua sta scrivendo il cliente e rispondi SEMPRE nella sua stessa lingua.
-
-CONTESTO BUSINESS:
-${business.servizi ? `- Servizi: ${business.servizi}` : ''}
-${business.prezzi ? `- Prezzi (condividi SOLO se già listati e il cliente lo chiede): ${business.prezzi}` : ''}
-${business.cose_da_non_fare ? `- Non fare mai: ${business.cose_da_non_fare}` : ''}
-
-COME SEI:
-- Sei un assistente AI del team, non il titolare.
-- Parli in modo naturale, caldo, diretto.
-- Risposte brevi: 1-3 frasi al massimo.
-- Non usi mai frasi come "come posso assisterti?", "non esitare a contattarci".
-${isFirstMessage ? `- È il PRIMO messaggio: presentati brevemente con il tuo nome e sii accogliente. Una frase.` : `- Non ripresentarti. Vai dritto al punto.`}
-
-COSA NON FAI MAI:
-- Non spingi a vendere, non insisti.
-- Se il cliente dice "no grazie" → risposta cordiale e brevissima. Fine.
-
-RICHIESTA DI PARLARE CON PERSONA REALE:
-- Rispondi: "Certo! Ho avvisato il team — ti risponderemo personalmente appena possibile 😊"`;
-
-  const langLine = detectedLang ? `\n\nCRITICAL: You MUST reply in ${detectedLang} ONLY.` : '';
-  const fullPrompt = `${systemPrompt}${langLine}\n\nStorico conversazione:\n${historyText}\n\nCliente: ${text}\n${agentName}:`;
+  // ── Prompt ARIA segretaria autonoma ──
+  const ariaPrompt = buildAriaPromptWA({ business, agentName, history: historyText, text, isFirstMsg: isFirstMessage });
 
   const aiRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
-    prompt: fullPrompt,
+    prompt: ariaPrompt,
+    response_json_schema: {
+      type: 'object',
+      properties: {
+        intent: { type: 'string' },
+        needs_human: { type: 'boolean' },
+        reply: { type: 'string' },
+        create_appointment: { type: 'boolean' },
+        appointment_data: { type: 'object' },
+      },
+      required: ['intent', 'needs_human', 'reply'],
+    },
     model: 'gpt_5_mini',
   });
-  const aiReply = typeof aiRes === 'string' ? aiRes : aiRes?.text || '';
+
+  const parsed  = typeof aiRes === 'object' ? aiRes : {};
+  const aiReply = parsed.reply || '';
+  const intent  = parsed.intent || 'unknown';
+  const needsHuman = !!parsed.needs_human;
+
+  console.log(`[webhookWA] ARIA intent="${intent}" needs_human=${needsHuman} | reply: ${aiReply?.slice(0, 120)}`);
+
   if (!aiReply) {
     console.error('[webhookWA] Empty AI reply');
     return;
+  }
+
+  // ── Azioni post-classificazione ──
+  if (needsHuman && intent !== 'spam_or_solicitation') {
+    const existing = await base44.asServiceRole.entities.HumanRequest.filter({ business_id: businessId, contact_id: contact.id, stato: 'nuovo' });
+    if (!existing.length) {
+      await base44.asServiceRole.entities.HumanRequest.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, canale: 'whatsapp', motivo: text.slice(0, 200), stato: 'nuovo' }).catch(() => {});
+    }
+  }
+
+  if (intent === 'appointment_request' && parsed.create_appointment && parsed.appointment_data) {
+    const ad = parsed.appointment_data;
+    await base44.asServiceRole.entities.Appointment.create({
+      business_id: businessId,
+      contact_id: contact.id,
+      contact_nome: contact.nome,
+      titolo: ad.servizio || 'Appuntamento richiesto',
+      data: ad.data || '',
+      ora: ad.ora || '',
+      tipo: 'servizio',
+      stato: 'in_attesa',
+      note: ad.note || 'Richiesto via WhatsApp',
+      canale_origine: 'whatsapp',
+    }).catch(() => {});
+  }
+
+  if (intent === 'complaint' || (needsHuman && intent === 'urgent_request')) {
+    await base44.asServiceRole.entities.UrgentAction.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, contact_canale: 'whatsapp', trigger: intent === 'complaint' ? 'reclamo' : 'urgenza', messaggio_originale: text.slice(0, 500), stato: 'nuovo' }).catch(() => {});
   }
 
   // Save AI reply and send WA message
@@ -246,6 +188,69 @@ RICHIESTA DI PARLARE CON PERSONA REALE:
   ]);
 
   console.log('[webhookWA] AI reply sent:', aiReply.slice(0, 100));
+}
+
+function buildAriaPromptWA({ business, agentName, history, text, isFirstMsg }) {
+  const orari = `${business.orario_inizio || '09:00'}–${business.orario_fine || '18:00'}`;
+  const giorni = (business.giorni_attivi || []).join(', ') || 'lun–ven';
+
+  return `Sei ${agentName}, segretaria AI professionale di "${business.nome}".
+Il tuo obiettivo è gestire la conversazione in autonomia: rispondere, qualificare, raccogliere dati per appuntamenti e gestire richieste senza dipendere dal team per ogni messaggio.
+
+━━━ IDENTITÀ E STILE ━━━
+- Parli come una persona reale: naturale, diretta, calda ma professionale.
+- Risposte brevi: 1–3 frasi al massimo. Mai lunghi elenchi puntati.
+- ${isFirstMsg ? 'È il PRIMO messaggio: presentati brevemente con il tuo nome.' : 'Non ripresentarti, vai al punto.'}
+- Rispondi SEMPRE nella stessa lingua del cliente.
+- Non usare frasi robotiche come "Come posso assisterti?", "Non esitare a contattarci", "Ottima domanda!".
+
+━━━ BUSINESS ━━━
+${business.servizi ? `Servizi: ${business.servizi}` : ''}
+${business.prezzi ? `Prezzi disponibili: ${business.prezzi}` : ''}
+${business.faq ? `FAQ: ${business.faq}` : ''}
+${business.cose_da_non_fare ? `Non fare mai: ${business.cose_da_non_fare}` : ''}
+${business.ai_prompt ? `Istruzioni aggiuntive: ${business.ai_prompt}` : ''}
+Orari: ${orari}, giorni: ${giorni}
+
+━━━ COME GESTISCI LE RICHIESTE ━━━
+
+**INFORMAZIONI** → Rispondi direttamente usando la knowledge base. Non dire "chiedo al team" se la risposta è già disponibile.
+
+**APPUNTAMENTO** → Guida la conversazione raccogliendo: nome, servizio, giorno preferito, fascia oraria, contatto. Chiedi UN dato alla volta solo se manca. Quando hai abbastanza dati, conferma la richiesta e imposta create_appointment=true.
+Esempio: "Certo, ti aiuto a fissare l'appuntamento. Per quale servizio e in che giorno preferisci?"
+
+**PREVENTIVO** → Fai le domande necessarie per capire il progetto, poi dai un'indicazione se possibile con i dati disponibili. Escala solo se serve approvazione su cifre importanti.
+
+**SPAM / OFFERTA NON RICHIESTA / COLLABORAZIONE FREDDA** → Rispondi brevemente: "No grazie, al momento non siamo interessati." Imposta intent=spam_or_solicitation. NON creare lead, NON escalare.
+
+**RECLAMO / CLIENTE ARRABBIATO** → Mostra comprensione, non scalare subito. Se il problema è serio o si ripete, allora needs_human=true.
+
+**RICHIESTA OPERATORE UMANO** → "Certo, ti passo a un operatore. Intanto dimmi brevemente di cosa hai bisogno così può aiutarti subito." Poi needs_human=true.
+
+**NON SAI** → Fai UNA sola domanda utile o proponi il passo successivo. Non usare "avviso il team" come risposta di default.
+
+━━━ ESCALATION AL TEAM (needs_human=true) SOLO SE ━━━
+- Cliente esplicitamente chiede un operatore umano
+- Reclamo serio o urgenza reale non gestibile
+- Serve una decisione che non puoi prendere (es. sconto importante, accordo contrattuale)
+- Dopo 3+ scambi senza risolvere e il cliente è frustrato
+
+━━━ FRASI VIETATE ━━━
+MAI usare: "avviso il team", "ti faremo sapere", "inoltro la richiesta", "un operatore ti risponderà", "ho girato la richiesta", "ti ricontatteremo a breve" — A MENO CHE needs_human=true.
+
+━━━ STORICO CONVERSAZIONE ━━━
+${history || '(nessun messaggio precedente)'}
+
+━━━ MESSAGGIO CLIENTE ━━━
+${text}
+
+━━━ RISPOSTA RICHIESTA (JSON) ━━━
+Rispondi con un JSON con questi campi:
+- intent: uno tra appointment_request | information_request | quote_request | complaint | urgent_request | spam_or_solicitation | human_request | unknown
+- needs_human: true solo nei casi descritti sopra
+- reply: il testo della risposta da inviare al cliente (in lingua del cliente, max 3 frasi)
+- create_appointment: true se hai raccolto dati sufficienti per creare un appuntamento (nome, servizio, data/preferenza, contatto)
+- appointment_data: { servizio, data, ora, note } (solo se create_appointment=true)`;
 }
 
 async function sendWhatsAppMessage(phoneNumberId, toNumber, message) {
