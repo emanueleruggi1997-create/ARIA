@@ -94,11 +94,13 @@ Deno.serve(async (req) => {
     if (!contact?.numero) return;
     let sent = false;
     if (canale === 'whatsapp') {
-      // Cerca il phoneNumberId dalla MetaConnection o dal business
-      const phoneNumberId = conn?.fb_page_id || business?.wa_number || null;
+      // Per WA: usa wa_number del business come phoneNumberId
+      const phoneNumberId = business?.wa_number || null;
       if (phoneNumberId) {
         const res = await sendWAMessage(phoneNumberId, contact.numero, text);
         sent = res.ok;
+      } else {
+        console.warn('[confirmAppointment] WA phoneNumberId mancante — salvo solo in DB');
       }
     } else {
       // Instagram
