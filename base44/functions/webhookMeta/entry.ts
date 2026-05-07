@@ -39,6 +39,8 @@ Deno.serve(async (req) => {
   for (const entry of (body.entry || [])) {
     const entryId = entry.id;
     console.log('[webhookMeta] entry.id:', entryId);
+    console.log('[webhookMeta] entry.messaging count:', (entry.messaging || []).length);
+    console.log('[webhookMeta] entry.changes count:', (entry.changes || []).length);
 
     // ── DM (messaging array) ──
     for (const event of (entry.messaging || [])) {
@@ -50,7 +52,15 @@ Deno.serve(async (req) => {
       const messageId   = event.message?.mid || '';
       const timestamp   = event.timestamp || Date.now();
 
-      console.log('[webhookMeta] DM EVENT:', JSON.stringify({ object: body.object, entryId, senderId, recipientId, messageId, text: text?.slice(0, 200), timestamp }));
+      console.log('[webhookMeta] ═══ DM EVENT ═══');
+      console.log('[webhookMeta] object:', body.object);
+      console.log('[webhookMeta] entry_id:', entryId);
+      console.log('[webhookMeta] sender_id:', senderId);
+      console.log('[webhookMeta] recipient_id:', recipientId);
+      console.log('[webhookMeta] message_id:', messageId);
+      console.log('[webhookMeta] text:', text?.slice(0, 300));
+      console.log('[webhookMeta] timestamp:', timestamp);
+      console.log('[webhookMeta] raw messaging event:', JSON.stringify(event).slice(0, 500));
 
       if (!senderId || !text) {
         console.log('[webhookMeta] Skip: senderId o text mancante');
@@ -59,6 +69,26 @@ Deno.serve(async (req) => {
 
       // Fire-and-forget async processing
       (async () => {
+        let webhookLogId = null;
+        // ── Salva log webhook immediatamente (prima di qualunque processing) ──
+        try {
+          const wl = await base44.asServiceRole.entities.WebhookEventLog.create({
+            provider: 'instagram',
+            object: body.object || '',
+            entry_id: entryId || '',
+            sender_id: senderId || '',
+            recipient_id: recipientId || '',
+            event_type: 'dm',
+            raw_payload: JSON.stringify({ object: body.object, entry_id: entryId, sender_id: senderId, recipient_id: recipientId, text: text?.slice(0, 500), message_id: messageId }).slice(0, 5000),
+            processed: false,
+            matched_connection: false,
+          });
+          webhookLogId = wl?.id;
+          console.log('[webhookMeta] WebhookEventLog created:', webhookLogId);
+        } catch (le) {
+          console.error('[webhookMeta] WebhookEventLog create failed:', le.message);
+        }
+
         try {
           // ── Trova MetaConnection ──
           // Per Instagram Business Login: recipientId = ig_account_id dell'account destinatario (il business)
@@ -122,8 +152,19 @@ Deno.serve(async (req) => {
 
           if (!businessId) {
             console.error('[webhookMeta] businessId mancante per conn:', conn.id, '— skip');
+            if (webhookLogId) await base44.asServiceRole.entities.WebhookEventLog.update(webhookLogId, { processing_error: 'businessId mancante' }).catch(() => {});
             return;
           }
+
+          // ── Aggiorna log con connection trovata ──
+          if (webhookLogId) {
+            await base44.asServiceRole.entities.WebhookEventLog.update(webhookLogId, {
+              connection_id: conn.id,
+              business_id: businessId,
+              matched_connection: true,
+            }).catch(() => {});
+          }
+          console.log('[webhookMeta] ✅ MetaConnection match: conn.id=%s ig_account_id=%s recipient_id=%s', conn.id, conn.ig_account_id, recipientId);
 
           // ── Trova o crea contatto ──
           let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
@@ -181,6 +222,10 @@ Deno.serve(async (req) => {
             business_id: businessId, contact_id: contact.id,
             canale: 'instagram', ruolo: 'user', testo: text, letto: false,
           });
+          // Segna webhook come processato con successo
+          if (webhookLogId) {
+            await base44.asServiceRole.entities.WebhookEventLog.update(webhookLogId, { processed: true }).catch(() => {});
+          }
 
           // Crea lead se non esiste
           const leads = await base44.asServiceRole.entities.Lead.filter({ business_id: businessId, contact_id: contact.id });
@@ -378,6 +423,11 @@ Deno.serve(async (req) => {
 
         } catch (e) {
           console.error('[webhookMeta] ❌ Errore DM processing:', e.message);
+          if (webhookLogId) {
+            await base44.asServiceRole.entities.WebhookEventLog.update(webhookLogId, {
+              processing_error: e.message,
+            }).catch(() => {});
+          }
         }
       })();
     }

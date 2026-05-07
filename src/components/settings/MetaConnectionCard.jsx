@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Loader2, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useLang } from '@/lib/LanguageContext.jsx';
 import MetaTestButton from './MetaTestButton';
+import MetaConnectionStatus from './MetaConnectionStatus';
 
 const IG_COLOR = '#E1306C';
 
@@ -196,81 +197,9 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       )}
 
-      {/* Status checks */}
+      {/* Pannello diagnostica veritiero — mostra stato reale OAuth / Webhook / ARIA */}
       {igConnected && (
-        <div style={{ marginTop: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#4B5563', marginBottom: 2, letterSpacing: 1 }}>STATO CONNESSIONE</div>
-
-          {/* Username row: se scope OK ma username mancante → "Connessione valida", NON errore */}
-          <StatusRow
-            icon={hasUsername ? '✅' : (hasBasicScope ? '🔄' : '⚠️')}
-            color={hasUsername ? '#10B981' : (hasBasicScope ? '#00C6FF' : '#F59E0B')}
-            label={
-              hasUsername
-                ? `@${igAccountName}`
-                : hasBasicScope
-                  ? 'Connessione valida — sincronizzazione username in corso'
-                  : 'Username da sincronizzare'
-            }
-            detail={null}
-          />
-
-          <StatusRow
-            icon={hasBasicScope ? '✅' : '❌'}
-            color={hasBasicScope ? '#10B981' : '#EF4444'}
-            label="instagram_business_basic"
-            detail={!hasBasicScope ? '— Riconnetti accettando tutti i permessi' : null}
-          />
-
-          <StatusRow
-            icon={hasMsgScope ? '✅' : '❌'}
-            color={hasMsgScope ? '#10B981' : '#EF4444'}
-            label="instagram_business_manage_messages"
-            detail={!hasMsgScope ? '— Riconnetti accettando tutti i permessi' : null}
-          />
-
-          {connection?.granted_scopes && (
-            <div style={{ fontSize: 10, color: '#374151', marginTop: 2 }}>
-              Scopes: {connection.granted_scopes}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Avviso scope mancante — solo se NON in granted_scopes E NON override runtime */}
-      {igConnected && !hasBasicScope && (
-        <div style={{ marginTop: 10, fontSize: 11, color: '#F59E0B', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '8px 12px' }}>
-          ⚠️ Permesso <strong>instagram_business_basic</strong> mancante. Riconnetti accettando tutti i permessi.
-        </div>
-      )}
-
-      {/* Username non recuperato — mostra solo se scope NON ok (altrimenti è solo cosmetic) */}
-      {igConnected && !hasUsername && !hasBasicScope && (
-        <div style={{ marginTop: 10, fontSize: 11, color: '#6B7280', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <span>Username non ancora sincronizzato.</span>
-          <button onClick={resolveUsername} disabled={resolvingName} style={smallBtn}>
-            {resolvingName ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={11} />}
-            {resolvingName ? '...' : 'Sincronizza'}
-          </button>
-        </div>
-      )}
-
-      {/* Bottone sync username — visibile se connesso + scope ok + username mancante */}
-      {igConnected && !hasUsername && hasBasicScope && (
-        <div style={{ marginTop: 10, fontSize: 11, color: '#00C6FF', background: '#00C6FF10', border: '1px solid #00C6FF30', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <span>Connessione valida — recupera username Instagram</span>
-          <button onClick={resolveUsername} disabled={resolvingName} style={smallBtn}>
-            {resolvingName ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={11} />}
-            {resolvingName ? '...' : 'Recupera'}
-          </button>
-        </div>
-      )}
-
-      {/* Sync error — mostra SOLO se scope NON ok E username mancante E nessun test ok runtime */}
-      {igConnected && syncError && !hasUsername && !hasBasicScope && runtimeTestOk !== true && (
-        <div style={{ marginTop: 8, fontSize: 11, color: '#9CA3AF', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '7px 12px' }}>
-          ℹ️ {syncError}
-        </div>
+        <MetaConnectionStatus connection={connection} businessId={connection?.business_id} />
       )}
 
       {resolveMsg && (

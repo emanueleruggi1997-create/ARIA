@@ -1,0 +1,65 @@
+{
+  "name": "WebhookEventLog",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "instagram | whatsapp"
+    },
+    "connection_id": {
+      "type": "string",
+      "description": "ID MetaConnection trovata"
+    },
+    "business_id": {
+      "type": "string"
+    },
+    "object": {
+      "type": "string",
+      "description": "Valore body.object dal webhook Meta"
+    },
+    "entry_id": {
+      "type": "string",
+      "description": "entry.id dal webhook"
+    },
+    "sender_id": {
+      "type": "string"
+    },
+    "recipient_id": {
+      "type": "string",
+      "description": "recipient.id \u2014 deve corrispondere a ig_account_id della MetaConnection"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "dm",
+        "comment",
+        "verification",
+        "unknown",
+        "error"
+      ],
+      "description": "Tipo evento rilevato"
+    },
+    "raw_payload": {
+      "type": "string",
+      "description": "JSON raw del body ricevuto (troncato a 5000 chars)"
+    },
+    "processed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True se il messaggio \u00e8 stato salvato in Inbox"
+    },
+    "processing_error": {
+      "type": "string",
+      "description": "Errore durante il processing"
+    },
+    "matched_connection": {
+      "type": "boolean",
+      "default": false,
+      "description": "True se MetaConnection trovata correttamente"
+    }
+  },
+  "required": [
+    "provider",
+    "event_type"
+  ]
+}
