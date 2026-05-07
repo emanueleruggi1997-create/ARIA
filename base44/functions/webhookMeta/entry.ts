@@ -129,9 +129,48 @@ Deno.serve(async (req) => {
           let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
           let contact  = contacts[0];
           if (!contact) {
+            // Tenta di risolvere il nome/username Instagram tramite API
+            let resolvedName = null;
+            try {
+              const igToken = conn.access_token;
+              const igAccountId = conn.ig_account_id;
+              if (igToken && igAccountId) {
+                const igRes = await fetch(
+                  `https://graph.instagram.com/v21.0/${senderId}?fields=name,username&access_token=${igToken}`,
+                );
+                if (igRes.ok) {
+                  const igData = await igRes.json();
+                  resolvedName = igData.username ? `@${igData.username}` : igData.name || null;
+                  console.log('[webhookMeta] IG user resolved:', resolvedName, '| raw:', JSON.stringify(igData));
+                } else {
+                  const errData = await igRes.json().catch(() => ({}));
+                  console.log('[webhookMeta] IG user resolve failed (private account?):', igRes.status, JSON.stringify(errData));
+                }
+              }
+            } catch (e) {
+              console.log('[webhookMeta] IG user resolve exception:', e.message);
+            }
+            // Fallback: nome leggibile invece di User_<id>
+            const contactName = resolvedName || `Utente IG`;
             contact = await base44.asServiceRole.entities.Contact.create({
-              business_id: businessId, nome: `User_${senderId}`, numero: senderId, canale: 'instagram', stato: 'lead',
+              business_id: businessId, nome: contactName, numero: senderId, canale: 'instagram', stato: 'lead',
             });
+          } else if (contact.nome && contact.nome.startsWith('User_') && conn.access_token && conn.ig_account_id) {
+            // Aggiorna contatti esistenti con User_* name — tenta di risolverli
+            try {
+              const igRes = await fetch(
+                `https://graph.instagram.com/v21.0/${senderId}?fields=name,username&access_token=${conn.access_token}`,
+              );
+              if (igRes.ok) {
+                const igData = await igRes.json();
+                const resolvedName = igData.username ? `@${igData.username}` : igData.name || null;
+                if (resolvedName) {
+                  await base44.asServiceRole.entities.Contact.update(contact.id, { nome: resolvedName });
+                  contact = { ...contact, nome: resolvedName };
+                  console.log('[webhookMeta] Updated existing User_ contact to:', resolvedName);
+                }
+              }
+            } catch (_) {}
           }
 
           // ── Salva messaggio ──
