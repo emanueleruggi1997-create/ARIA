@@ -8,7 +8,7 @@ import { formatSafeTimestamp } from '@/lib/safeDate.js';
 import { safeArray, safeInitials, safeNumber } from '@/lib/safeData.js';
 import SafeSection from '@/components/ui/SafeSection.jsx';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
-import MailingListTab from '@/components/crm/MailingListTab';
+import MailingListNew from '@/components/email/MailingListNew';
 import EmailCampaignsTab from '@/components/crm/EmailCampaignsTab';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -397,7 +397,7 @@ function MailingSection({ businessId }) {
       <h2 style={{ margin: 0, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, color: C.text }}>
         Mailing <span style={{ color: C.success }}>List</span>
       </h2>
-      <MailingListTab businessId={businessId} />
+      <MailingListNew businessId={businessId} />
     </div>
   );
 }

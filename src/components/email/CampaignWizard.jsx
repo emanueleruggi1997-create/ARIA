@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import StepTemplate from './wizard/StepTemplate';
-import StepDetails from './wizard/StepDetails';
+import StepContent from './wizard/StepContent';
 import StepAudience from './wizard/StepAudience';
-import StepEditor from './wizard/StepEditor';
-import StepReview from './wizard/StepReview';
+import StepSchedule from './wizard/StepSchedule';
 
 const C = {
   bg: '#070B14', surface: '#0D1525', card: '#111C30', border: '#1A2E4A',
@@ -13,27 +12,27 @@ const C = {
 
 const STEPS = [
   { n: 1, label: 'Template' },
-  { n: 2, label: 'Campagna' },
+  { n: 2, label: 'Contenuto' },
   { n: 3, label: 'Audience' },
-  { n: 4, label: 'Editor' },
-  { n: 5, label: 'Review' },
+  { n: 4, label: 'Invio' },
 ];
+
+const DEFAULT_STYLE = {
+  bgColor: '#ffffff',
+  textColor: '#1a1a1a',
+  accentColor: '#7B2FFF',
+  font: 'Arial',
+  showLogo: false,
+};
 
 const EMPTY_FORM = {
   templateId: null,
   templateName: '',
   templateCategory: '',
-  nome: '',
-  tipo: 'newsletter',
-  mittente_nome: '',
-  mittente_email: '',
   oggetto: '',
-  preview_text: '',
+  body: '',
   destinatari_tag: 'tutti',
-  audience_filters: {},
-  blocks: [],
-  scheduled_at: '',
-  stato: 'bozza',
+  emailStyle: DEFAULT_STYLE,
 };
 
 export default function CampaignWizard({ businessId, emailContacts, onClose, onComplete }) {
@@ -42,7 +41,6 @@ export default function CampaignWizard({ businessId, emailContacts, onClose, onC
   const [saving, setSaving] = useState(false);
 
   const setField = (field, val) => setForm(p => ({ ...p, [field]: val }));
-  const setFields = (obj) => setForm(p => ({ ...p, ...obj }));
 
   const validContacts = emailContacts.filter(c => c.email?.includes('@') && c.stato === 'attivo');
 
@@ -55,19 +53,16 @@ export default function CampaignWizard({ businessId, emailContacts, onClose, onC
   const handleSave = async (stato = 'bozza', scheduled_at = '') => {
     setSaving(true);
     try {
-      const blocksStr = JSON.stringify(form.blocks);
       await base44.entities.EmailCampaign.create({
         business_id: businessId,
-        nome: form.nome,
+        nome: form.templateName || form.oggetto || 'Campagna',
         oggetto: form.oggetto,
-        preview_text: form.preview_text,
-        mittente_nome: form.mittente_nome,
-        mittente_email: form.mittente_email,
         destinatari_tag: form.destinatari_tag,
         destinatari_count: getAudienceCount(),
         stato,
-        scheduled_at: scheduled_at || form.scheduled_at || '',
+        scheduled_at: scheduled_at || '',
         template_id: form.templateId || '',
+        preview_text: form.body?.substring(0, 100) || '',
       });
       onComplete();
     } finally {
@@ -75,33 +70,35 @@ export default function CampaignWizard({ businessId, emailContacts, onClose, onC
     }
   };
 
+  const isMobile = window.innerWidth < 768;
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 300,
       background: '#000000dd', backdropFilter: 'blur(12px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '20px',
+      display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center',
+      padding: isMobile ? 0 : '20px',
     }}>
       <div style={{
-        width: '100%', maxWidth: 860,
-        background: C.surface, borderRadius: 20,
+        width: '100%', maxWidth: isMobile ? '100%' : 900,
+        background: C.surface, borderRadius: isMobile ? '20px 20px 0 0' : 20,
         border: `1px solid ${C.border}`,
         display: 'flex', flexDirection: 'column',
-        maxHeight: '92vh', overflow: 'hidden',
+        maxHeight: isMobile ? '95dvh' : '92vh', overflow: 'hidden',
       }}>
         {/* Header */}
-        <div style={{ padding: '20px 24px 0', borderBottom: `1px solid ${C.border}`, paddingBottom: 16, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ fontWeight: 900, fontSize: 18, color: C.text }}>📧 Nuova Campagna Email</div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer' }}>×</button>
+        <div style={{ padding: '18px 24px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ fontWeight: 900, fontSize: 17, color: C.text }}>📧 Nuova Campagna Email</div>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 22, cursor: 'pointer', lineHeight: 1 }}>×</button>
           </div>
           {/* Step indicators */}
           <div style={{ display: 'flex', gap: 0, alignItems: 'center' }}>
             {STEPS.map((s, i) => (
               <React.Fragment key={s.n}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                   <div style={{
-                    width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 11, fontWeight: 800,
                     background: step === s.n ? C.accent2 : step > s.n ? C.success : C.card,
                     color: step >= s.n ? '#fff' : C.muted,
@@ -115,7 +112,7 @@ export default function CampaignWizard({ businessId, emailContacts, onClose, onC
                   </div>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div style={{ flex: 1, height: 2, background: step > s.n ? C.success : C.border, margin: '0 4px', marginBottom: 18, transition: 'background 0.3s' }} />
+                  <div style={{ flex: 1, height: 2, background: step > s.n ? C.success : C.border, margin: '0 4px', marginBottom: 16, transition: 'background 0.3s' }} />
                 )}
               </React.Fragment>
             ))}
@@ -127,14 +124,34 @@ export default function CampaignWizard({ businessId, emailContacts, onClose, onC
           {step === 1 && (
             <StepTemplate
               selected={form.templateId}
-              onSelect={(tmpl) => {
-                setFields({ templateId: tmpl.id, templateName: tmpl.name, templateCategory: tmpl.category });
-                setStep(2);
+              emailStyle={form.emailStyle}
+              onSelect={(tmpl, style) => {
+                setForm(p => ({
+                  ...p,
+                  templateId: tmpl.id,
+                  templateName: tmpl.name,
+                  templateCategory: tmpl.goal,
+                  oggetto: tmpl.defaultOggetto,
+                  body: tmpl.defaultBody,
+                  emailStyle: style,
+                }));
               }}
+              onStyleChange={(style) => setField('emailStyle', style)}
             />
           )}
+          {step === 1 && form.templateId && (
+            <div style={{ marginTop: 16 }}>
+              <button onClick={() => setStep(2)} style={{
+                width: '100%', background: `linear-gradient(135deg, ${C.accent2}, ${C.accent})`,
+                border: 'none', borderRadius: 10, padding: '12px 0',
+                color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+                Continua → Contenuto
+              </button>
+            </div>
+          )}
           {step === 2 && (
-            <StepDetails
+            <StepContent
               form={form}
               setField={setField}
               onBack={() => setStep(1)}
@@ -153,19 +170,11 @@ export default function CampaignWizard({ businessId, emailContacts, onClose, onC
             />
           )}
           {step === 4 && (
-            <StepEditor
+            <StepSchedule
               form={form}
               setField={setField}
-              businessId={businessId}
-              onBack={() => setStep(3)}
-              onNext={() => setStep(5)}
-            />
-          )}
-          {step === 5 && (
-            <StepReview
-              form={form}
               audienceCount={getAudienceCount()}
-              onBack={() => setStep(4)}
+              onBack={() => setStep(3)}
               onSave={handleSave}
               saving={saving}
             />
