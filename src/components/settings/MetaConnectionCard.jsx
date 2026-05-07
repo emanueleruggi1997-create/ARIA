@@ -116,10 +116,8 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         setResolveMsg({ ok: true, text: `✅ Connessione verificata${data.username ? ' — @' + data.username : ''}` });
         await onRefresh();
       } else if (data.scopesOk || data.connectionOperative) {
-        // Token e scopes validi — username non recuperabile ma ARIA funziona
-        setRuntimeScopesOk(true);
-        setRuntimeTestOk(true);
-        setResolveMsg({ ok: true, text: '✅ Connessione operativa — ARIA attiva sui DM. Username non recuperabile con questo endpoint.' });
+        // Token e scopes presenti in DB — ma non verificati tramite API reale
+        setResolveMsg({ ok: false, text: '⚠️ Scopes salvati in DB, ma chiamata API Meta fallita. Verifica la diagnostica: instagram_business_basic potrebbe non essere approvato in App Review.' });
         await onRefresh();
       } else {
         setResolveMsg({ ok: false, text: data.message || 'Impossibile recuperare lo username.' });
