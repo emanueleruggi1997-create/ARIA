@@ -22,10 +22,18 @@ export default function MetaTestButton({ connection, ariaColor, onTestSuccess })
       const data = res.data || {};
       if (data.success) {
         setResult({ success: true, account_name: data.account_name, account_type: data.account_type });
-        // Notifica la card padre: test OK, aggiorna stato runtime
         if (onTestSuccess) onTestSuccess({ username: data.resolved_username || data.account_name });
+      } else if (data.connectionOperative || data.scopesOk) {
+        // Token e scopes validi ma profilo non recuperabile — connessione operativa per DM
+        setResult({
+          success: 'operative',
+          note: data.note || 'Connessione operativa — ARIA attiva sui DM.',
+          error: data.error,
+          endpoint: data.endpoint_called,
+        });
+        if (onTestSuccess) onTestSuccess({ username: null });
       } else {
-        setResult({ success: false, error: data.error || 'Test fallito' });
+        setResult({ success: false, error: data.error || 'Test fallito', raw: data.raw });
       }
     } catch (e) {
       // Fallback: controlla scadenza token da DB
@@ -69,17 +77,17 @@ export default function MetaTestButton({ connection, ariaColor, onTestSuccess })
         <div
           className="rounded-lg p-3 text-sm border"
           style={{
-            background: result.success === true ? '#10B98110' : result.success === null ? '#F59E0B10' : '#EF444410',
-            border: `1px solid ${result.success === true ? '#10B98140' : result.success === null ? '#F59E0B40' : '#EF444440'}`,
-            color: result.success === true ? '#10B981' : result.success === null ? '#F59E0B' : '#EF4444',
+            background: result.success === true ? '#10B98110' : result.success === 'operative' ? '#00C6FF10' : result.success === null ? '#F59E0B10' : '#EF444410',
+            border: `1px solid ${result.success === true ? '#10B98140' : result.success === 'operative' ? '#00C6FF40' : result.success === null ? '#F59E0B40' : '#EF444440'}`,
+            color: result.success === true ? '#10B981' : result.success === 'operative' ? '#00C6FF' : result.success === null ? '#F59E0B' : '#EF4444',
           }}
         >
           <div className="flex items-start gap-2">
-            {result.success === true
+            {(result.success === true || result.success === 'operative')
               ? <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
               : <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
             }
-            <div>
+            <div className="w-full">
               {result.success === true ? (
                 <div className="space-y-1">
                   <p className="font-semibold">✅ {lang === 'en' ? 'Connection valid' : 'Connessione valida'}</p>
@@ -90,10 +98,18 @@ export default function MetaTestButton({ connection, ariaColor, onTestSuccess })
                   </p>
                   <p className="text-xs opacity-80">✓ Webhook gestito dal Meta App Dashboard</p>
                 </div>
+              ) : result.success === 'operative' ? (
+                <div className="space-y-1">
+                  <p className="font-semibold">✅ {lang === 'en' ? 'Connection operative' : 'Connessione operativa'}</p>
+                  <p className="text-xs opacity-80">{result.note}</p>
+                  {result.error && <p className="text-xs opacity-60 mt-1">Dettaglio endpoint: {result.error}</p>}
+                  {result.endpoint && <p className="text-xs opacity-50 mt-1 break-all">URL: {result.endpoint}</p>}
+                </div>
               ) : (
                 <div>
                   <p className="font-semibold">{result.success === null ? (lang === 'en' ? 'Test incomplete' : 'Test incompleto') : (lang === 'en' ? 'Test failed' : 'Test fallito')}</p>
                   <p className="text-xs opacity-80 mt-1">{result.error}</p>
+                  {result.raw && <p className="text-xs opacity-50 mt-1 break-all font-mono">{JSON.stringify(result.raw)}</p>}
                 </div>
               )}
             </div>

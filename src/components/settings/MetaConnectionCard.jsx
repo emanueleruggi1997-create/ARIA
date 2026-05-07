@@ -107,19 +107,18 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
       const res = await base44.functions.invoke('resolveIGUsername', {});
       const data = res.data || {};
       if (data.success) {
-        // Stato runtime: aggiorna subito UI senza aspettare refresh DB
         if (data.username || data.resolvedName) {
           setRuntimeUsername(data.username || data.resolvedName);
         }
         setRuntimeScopesOk(true);
         setRuntimeTestOk(true);
         setResolveMsg({ ok: true, text: `✅ Connessione verificata${data.username ? ' — @' + data.username : ''}` });
-        await onRefresh(); // aggiorna anche i dati DB
-      } else if (data.scopesOk) {
-        // Test ha funzionato ma username non disponibile: connessione valida
+        await onRefresh();
+      } else if (data.scopesOk || data.connectionOperative) {
+        // Token e scopes validi — username non recuperabile ma ARIA funziona
         setRuntimeScopesOk(true);
         setRuntimeTestOk(true);
-        setResolveMsg({ ok: true, text: '✅ Connessione valida — username in sincronizzazione' });
+        setResolveMsg({ ok: true, text: '✅ Connessione operativa — ARIA attiva sui DM. Username non recuperabile con questo endpoint.' });
         await onRefresh();
       } else {
         setResolveMsg({ ok: false, text: data.message || 'Impossibile recuperare lo username.' });
