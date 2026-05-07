@@ -128,49 +128,51 @@ Deno.serve(async (req) => {
           // ── Trova o crea contatto ──
           let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
           let contact  = contacts[0];
-          if (!contact) {
-            // Tenta di risolvere il nome/username Instagram tramite API
-            let resolvedName = null;
+
+          // Risolvi nome Instagram usando message_id (più affidabile per IG Business Login)
+          const resolveIGName = async () => {
+            const igToken = conn.access_token;
+            const igAccountId = conn.ig_account_id;
+            if (!igToken || !igAccountId || !messageId) return null;
             try {
-              const igToken = conn.access_token;
-              const igAccountId = conn.ig_account_id;
-              if (igToken && igAccountId) {
-                const igRes = await fetch(
-                  `https://graph.instagram.com/v21.0/${senderId}?fields=name,username&access_token=${igToken}`,
-                );
-                if (igRes.ok) {
-                  const igData = await igRes.json();
-                  resolvedName = igData.username ? `@${igData.username}` : igData.name || null;
-                  console.log('[webhookMeta] IG user resolved:', resolvedName, '| raw:', JSON.stringify(igData));
-                } else {
-                  const errData = await igRes.json().catch(() => ({}));
-                  console.log('[webhookMeta] IG user resolve failed (private account?):', igRes.status, JSON.stringify(errData));
-                }
-              }
-            } catch (e) {
-              console.log('[webhookMeta] IG user resolve exception:', e.message);
-            }
-            // Fallback: nome leggibile invece di User_<id>
-            const contactName = resolvedName || `Utente IG`;
-            contact = await base44.asServiceRole.entities.Contact.create({
-              business_id: businessId, nome: contactName, numero: senderId, canale: 'instagram', stato: 'lead',
-            });
-          } else if (contact.nome && contact.nome.startsWith('User_') && conn.access_token && conn.ig_account_id) {
-            // Aggiorna contatti esistenti con User_* name — tenta di risolverli
-            try {
-              const igRes = await fetch(
-                `https://graph.instagram.com/v21.0/${senderId}?fields=name,username&access_token=${conn.access_token}`,
+              // Endpoint corretto: recupera il messaggio per ottenere il profilo del mittente
+              const res = await fetch(
+                `https://graph.instagram.com/v21.0/${messageId}?fields=from&access_token=${igToken}`,
               );
-              if (igRes.ok) {
-                const igData = await igRes.json();
-                const resolvedName = igData.username ? `@${igData.username}` : igData.name || null;
-                if (resolvedName) {
-                  await base44.asServiceRole.entities.Contact.update(contact.id, { nome: resolvedName });
-                  contact = { ...contact, nome: resolvedName };
-                  console.log('[webhookMeta] Updated existing User_ contact to:', resolvedName);
-                }
-              }
+              const data = await res.json();
+              console.log('[webhookMeta] resolveIGName via message:', JSON.stringify(data));
+              if (data.from?.username) return `@${data.from.username}`;
+              if (data.from?.name) return data.from.name;
+            } catch (e) {
+              console.log('[webhookMeta] resolveIGName exception:', e.message);
+            }
+            // Fallback: prova direttamente per sender_id con user_access_token
+            try {
+              const res2 = await fetch(
+                `https://graph.instagram.com/v21.0/${senderId}?fields=username,name&access_token=${igToken}`,
+              );
+              const data2 = await res2.json();
+              console.log('[webhookMeta] resolveIGName via senderId:', JSON.stringify(data2));
+              if (data2.username) return `@${data2.username}`;
+              if (data2.name) return data2.name;
             } catch (_) {}
+            return null;
+          };
+
+          if (!contact) {
+            const resolvedName = await resolveIGName();
+            console.log('[webhookMeta] Contact name resolved:', resolvedName || '(fallback)');
+            contact = await base44.asServiceRole.entities.Contact.create({
+              business_id: businessId, nome: resolvedName || 'Utente IG', numero: senderId, canale: 'instagram', stato: 'lead',
+            });
+          } else if (contact.nome && (contact.nome.startsWith('User_') || contact.nome === 'Utente IG')) {
+            // Aggiorna contatti con nome placeholder
+            const resolvedName = await resolveIGName();
+            if (resolvedName) {
+              await base44.asServiceRole.entities.Contact.update(contact.id, { nome: resolvedName });
+              contact = { ...contact, nome: resolvedName };
+              console.log('[webhookMeta] Updated placeholder contact to:', resolvedName);
+            }
           }
 
           // ── Salva messaggio ──
