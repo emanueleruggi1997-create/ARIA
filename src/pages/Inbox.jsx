@@ -7,15 +7,26 @@ import SubFilters from '@/components/inbox/SubFilters';
 import ConvRow from '@/components/inbox/ConvRow';
 import NewChatView from '@/components/inbox/NewChatView';
 import ContactInfoPanel from '@/components/inbox/ContactInfoPanel';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, RefreshCw } from 'lucide-react';
 import SafeSection from '@/components/ui/SafeSection.jsx';
 import { safeArray } from '@/lib/safeData.js';
+
+// Filtra nomi tecnici/placeholder — mai mostrare User_XXX o ID numerici
+function cleanDisplayName(nome) {
+  if (!nome) return 'Utente Instagram';
+  if (nome.startsWith('User_')) return 'Utente Instagram';
+  if (/^\d{8,}$/.test(nome)) return 'Utente Instagram';
+  if (nome === 'Utente IG') return 'Utente Instagram';
+  return nome;
+}
 
 const C = {
   bg: '#04080F', surface: '#0D1525', card: '#111C30', border: '#1A2E4A',
   text: '#E8F4FF', muted: '#5A7A9A', wa: '#25D366', ig: '#DD2A7B',
   success: '#00E5A0',
 };
+
+const inboxStyles = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
 
 function ConvSkeleton() {
   return (
@@ -45,6 +56,7 @@ export default function Inbox() {
   const [readIds, setReadIds] = useState(new Set());
   const [actingId, setActingId] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [syncingNames, setSyncingNames] = useState(false);
   // Optimistic messages: shown immediately before API confirms
   const [optimisticMessages, setOptimisticMessages] = useState([]);
   const markReadTimerRef = useRef(null);
@@ -95,7 +107,7 @@ export default function Inbox() {
       const unread = msgs.filter(m => !m?.letto && m?.ruolo === 'user' && !readIds.has(contact.id));
       return {
         contact_id: contact.id,
-        nome: contact.nome || '—',
+        nome: contact.canale === 'instagram' ? cleanDisplayName(contact.nome) : (contact.nome || '—'),
         canale: contact.canale,
         stato: contact.stato,
         numero: contact.numero,
@@ -218,6 +230,17 @@ export default function Inbox() {
 
   const handleMarkRead = (conv) => setReadIds(prev => new Set([...prev, conv.contact_id]));
 
+  const handleSyncIGNames = async () => {
+    if (syncingNames) return;
+    setSyncingNames(true);
+    try {
+      await base44.functions.invoke('cleanupIGContacts', {});
+      queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
+    } finally {
+      setSyncingNames(false);
+    }
+  };
+
   const handleToggleAI = (conv, newDisabled) => {
     // Aggiorna la lista localmente subito, poi refetch
     queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
@@ -295,6 +318,7 @@ export default function Inbox() {
   // ── DESKTOP LAYOUT ──
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: C.bg }}>
+      <style>{inboxStyles}</style>
       {/* Desktop header */}
       <div style={{ height: 56, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${C.border}`, background: C.surface, flexShrink: 0 }}>
         <MessageSquare size={18} style={{ color: '#7000FF' }} />
@@ -302,9 +326,29 @@ export default function Inbox() {
         <span style={{ fontSize: 11, color: C.muted, background: `${C.border}66`, borderRadius: 20, padding: '2px 10px' }}>
           {conversations.filter(c => !c.archiviata).length} conversazioni
         </span>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.success, boxShadow: `0 0 8px ${C.success}` }} />
-          <span style={{ fontSize: 11, color: C.success, fontWeight: 700 }}>ARIA online</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          {activeTab === 'instagram' && (
+            <button
+              onClick={handleSyncIGNames}
+              disabled={syncingNames}
+              title="Sincronizza nomi utenti Instagram"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '5px 12px', borderRadius: 8,
+                background: 'transparent', border: `1px solid ${C.border}`,
+                color: C.muted, fontSize: 11, fontWeight: 700,
+                cursor: syncingNames ? 'not-allowed' : 'pointer',
+                opacity: syncingNames ? 0.5 : 1, fontFamily: 'inherit',
+              }}
+            >
+              <RefreshCw size={12} style={{ animation: syncingNames ? 'spin 1s linear infinite' : 'none' }} />
+              {syncingNames ? 'Sync...' : 'Sync nomi IG'}
+            </button>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.success, boxShadow: `0 0 8px ${C.success}` }} />
+            <span style={{ fontSize: 11, color: C.success, fontWeight: 700 }}>ARIA online</span>
+          </div>
         </div>
       </div>
 

@@ -129,45 +129,45 @@ Deno.serve(async (req) => {
           let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
           let contact  = contacts[0];
 
-          // Risolvi nome Instagram usando message_id (più affidabile per IG Business Login)
-          const resolveIGName = async () => {
+          // Risolvi profilo Instagram sender usando Business token
+          // API corretta per IG Business Login: GET /{senderId}?fields=username,name&access_token={BUSINESS_TOKEN}
+          const resolveIGSenderProfile = async () => {
             const igToken = conn.access_token;
-            const igAccountId = conn.ig_account_id;
-            if (!igToken || !igAccountId || !messageId) return null;
+            if (!igToken) return null;
             try {
-              // Endpoint corretto: recupera il messaggio per ottenere il profilo del mittente
-              const res = await fetch(
-                `https://graph.instagram.com/v21.0/${messageId}?fields=from&access_token=${igToken}`,
-              );
+              const url = `https://graph.instagram.com/v21.0/${senderId}?fields=username,name&access_token=${igToken}`;
+              console.log('[webhookMeta] resolveIGSenderProfile URL: graph.instagram.com/v21.0/' + senderId + '?fields=username,name');
+              const res = await fetch(url);
               const data = await res.json();
-              console.log('[webhookMeta] resolveIGName via message:', JSON.stringify(data));
-              if (data.from?.username) return `@${data.from.username}`;
-              if (data.from?.name) return data.from.name;
+              console.log('[webhookMeta] resolveIGSenderProfile status:', res.status, '| data:', JSON.stringify(data));
+              if (data.error) {
+                console.log('[webhookMeta] resolveIGSenderProfile API error:', data.error.message);
+                return null;
+              }
+              // Priorità: username (leggibile) → name → null
+              if (data.username) return `@${data.username}`;
+              if (data.name && !/^\d+$/.test(data.name)) return data.name;
             } catch (e) {
-              console.log('[webhookMeta] resolveIGName exception:', e.message);
+              console.log('[webhookMeta] resolveIGSenderProfile exception:', e.message);
             }
-            // Fallback: prova direttamente per sender_id con user_access_token
-            try {
-              const res2 = await fetch(
-                `https://graph.instagram.com/v21.0/${senderId}?fields=username,name&access_token=${igToken}`,
-              );
-              const data2 = await res2.json();
-              console.log('[webhookMeta] resolveIGName via senderId:', JSON.stringify(data2));
-              if (data2.username) return `@${data2.username}`;
-              if (data2.name) return data2.name;
-            } catch (_) {}
             return null;
           };
 
+          const isPlaceholderName = (n) => !n || n.startsWith('User_') || n === 'Utente IG' || /^\d{10,}$/.test(n);
+
           if (!contact) {
-            const resolvedName = await resolveIGName();
-            console.log('[webhookMeta] Contact name resolved:', resolvedName || '(fallback)');
+            const resolvedName = await resolveIGSenderProfile();
+            console.log('[webhookMeta] New contact name resolved:', resolvedName || '(no username — using fallback)');
             contact = await base44.asServiceRole.entities.Contact.create({
-              business_id: businessId, nome: resolvedName || 'Utente IG', numero: senderId, canale: 'instagram', stato: 'lead',
+              business_id: businessId,
+              nome: resolvedName || 'Utente Instagram',
+              numero: senderId,
+              canale: 'instagram',
+              stato: 'lead',
             });
-          } else if (contact.nome && (contact.nome.startsWith('User_') || contact.nome === 'Utente IG')) {
-            // Aggiorna contatti con nome placeholder
-            const resolvedName = await resolveIGName();
+          } else if (isPlaceholderName(contact.nome)) {
+            // Tenta di aggiornare contatti esistenti con nome placeholder
+            const resolvedName = await resolveIGSenderProfile();
             if (resolvedName) {
               await base44.asServiceRole.entities.Contact.update(contact.id, { nome: resolvedName });
               contact = { ...contact, nome: resolvedName };
@@ -523,9 +523,20 @@ function buildSafeAppointmentPayload({ ad, businessId, contactId, contactName, s
   };
 }
 
+// ── Utility: controlla se un nome è un placeholder tecnico ──
+function isTechName(n) {
+  if (!n) return true;
+  if (n.startsWith('User_')) return true;
+  if (/^\d{8,}$/.test(n)) return true; // solo numeri lunghi = ID
+  if (n === 'Utente IG' || n === 'Utente Instagram') return true;
+  return false;
+}
+
 // ── Helper: costruisce il profilo cliente dai dati esistenti ──
 function buildCustomerProfile({ contact, lead, appointments, history }) {
-  const name = contact?.nome && !contact.nome.startsWith('User_') ? contact.nome : (lead?.contact_nome || null);
+  const rawName = contact?.nome && !isTechName(contact.nome) ? contact.nome : (lead?.contact_nome || null);
+  // Filtra anche nomi raccolti dal lead se tecnici
+  const name = rawName && !isTechName(rawName) ? rawName : null;
   const email = lead?.email || null;
   const phone = lead?.phone || contact?.numero && !contact.numero.startsWith('WA_') ? (lead?.phone || contact?.numero) : null;
 
@@ -571,9 +582,12 @@ function buildAriaPrompt({ business, agentName, history, text, isFirstMsg, custo
   const romeDateISO = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Rome' }).format(now);
 
   const cp = customerProfile || {};
+  // Nome da usare nelle risposte — solo se è un nome umano leggibile
+  const humanName = cp.name || null; // già filtrato da buildCustomerProfile
+
   const profileSection = `
 ━━━ PROFILO CLIENTE (dati già noti — NON richiedere) ━━━
-Nome: ${cp.name || 'sconosciuto (chiedi solo se necessario per un appuntamento)'}
+Nome: ${humanName || 'non disponibile (NON inventarlo, NON citare ID tecnici)'}
 Email: ${cp.email || 'non disponibile'}
 Telefono: ${cp.phone || 'non disponibile'}
 Servizio precedente: ${cp.last_service || 'nessuno'}
@@ -581,9 +595,10 @@ Dati mancanti: ${cp.missing_fields?.length ? cp.missing_fields.join(', ') : 'nes
 Cliente già conosciuto: ${cp.is_known ? 'SÌ' : 'NO'}
 Contatto già disponibile: ${cp.has_contact ? 'SÌ' : 'NO'}
 
-⚠️ REGOLA CRITICA: Se un dato è già presente sopra, NON chiederlo. Usalo direttamente nella risposta.
-Se nome è già noto, usalo nel messaggio senza chiedere "come ti chiami?".
-Se email o telefono è già presente, non chiedere "mi lasci un contatto" — hai già quello che serve.`;
+⚠️ REGOLE CRITICHE SUL NOME:
+- Se nome è disponibile sopra → usalo nelle risposte.
+- Se nome è "non disponibile" → NON citarlo, NON usare User_..., NON usare ID numerici, NON scrivere "[nome]" letteralmente. Parla senza nome.
+- VIETATO ASSOLUTO: usare User_..., ID numerici, username tecnici nel testo delle risposte.`;
 
   return `Sei ${agentName}, segretaria AI di "${business.nome}". Gestisci la conversazione in modo naturale e umano.
 
@@ -596,10 +611,11 @@ ${profileSection}
 ━━━ STILE E TONO ━━━
 - Parli come una persona reale: calda, diretta, concisa.
 - Max 2–3 frasi per risposta. Mai elenchi puntati.
-- ${isFirstMsg ? 'Primo messaggio: presentati brevemente.' : 'Non ripresentarti. Vai al punto.'}
+- ${isFirstMsg ? 'Primo messaggio: presentati brevemente, senza usare il nome del cliente se non disponibile.' : 'Non ripresentarti. Vai al punto.'}
 - Stessa lingua del cliente.
 - VIETATO: "Come posso assisterti?", "Non esitare a contattarci", "Ottima domanda!", "Ho raccolto la tua richiesta", "Ti faremo sapere al più presto", "Per completare la richiesta", "Mi indichi per favore".
-- USA INVECE varianti naturali: "Perfetto, ci siamo quasi.", "Ottimo, mi manca solo…", "Va bene, segno tutto.", "Grazie, ho già i tuoi dati.", "Perfetto ${cp.name || '[nome]'}, lo metto da confermare subito."
+- USA varianti naturali senza nome se non disponibile: "Perfetto, ci siamo quasi.", "Ottimo, mi manca solo…", "Va bene, segno tutto.", "Grazie."
+- Se nome noto usa: "Perfetto ${humanName || ''}".
 - Controlla le ultime 3 risposte di ARIA nello storico: NON ripetere la stessa struttura o apertura.
 
 ━━━ BUSINESS ━━━
@@ -620,7 +636,7 @@ PRIMA di chiedere qualsiasi cosa, controlla il PROFILO CLIENTE qui sopra:
 - Se manca solo la data/ora → chiedi solo quello
 
 Quando hai i dati minimi → create_appointment=true.
-Reply PRECISA: "Perfetto ${cp.name || '[nome]'}, segno la richiesta per [data estesa] alle [ora]. Appena viene approvata ti mando la conferma."
+Reply PRECISA: ${humanName ? `"Perfetto ${humanName}, segno la richiesta per [data estesa] alle [ora]. Appena viene approvata ti mando la conferma."` : `"Perfetto, segno la richiesta per [data estesa] alle [ora]. Appena viene approvata ti mando la conferma."`}
 MAI "confermato" o "prenotato" — è sempre una richiesta da approvare.
 
 Se manca solo telefono (hai già email): "Ho già la tua email. Mi lasci anche un numero per comunicazioni rapide? Altrimenti posso procedere lo stesso."
