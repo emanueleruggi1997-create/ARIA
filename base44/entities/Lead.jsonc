@@ -10,24 +10,42 @@
       "type": "string",
       "description": "ID del contatto"
     },
+    "nome": {
+      "type": "string",
+      "description": "Nome del lead"
+    },
+    "cognome": {
+      "type": "string",
+      "description": "Cognome del lead"
+    },
     "contact_nome": {
       "type": "string",
-      "description": "Nome del contatto"
+      "description": "Nome completo (legacy)"
     },
     "email": {
       "type": "string",
-      "description": "Email del lead (necessaria per qualificazione)"
+      "description": "Email del lead"
     },
     "phone": {
       "type": "string",
-      "description": "Telefono del lead (necessario per qualificazione)"
+      "description": "Telefono / WhatsApp"
+    },
+    "instagram_username": {
+      "type": "string",
+      "description": "Instagram handle (es. @username)"
+    },
+    "azienda": {
+      "type": "string",
+      "description": "Nome azienda"
     },
     "canale": {
       "type": "string",
       "enum": [
         "whatsapp",
         "instagram",
-        "manual"
+        "web",
+        "manual",
+        "csv"
       ],
       "description": "Canale di provenienza"
     },
@@ -49,6 +67,7 @@
       "type": "string",
       "enum": [
         "nuovo",
+        "contattato",
         "qualificato",
         "preventivo_inviato",
         "chiuso_vinto",
@@ -56,17 +75,22 @@
       ],
       "default": "nuovo"
     },
-    "marketing_consent": {
-      "type": "boolean",
-      "description": "Consenso email marketing"
+    "note": {
+      "type": "string",
+      "description": "Note sul lead"
     },
     "note_ai": {
       "type": "string",
       "description": "Note generate da ARIA"
     },
-    "instagram_username": {
+    "marketing_consent": {
+      "type": "boolean",
+      "description": "Consenso email marketing"
+    },
+    "data_primo_contatto": {
       "type": "string",
-      "description": "Username Instagram se provenienza IG"
+      "format": "date",
+      "description": "Data primo contatto"
     }
   },
   "required": [

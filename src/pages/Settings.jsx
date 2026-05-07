@@ -50,6 +50,8 @@ export default function Settings() {
     email_smtp_user: '', email_smtp_pass: '', email_connessa: false,
     email_notifica: '',
     notif_escalation: true, notif_report_settimanale: false, notif_limite_piano: true,
+    email_company_name: '', email_company_year: '', email_company_website: '',
+    email_reply_to: '', email_logo_url: '',
   });
 
   useEffect(() => {
@@ -89,6 +91,11 @@ export default function Settings() {
         email_smtp_pass: business.email_smtp_pass || '',
         email_connessa: !!business.email_connessa,
         email_notifica: business.email_notifica || '',
+        email_company_name: business.email_company_name || '',
+        email_company_year: business.email_company_year || String(new Date().getFullYear()),
+        email_company_website: business.email_company_website || '',
+        email_reply_to: business.email_reply_to || '',
+        email_logo_url: business.email_logo_url || '',
         notif_escalation: business.notif_escalation !== false,
         notif_report_settimanale: !!business.notif_report_settimanale,
         notif_limite_piano: business.notif_limite_piano !== false,

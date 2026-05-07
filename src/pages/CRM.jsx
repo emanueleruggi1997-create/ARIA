@@ -7,11 +7,8 @@ import { formatSafeTimestamp } from '@/lib/safeDate.js';
 import { safeArray, safeInitials, safeNumber } from '@/lib/safeData.js';
 import SafeSection from '@/components/ui/SafeSection.jsx';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
+import LeadFormModal from '@/components/crm/LeadFormModal';
 import MailingListNew from '@/components/email/MailingListNew';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import LeadsKanban from '@/components/crm/LeadsKanban';
@@ -198,8 +195,6 @@ function LeadsSection({ businessId, onOpenAria }) {
   const queryClient = useQueryClient();
   const [selectedLead, setSelectedLead] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [newLead, setNewLead] = useState({ contact_nome: '', tipo_progetto: '', canale: 'instagram' });
-  const [mobileFilter, setMobileFilter] = useState('tutti');
   const [creating, setCreating] = useState(false);
   const [movingId, setMovingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -219,11 +214,14 @@ function LeadsSection({ businessId, onOpenAria }) {
   const handleUpdate = async (id, data) => { await base44.entities.Lead.update(id, data); invalidate(); setSelectedLead(null); };
   const handleDelete = async (id) => { if (deletingId === id) return; setDeletingId(id); try { await base44.entities.Lead.delete(id); invalidate(); } finally { setDeletingId(null); } };
   const handleMove = async (lead, stato) => { if (movingId === lead.id) return; setMovingId(lead.id); try { await base44.entities.Lead.update(lead.id, { stato }); invalidate(); } finally { setMovingId(null); } };
-  const handleCreate = async () => {
-    if (!newLead.contact_nome.trim() || creating) return;
+  const handleCreate = async (formData) => {
+    if (creating) return;
     setCreating(true);
-    try { await base44.entities.Lead.create({ ...newLead, business_id: businessId, stato: 'nuovo' }); invalidate(); setShowCreate(false); setNewLead({ contact_nome: '', tipo_progetto: '', canale: 'instagram' }); }
-    finally { setCreating(false); }
+    try {
+      await base44.entities.Lead.create({ ...formData, business_id: businessId });
+      invalidate();
+      setShowCreate(false);
+    } finally { setCreating(false); }
   };
 
   const statusMap = { all: 'all', hot: 'nuovo', warm: 'qualificato', cold: 'preventivo_inviato' };
@@ -289,47 +287,60 @@ function LeadsSection({ businessId, onOpenAria }) {
       </div>
 
       {leads.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
-          <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>{en ? 'No leads yet' : 'Nessun lead ancora'}</div>
-          <div style={{ fontSize: 13, marginBottom: 16 }}>{en ? 'Leads appear when messages arrive from Instagram or WhatsApp' : 'I lead appaiono quando arrivano messaggi da Instagram o WhatsApp'}</div>
-          <GlowBtn onClick={() => setShowCreate(true)}>+ {en ? 'Add manually' : 'Aggiungi manualmente'}</GlowBtn>
-        </div>
+      <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted }}>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>👥</div>
+      <div style={{ fontWeight: 700, color: C.text, marginBottom: 6 }}>{en ? 'No leads yet' : 'Nessun lead ancora'}</div>
+      <div style={{ fontSize: 13, marginBottom: 16 }}>{en ? 'Leads appear when messages arrive from Instagram or WhatsApp' : 'I lead appaiono quando arrivano messaggi da Instagram o WhatsApp'}</div>
+      <GlowBtn onClick={() => setShowCreate(true)}>+ {en ? 'Add manually' : 'Aggiungi manualmente'}</GlowBtn>
+      </div>
       ) : (
-        <>
-          {viewMode === 'list' ? (
-            /* Lead list */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {filteredLeads.map(l => (
-                <div key={l.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <Avatar initials={getInitials(l.contact_nome)} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>{l.contact_nome || 'Sconosciuto'}</span>
-                      <StatusDot color={colColor(l.stato)} />
-                      <span style={{ fontSize: 11, color: C.muted }}>
-                        {KANBAN_COLS.find(c => c.id === l.stato)?.label || l.stato}
-                      </span>
-                    </div>
-                    {l.tipo_progetto && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{l.tipo_progetto}</div>}
-                    <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                      {l.canale && (
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: (l.canale === 'instagram' ? '#E1306C' : '#25D366') + '22', color: l.canale === 'instagram' ? '#E1306C' : '#25D366', border: `1px solid ${(l.canale === 'instagram' ? '#E1306C' : '#25D366')}44` }}>
-                          {l.canale === 'instagram' ? 'IG' : 'WA'}
-                        </span>
-                      )}
-                      {l.budget_max && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: C.gold + '22', color: C.gold, border: `1px solid ${C.gold}44` }}>€{l.budget_max.toLocaleString('it-IT')}</span>}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontSize: 11, color: C.muted }}>{formatSafeTimestamp(l.created_date, 'dd/MM', '')}</div>
-                    <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                      <button onClick={() => setSelectedLead(l)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', color: C.muted, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✏</button>
-                      <button onClick={() => handleDelete(l.id)} style={{ background: C.surface, border: `1px solid ${C.danger}44`, borderRadius: 8, padding: '5px 10px', color: C.danger, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+      <>
+      {viewMode === 'list' ? (
+      /* Lead list */
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {filteredLeads.map(l => {
+      const CANALE_COLOR = { instagram: '#E1306C', whatsapp: '#25D366', web: '#00C6FF', manual: C.muted, csv: C.muted };
+      const CANALE_LABEL = { instagram: 'IG', whatsapp: 'WA', web: 'WEB', manual: 'MAN', csv: 'CSV' };
+      const displayName = `${l.nome || l.contact_nome || ''}${l.cognome ? ' ' + l.cognome : ''}`.trim() || 'Sconosciuto';
+      return (
+      <div key={l.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <Avatar initials={getInitials(displayName)} />
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 800, fontSize: 14, color: C.text }}>{displayName}</span>
+            <StatusDot color={colColor(l.stato)} />
+            <span style={{ fontSize: 11, color: C.muted }}>{KANBAN_COLS.find(c => c.id === l.stato)?.label || l.stato}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+            {l.email && (
+              <a href={`mailto:${l.email}`} style={{ fontSize: 12, color: C.accent, textDecoration: 'none' }}>{l.email}</a>
+            )}
+            {l.phone && (
+              <a href={`tel:${l.phone}`} style={{ fontSize: 12, color: C.success, textDecoration: 'none' }}>{l.phone}</a>
+            )}
+            {l.instagram_username && (
+              <span style={{ fontSize: 12, color: '#E1306C' }}>{l.instagram_username}</span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            {l.canale && (
+              <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: (CANALE_COLOR[l.canale] || C.muted) + '22', color: CANALE_COLOR[l.canale] || C.muted, border: `1px solid ${(CANALE_COLOR[l.canale] || C.muted)}44` }}>
+                {CANALE_LABEL[l.canale] || l.canale}
+              </span>
+            )}
+            {l.tipo_progetto && <span style={{ fontSize: 11, color: C.muted }}>{l.tipo_progetto}</span>}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontSize: 11, color: C.muted }}>{formatSafeTimestamp(l.data_primo_contatto || l.created_date, 'dd/MM/yy', '')}</div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+            <button onClick={() => setSelectedLead(l)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: '5px 10px', color: C.muted, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✏</button>
+            <button onClick={() => handleDelete(l.id)} style={{ background: C.surface, border: `1px solid ${C.danger}44`, borderRadius: 8, padding: '5px 10px', color: C.danger, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+          </div>
+        </div>
+      </div>
+      );
+      })}
             </div>
           ) : (
             /* Kanban view */
@@ -355,34 +366,12 @@ function LeadsSection({ businessId, onOpenAria }) {
 
       <LeadDetailModal lead={selectedLead} open={!!selectedLead} onClose={() => setSelectedLead(null)} onUpdate={handleUpdate} />
 
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader><DialogTitle>{en ? 'New Lead' : 'Nuovo Lead'}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>{en ? 'Contact name' : 'Nome contatto'}</Label>
-              <Input value={newLead.contact_nome} onChange={e => setNewLead(p => ({ ...p, contact_nome: e.target.value }))} className="mt-1 bg-secondary border-border" />
-            </div>
-            <div>
-              <Label>{en ? 'Interest / Service' : 'Interesse / Servizio'}</Label>
-              <Input value={newLead.tipo_progetto} onChange={e => setNewLead(p => ({ ...p, tipo_progetto: e.target.value }))} placeholder={en ? 'E.g. Consulting, Course, Product...' : 'Es: Consulenza, Corso, Prodotto...'} className="mt-1 bg-secondary border-border" />
-            </div>
-            <div>
-              <Label>{en ? 'Channel' : 'Canale'}</Label>
-              <Select value={newLead.canale} onValueChange={v => setNewLead(p => ({ ...p, canale: v }))}>
-                <SelectTrigger className="mt-1 bg-secondary border-border"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="instagram">Instagram DM</SelectItem>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleCreate} className="w-full" disabled={!newLead.contact_nome.trim() || creating}>
-              {creating ? (en ? 'Creating...' : 'Creazione...') : (en ? 'Create Lead' : 'Crea Lead')}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <LeadFormModal
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onSave={handleCreate}
+        saving={creating}
+      />
     </div>
   );
 }

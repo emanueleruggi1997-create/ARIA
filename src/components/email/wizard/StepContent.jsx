@@ -5,7 +5,7 @@ const C = {
   accent: '#00C6FF', accent2: '#7B2FFF', text: '#E8F4FF', muted: '#5A7A9A', success: '#00E5A0',
 };
 
-const VARS = ['{{nome}}', '{{nome_azienda}}', '{{data}}'];
+const VARS = ['{{nome}}', '{{nome_azienda}}', '{{data}}', '{{anno}}', '{{data_scadenza}}'];
 
 export default function StepContent({ form, setField, onBack, onNext }) {
   const bodyRef = useRef(null);

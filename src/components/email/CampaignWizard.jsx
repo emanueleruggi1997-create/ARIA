@@ -122,33 +122,33 @@ export default function CampaignWizard({ businessId, emailContacts, onClose, onC
         {/* Content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
           {step === 1 && (
-            <StepTemplate
-              selected={form.templateId}
-              emailStyle={form.emailStyle}
-              onSelect={(tmpl, style) => {
-                setForm(p => ({
-                  ...p,
-                  templateId: tmpl.id,
-                  templateName: tmpl.name,
-                  templateCategory: tmpl.goal,
-                  oggetto: tmpl.defaultOggetto,
-                  body: tmpl.defaultBody,
-                  emailStyle: style,
-                }));
-              }}
-              onStyleChange={(style) => setField('emailStyle', style)}
-            />
-          )}
-          {step === 1 && form.templateId && (
-            <div style={{ marginTop: 16 }}>
-              <button onClick={() => setStep(2)} style={{
-                width: '100%', background: `linear-gradient(135deg, ${C.accent2}, ${C.accent})`,
-                border: 'none', borderRadius: 10, padding: '12px 0',
-                color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
-              }}>
-                Continua → Contenuto
-              </button>
-            </div>
+            <>
+              <StepTemplate
+                selected={form.templateId}
+                onSelect={(tmpl, style) => {
+                  setForm(p => ({
+                    ...p,
+                    templateId: tmpl.id,
+                    templateName: tmpl.name,
+                    templateCategory: tmpl.goal,
+                    oggetto: tmpl.defaultOggetto || '',
+                    body: tmpl.defaultBody || '',
+                    emailStyle: style,
+                  }));
+                }}
+              />
+              {form.templateId && (
+                <div style={{ marginTop: 20 }}>
+                  <button onClick={() => setStep(2)} style={{
+                    width: '100%', background: `linear-gradient(135deg, ${C.accent2}, ${C.accent})`,
+                    border: 'none', borderRadius: 10, padding: '12px 0',
+                    color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    Continua → Contenuto
+                  </button>
+                </div>
+              )}
+            </>
           )}
           {step === 2 && (
             <StepContent

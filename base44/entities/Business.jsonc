@@ -74,6 +74,29 @@
       "type": "boolean",
       "default": false
     },
+    "email_notifica": {
+      "type": "string"
+    },
+    "email_company_name": {
+      "type": "string",
+      "description": "Nome azienda nel footer email"
+    },
+    "email_company_year": {
+      "type": "string",
+      "description": "Anno nel footer email"
+    },
+    "email_company_website": {
+      "type": "string",
+      "description": "Sito web nel footer email"
+    },
+    "email_reply_to": {
+      "type": "string",
+      "description": "Email di risposta per campagne"
+    },
+    "email_logo_url": {
+      "type": "string",
+      "description": "URL logo aziendale per email"
+    },
     "notif_escalation": {
       "type": "boolean",
       "default": true
@@ -133,20 +156,17 @@
     },
     "orario_inizio": {
       "type": "string",
-      "default": "08:00",
-      "description": "Orario inizio risposta automatica ARIA"
+      "default": "08:00"
     },
     "orario_fine": {
       "type": "string",
-      "default": "20:00",
-      "description": "Orario fine risposta automatica ARIA"
+      "default": "20:00"
     },
     "giorni_attivi": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Giorni in cui ARIA risponde automaticamente"
+      }
     },
     "messaggio_fuori_orario": {
       "type": "string"
@@ -160,9 +180,6 @@
       "items": {
         "type": "string"
       }
-    },
-    "email_notifica": {
-      "type": "string"
     },
     "attivo": {
       "type": "boolean",
@@ -179,35 +196,29 @@
     },
     "responsabile_orario_inizio": {
       "type": "string",
-      "default": "09:00",
-      "description": "Orario inizio disponibilit\u00e0 responsabile per appuntamenti"
+      "default": "09:00"
     },
     "responsabile_orario_fine": {
       "type": "string",
-      "default": "18:00",
-      "description": "Orario fine disponibilit\u00e0 responsabile per appuntamenti"
+      "default": "18:00"
     },
     "responsabile_giorni_attivi": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Giorni in cui il responsabile \u00e8 disponibile per appuntamenti"
+      }
     },
     "aria_name": {
       "type": "string",
-      "default": "ARIA",
-      "description": "Nome ARIA (canonical)"
+      "default": "ARIA"
     },
     "aria_color": {
       "type": "string",
-      "default": "#3B6EF8",
-      "description": "Colore ARIA (canonical)"
+      "default": "#3B6EF8"
     },
     "aria_mood": {
       "type": "string",
-      "default": "felice",
-      "description": "Umore ARIA (canonical)"
+      "default": "felice"
     },
     "robot_color": {
       "type": "string"
@@ -220,47 +231,38 @@
     },
     "theme_name": {
       "type": "string",
-      "default": "emaral",
-      "description": "Nome tema attivo"
+      "default": "emaral"
     },
     "theme_accent": {
       "type": "string",
-      "default": "#3B6EF8",
-      "description": "Colore accento tema"
+      "default": "#3B6EF8"
     },
     "theme_bg": {
       "type": "string",
-      "default": "#080A0F",
-      "description": "Colore sfondo tema"
+      "default": "#080A0F"
     },
     "dashboard_bg": {
       "type": "string",
-      "default": "pure",
-      "description": "Tipo sfondo dashboard"
+      "default": "pure"
     },
     "font_family": {
       "type": "string",
-      "default": "inter",
-      "description": "Font selezionato"
+      "default": "inter"
     },
     "sidebar_mode": {
       "type": "string",
-      "default": "expanded",
-      "description": "Modalit\u00e0 sidebar"
+      "default": "expanded"
     },
     "density": {
       "type": "string",
-      "default": "normal",
-      "description": "Densit\u00e0 interfaccia"
+      "default": "normal"
     },
     "custom_bg_url": {
-      "type": "string",
-      "description": "URL immagine sfondo personalizzato"
+      "type": "string"
     },
     "sync_aria_color": {
       "type": "boolean",
-      "default": false,
-      "description": "Sincronizza colore ARIA col tema"
+      "default": false
     }
   },
   "required": [
