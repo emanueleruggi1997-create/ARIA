@@ -216,12 +216,19 @@ export default function NewChatView({ conversation, messages, onSendMessage, onB
         </div>
       )}
 
-      {/* ── MESSAGES AREA ── */}
+      {/* ── MESSAGES AREA — windowed: show only last 60 items for perf ── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 2, background: `linear-gradient(180deg, ${C.bg} 0%, ${C.surface}44 100%)` }}>
         {messages.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: C.muted, fontSize: 13 }}>Nessun messaggio in questa conversazione</div>
         )}
-        {grouped.map((item, idx) => {
+        {grouped.length > 60 && (
+          <div style={{ textAlign: 'center', padding: '8px 0', marginBottom: 4 }}>
+            <span style={{ fontSize: 11, color: C.muted, background: C.card, padding: '3px 12px', borderRadius: 20, border: `1px solid ${C.border}` }}>
+              Mostrando gli ultimi {Math.floor(60 * messages.length / grouped.length)} messaggi
+            </span>
+          </div>
+        )}
+        {(grouped.length > 60 ? grouped.slice(-60) : grouped).map((item, idx) => {
           if (item.type === 'separator') return <DateSep key={item.key} date={item.date} />;
           const msg = item.msg;
           const isUser = msg.ruolo === 'user';

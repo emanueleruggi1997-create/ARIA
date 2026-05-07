@@ -1,24 +1,34 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { useLang } from '@/lib/LanguageContext.jsx';
-import LeadCard from '@/components/crm/LeadCard';
 import { formatSafeTimestamp } from '@/lib/safeDate.js';
 import { safeArray, safeInitials, safeNumber } from '@/lib/safeData.js';
 import SafeSection from '@/components/ui/SafeSection.jsx';
 import LeadDetailModal from '@/components/crm/LeadDetailModal';
 import MailingListNew from '@/components/email/MailingListNew';
-import EmailCampaignsTab from '@/components/crm/EmailCampaignsTab';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import CRMDashboardKPIs from '@/components/crm/CRMDashboardKPIs';
 import LeadsKanban from '@/components/crm/LeadsKanban';
-import EmailTemplateLibrary from '@/components/email/EmailTemplateLibrary';
+
+// Lazy-load heavy components — only download JS when actually navigated to
+const CRMDashboardKPIs = lazy(() => import('@/components/crm/CRMDashboardKPIs'));
+const EmailMarketingHubLazy = lazy(() => import('@/components/email/EmailMarketingHub'));
+
+function TabSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {[1, 2, 3].map(i => (
+        <div key={i} className="shimmer" style={{ height: 80, borderRadius: 14 }} />
+      ))}
+    </div>
+  );
+}
 
 // ─── Design tokens ───────────────────────────────────────────────
 const C = {
@@ -377,17 +387,12 @@ function LeadsSection({ businessId, onOpenAria }) {
   );
 }
 
-// ─── Campaigns wrapper with new UI ───────────────────────────────
-function CampaignsSection({ businessId, onOpenAria }) {
+// ─── Campaigns wrapper — lazy loaded ─────────────────────────────
+function CampaignsSection({ businessId }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, fontWeight: 900, fontSize: 22, letterSpacing: -0.5, color: C.text }}>
-          Email <span style={{ color: C.accent2 }}>Marketing</span>
-        </h2>
-      </div>
-      <EmailCampaignsTab businessId={businessId} />
-    </div>
+    <React.Suspense fallback={<TabSkeleton />}>
+      <EmailMarketingHubLazy businessId={businessId} />
+    </React.Suspense>
   );
 }
 
@@ -565,9 +570,11 @@ export default function CRM() {
               </p>
             </div>
 
-            {/* KPIs — Upgraded 8-card dashboard */}
+            {/* KPIs — Lazy loaded heavy chart component */}
             <SafeSection label="CRM KPIs">
-              <CRMDashboardKPIs leads={safeLeads} campaigns={safeCampaigns} emailContacts={safeEmailContacts} messages={safeArray(messages)} isDesktop={isDesktop} />
+              <React.Suspense fallback={<TabSkeleton />}>
+                <CRMDashboardKPIs leads={safeLeads} campaigns={safeCampaigns} emailContacts={safeEmailContacts} messages={safeArray(messages)} isDesktop={isDesktop} />
+              </React.Suspense>
             </SafeSection>
 
             {/* Recent leads + Quick actions */}
