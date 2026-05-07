@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
@@ -45,6 +45,9 @@ export default function Inbox() {
   const [readIds, setReadIds] = useState(new Set());
   const [actingId, setActingId] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  // Optimistic messages: shown immediately before API confirms
+  const [optimisticMessages, setOptimisticMessages] = useState([]);
+  const markReadTimerRef = useRef(null);
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768);
@@ -78,10 +81,10 @@ export default function Inbox() {
 
   const { data: allMessages = [] } = useQuery({
     queryKey: ['all-messages', business?.id],
-    queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 500),
+    queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 200),
     enabled: !!business?.id,
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: 30_000,
+    // Removed aggressive polling — real-time updates happen via optimistic updates
   });
 
   const conversations = useMemo(() => {
@@ -131,38 +134,64 @@ export default function Inbox() {
 
   const activeMessages = useMemo(() => {
     if (!activeConv) return [];
-    return safeArray(allMessages).filter(m => m?.contact_id === activeConv.contact_id).reverse();
-  }, [activeConv, allMessages]);
+    const real = safeArray(allMessages).filter(m => m?.contact_id === activeConv.contact_id).reverse();
+    const opt = optimisticMessages.filter(m => m.contact_id === activeConv.contact_id);
+    return [...real, ...opt];
+  }, [activeConv, allMessages, optimisticMessages]);
 
   const activeContact = useMemo(() => {
     if (!activeConv) return null;
     return contacts.find(c => c.id === activeConv.contact_id) || null;
   }, [activeConv, contacts]);
 
-  const handleSelect = async (conv) => {
+  const handleSelect = useCallback(async (conv) => {
     setActiveConv(conv);
+    setOptimisticMessages([]); // clear optimistic for new conv
     setReadIds(prev => new Set([...prev, conv.contact_id]));
     setShowContactInfo(false);
-    // Segna come letti tutti i messaggi non letti di questo contatto
-    const unread = allMessages.filter(m => m?.contact_id === conv.contact_id && !m?.letto && m?.ruolo === 'user');
-    if (unread.length > 0) {
-      await Promise.allSettled(unread.map(m => base44.entities.Message.update(m.id, { letto: true })));
-      queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
-    }
-  };
+    // Mark as read in background, debounced — no UI wait
+    if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
+    markReadTimerRef.current = setTimeout(async () => {
+      const unread = allMessages.filter(m => m?.contact_id === conv.contact_id && !m?.letto && m?.ruolo === 'user');
+      if (unread.length > 0) {
+        await Promise.allSettled(unread.map(m => base44.entities.Message.update(m.id, { letto: true })));
+        // Soft refresh — don't block UI
+        queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
+      }
+    }, 500);
+  }, [allMessages, business?.id, queryClient]);
 
-  const handleSendMessage = async (text, ruolo) => {
+  const handleSendMessage = useCallback(async (text, ruolo) => {
     if (!text?.trim() || !activeConv?.contact_id || !business?.id) return;
-    await base44.entities.Message.create({
+    // Optimistic: show message immediately
+    const optimistic = {
+      id: `opt_${Date.now()}`,
       contact_id: activeConv.contact_id,
       business_id: business.id,
       canale: activeConv.canale || 'whatsapp',
       ruolo,
       testo: text.trim(),
       letto: true,
+      created_date: new Date().toISOString(),
+      _optimistic: true,
+    };
+    setOptimisticMessages(prev => [...prev, optimistic]);
+    // Fire API in background
+    base44.entities.Message.create({
+      contact_id: activeConv.contact_id,
+      business_id: business.id,
+      canale: activeConv.canale || 'whatsapp',
+      ruolo,
+      testo: text.trim(),
+      letto: true,
+    }).then(() => {
+      queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
+      setOptimisticMessages([]);
+    }).catch(() => {
+      // Remove optimistic message on failure
+      setOptimisticMessages(prev => prev.filter(m => m.id !== optimistic.id));
     });
-    queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
-  };
+  }, [activeConv, business?.id, queryClient]);
 
   const handleArchive = async (conv) => {
     if (!conv?.contact_id || actingId === conv.contact_id) return;

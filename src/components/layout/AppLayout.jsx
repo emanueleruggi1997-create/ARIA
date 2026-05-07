@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import NotificationsBell from './NotificationsBell';
@@ -62,12 +62,15 @@ export default function AppLayout() {
 
       {/* Main */}
       <main className={cn("relative z-10",
-        "min-h-screen transition-all duration-300",
+        "min-h-screen transition-[margin-left] duration-200 ease-out",
         collapsed ? "md:ml-[68px]" : "md:ml-[240px]",
       )}>
         {/* Spacer for mobile fixed header */}
         <div className="h-14 md:hidden" />
-        <Outlet />
+        {/* Page content with enter animation */}
+        <div key={location.pathname} className="page-enter">
+          <Outlet />
+        </div>
         {/* Spacer for mobile bottom nav (68px + safe-area) */}
         <div className="h-[68px] md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} />
       </main>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo, useCallback } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { MoreHorizontal, Archive, Trash2, CheckCheck } from 'lucide-react';
@@ -43,20 +43,20 @@ function Avatar({ nome, canale, size = 48 }) {
   );
 }
 
-export default function ConvRow({ conv, isActive, onSelect, onArchive, onDelete, onMarkRead, onToggleAI }) {
+const ConvRow = memo(function ConvRow({ conv, isActive, onSelect, onArchive, onDelete, onMarkRead, onToggleAI }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const hasUnread = conv.unreadCount > 0;
   const ariaActive = !conv.ai_disabled;
 
-  const handleToggleAI = async (e) => {
+  const handleToggleAI = useCallback(async (e) => {
     e.stopPropagation();
     const newDisabled = !conv.ai_disabled;
     if (conv.contact_id) {
       await base44.entities.Contact.update(conv.contact_id, { ai_disabled: newDisabled });
     }
     onToggleAI?.(conv, newDisabled);
-  };
+  }, [conv, onToggleAI]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -66,11 +66,7 @@ export default function ConvRow({ conv, isActive, onSelect, onArchive, onDelete,
     return () => { document.removeEventListener('mousedown', h); document.removeEventListener('touchstart', h); };
   }, [menuOpen]);
 
-  const previewText = () => {
-    const t = conv.lastMessage || '';
-    if (!t) return 'Nessun messaggio';
-    return t;
-  };
+  const previewText = conv.lastMessage || 'Nessun messaggio';
 
   return (
     <div style={{ position: 'relative', borderBottom: `1px solid ${C.border}` }}>
@@ -80,7 +76,8 @@ export default function ConvRow({ conv, isActive, onSelect, onArchive, onDelete,
           display: 'flex', alignItems: 'center', gap: 12, padding: '13px 48px 13px 14px',
           cursor: 'pointer',
           background: isActive ? `${C.accent2}14` : hasUnread ? `${C.text}04` : 'transparent',
-          transition: 'background 0.15s',
+          transition: 'background 0.1s',
+          willChange: 'background-color',
         }}
       >
         <Avatar nome={conv.nome} canale={conv.canale} />
@@ -97,7 +94,7 @@ export default function ConvRow({ conv, isActive, onSelect, onArchive, onDelete,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
               fontWeight: hasUnread ? 600 : 400,
             }}>
-              {previewText()}
+              {previewText}
             </span>
             <div style={{ display: 'flex', gap: 5, flexShrink: 0, alignItems: 'center' }}>
               {/* Quick AI toggle */}
@@ -156,4 +153,6 @@ export default function ConvRow({ conv, isActive, onSelect, onArchive, onDelete,
       </div>
     </div>
   );
-}
+});
+
+export default ConvRow;

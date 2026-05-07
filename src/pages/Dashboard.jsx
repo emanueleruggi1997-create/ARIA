@@ -1,26 +1,25 @@
-import React from 'react';
+import React, { useMemo, lazy, Suspense } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
 import { useBusiness } from '@/lib/useBusinessContext.jsx';
 import { useLang } from '@/lib/LanguageContext.jsx';
 import KpiCard from '@/components/dashboard/KpiCard';
-import AgentStatusBadge from '@/components/dashboard/AgentStatusBadge';
 import RobotMascot from '@/components/dashboard/RobotMascot';
 import AppointmentRequests from '@/components/dashboard/AppointmentRequests';
 import HumanRequestsWidget from '@/components/dashboard/HumanRequestsWidget';
 import UrgentActionsWidget from '@/components/dashboard/UrgentActionsWidget';
 import TodayTasks from '@/components/dashboard/TodayTasks';
 import AriaProactiveWidget from '@/components/dashboard/AriaProactiveWidget';
-import MessagesChartEnhanced from '@/components/dashboard/MessagesChartEnhanced';
-import { MessageSquare, Users, CalendarDays, Zap, ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+// Lazy-load heavy chart component
+const MessagesChartEnhanced = lazy(() => import('@/components/dashboard/MessagesChartEnhanced'));
+import { MessageSquare, Users, CalendarDays, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { it as itLocale, enUS } from 'date-fns/locale';
 import { formatSafeTimestamp } from '@/lib/safeDate.js';
 import SafeSection from '@/components/ui/SafeSection.jsx';
-import { safeArray, safeString } from '@/lib/safeData.js';
+import { safeArray } from '@/lib/safeData.js';
 
 function getGreeting(name, lang) {
   const h = new Date().getHours();
@@ -61,53 +60,54 @@ export default function Dashboard() {
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', business?.id],
-    queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 200),
+    // Load only last 100 for dashboard metrics — inbox loads the full set
+    queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 100),
     enabled: !!business?.id,
-    staleTime: 30_000,
+    staleTime: 2 * 60_000,
   });
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads', business?.id],
     queryFn: () => base44.entities.Lead.filter({ business_id: business?.id }, '-created_date', 20),
     enabled: !!business?.id,
-    staleTime: 60_000,
+    staleTime: 2 * 60_000,
   });
 
   const { data: metaConnections = [] } = useQuery({
     queryKey: ['meta-connection-dashboard', user?.id],
     queryFn: () => base44.entities.MetaConnection.filter({ user_id: user?.id }),
     enabled: !!user?.id,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
-
-  const igReallyConnected = metaConnections.some(c => c.ig_connected && c.ig_account_id);
 
   const { data: appointments = [] } = useQuery({
     queryKey: ['appointments', business?.id],
-    queryFn: () => base44.entities.Appointment.filter({ business_id: business?.id }),
+    queryFn: () => base44.entities.Appointment.filter({ business_id: business?.id }, '-data', 50),
     enabled: !!business?.id,
-    staleTime: 60_000,
+    staleTime: 2 * 60_000,
   });
 
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  const safeMessages = safeArray(messages);
-  const safeLeads = safeArray(leads);
-  const safeAppointments = safeArray(appointments);
+  // Memoize all derived values to avoid recalculation on every render
+  const safeMessages = useMemo(() => safeArray(messages), [messages]);
+  const safeLeads = useMemo(() => safeArray(leads), [leads]);
+  const safeAppointments = useMemo(() => safeArray(appointments), [appointments]);
+  const igReallyConnected = useMemo(() => metaConnections.some(c => c.ig_connected && c.ig_account_id), [metaConnections]);
 
-  const unreadMessages = safeMessages.filter(m => !m?.letto && m?.ruolo === 'user');
-  const todayMessages = safeMessages.filter(m => {
-    try {
-      if (!m?.created_date) return false;
-      return new Date(m.created_date).toDateString() === new Date().toDateString();
-    } catch { return false; }
-  });
-  const activeLeads = safeLeads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l?.stato));
-  const aiMessages = safeMessages.filter(m => m?.ruolo === 'assistant');
-  const aiRate = safeMessages.length > 0 ? Math.round((aiMessages.length / safeMessages.length) * 100) : 0;
-  const upcomingAppointments = safeAppointments.filter(a => a?.stato === 'in_attesa' || a?.stato === 'confermato');
-  const todayAppointments = safeAppointments.filter(a => a?.data === today);
-  const unreadCount = unreadMessages.length;
+  const { unreadMessages, todayMessages, activeLeads, aiMessages, aiRate, upcomingAppointments, todayAppointments, unreadCount } = useMemo(() => {
+    const unreadMessages = safeMessages.filter(m => !m?.letto && m?.ruolo === 'user');
+    const todayMessages = safeMessages.filter(m => {
+      try { return m?.created_date && new Date(m.created_date).toDateString() === new Date().toDateString(); }
+      catch { return false; }
+    });
+    const activeLeads = safeLeads.filter(l => !['chiuso_vinto', 'chiuso_perso'].includes(l?.stato));
+    const aiMessages = safeMessages.filter(m => m?.ruolo === 'assistant');
+    const aiRate = safeMessages.length > 0 ? Math.round((aiMessages.length / safeMessages.length) * 100) : 0;
+    const upcomingAppointments = safeAppointments.filter(a => a?.stato === 'in_attesa' || a?.stato === 'confermato');
+    const todayAppointments = safeAppointments.filter(a => a?.data === today);
+    return { unreadMessages, todayMessages, activeLeads, aiMessages, aiRate, upcomingAppointments, todayAppointments, unreadCount: unreadMessages.length };
+  }, [safeMessages, safeLeads, safeAppointments, today]);
 
   return (
     <div className="px-5 py-5 md:p-6 lg:p-8 space-y-3 md:space-y-5">
@@ -156,8 +156,10 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Chart */}
-      <MessagesChartEnhanced messages={messages} />
+      {/* Chart — lazy loaded */}
+      <Suspense fallback={<div className="h-64 bg-secondary rounded-xl animate-pulse" />}>
+        <MessagesChartEnhanced messages={messages} />
+      </Suspense>
 
       {/* Instagram connection notice */}
       {business && !igReallyConnected && (

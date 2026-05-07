@@ -30,7 +30,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
   return (
     <aside className={cn(
-      "hidden md:flex fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border z-40 flex-col transition-all duration-300",
+      "hidden md:flex fixed left-0 top-0 h-screen bg-sidebar border-r border-sidebar-border z-40 flex-col",
+      "transition-[width] duration-200 ease-out will-change-[width]",
       collapsed ? "w-[68px]" : "w-[240px]"
     )}>
       {/* Logo */}
@@ -60,7 +61,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium",
+                "transition-colors duration-100",
                 isActive 
                   ? "bg-primary/10 text-primary" 
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"

@@ -167,3 +167,65 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(220 15% 30%);
 }
+
+/* ─── Performance & Premium UI ───────────────────────────────────── */
+
+/* GPU-accelerated page transitions */
+.page-enter {
+  animation: pageSlideIn 0.18s ease-out both;
+}
+@keyframes pageSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Instant hover feedback on interactive elements */
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent layout shift during load */
+img { content-visibility: auto; }
+
+/* Smooth all transitions app-wide */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Premium card hover */
+.premium-card {
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s;
+  will-change: transform;
+}
+.premium-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, hsl(220 18% 7%) 25%, hsl(220 18% 11%) 50%, hsl(220 18% 7%) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Prevent paint flicker on sidebar nav links */
+aside a {
+  will-change: background-color;
+  transform: translateZ(0);
+}
+
+/* Remove 300ms tap delay on mobile */
+html {
+  touch-action: manipulation;
+}
+
+/* Fast focus ring */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}

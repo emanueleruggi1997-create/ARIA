@@ -6,8 +6,11 @@ export const queryClientInstance = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       retry: 1,
-      staleTime: 30_000, // 30s default — reduce unnecessary API calls
-      gcTime: 5 * 60_000, // 5min cache retention
+      // Aggressive caching: data stays fresh for 2min, kept in memory for 10min
+      staleTime: 2 * 60_000,
+      gcTime: 10 * 60_000,
+      // Do NOT refetch on mount if data is still fresh
+      refetchOnMount: true,
     },
     mutations: {
       retry: 0,
