@@ -7,9 +7,10 @@ import SubFilters from '@/components/inbox/SubFilters';
 import ConvRow from '@/components/inbox/ConvRow';
 import NewChatView from '@/components/inbox/NewChatView';
 import ContactInfoPanel from '@/components/inbox/ContactInfoPanel';
-import { MessageSquare, RefreshCw } from 'lucide-react';
+import { MessageSquare, RefreshCw, AlertTriangle } from 'lucide-react';
 import SafeSection from '@/components/ui/SafeSection.jsx';
 import { safeArray } from '@/lib/safeData.js';
+import InboxRecovery from '@/components/inbox/InboxRecovery';
 
 // Filtra nomi tecnici/placeholder — mai mostrare User_XXX o ID numerici
 function cleanDisplayName(nome) {
@@ -53,6 +54,7 @@ export default function Inbox() {
   const [igFilter, setIgFilter] = useState('tutti');
   const [activeConv, setActiveConv] = useState(null);
   const [showContactInfo, setShowContactInfo] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
   const [readIds, setReadIds] = useState(new Set());
   const [actingId, setActingId] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -83,6 +85,14 @@ export default function Inbox() {
       if (spacer) spacer.style.display = '';
     };
   }, [activeConv, isMobile]);
+
+  const { data: metaConnections = [] } = useQuery({
+    queryKey: ['meta-connections', business?.id],
+    queryFn: () => base44.entities.MetaConnection.filter({ business_id: business?.id, ig_connected: true }).catch(() => []),
+    enabled: !!business?.id,
+    staleTime: 60_000,
+  });
+  const igAccountId = metaConnections[0]?.ig_account_id || null;
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['contacts', business?.id],
@@ -328,22 +338,40 @@ export default function Inbox() {
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           {activeTab === 'instagram' && (
-            <button
-              onClick={handleSyncIGNames}
-              disabled={syncingNames}
-              title="Sincronizza nomi utenti Instagram"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                padding: '5px 12px', borderRadius: 8,
-                background: 'transparent', border: `1px solid ${C.border}`,
-                color: C.muted, fontSize: 11, fontWeight: 700,
-                cursor: syncingNames ? 'not-allowed' : 'pointer',
-                opacity: syncingNames ? 0.5 : 1, fontFamily: 'inherit',
-              }}
-            >
-              <RefreshCw size={12} style={{ animation: syncingNames ? 'spin 1s linear infinite' : 'none' }} />
-              {syncingNames ? 'Sync...' : 'Sync nomi IG'}
-            </button>
+            <>
+              <button
+                onClick={handleSyncIGNames}
+                disabled={syncingNames}
+                title="Sincronizza nomi utenti Instagram"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 12px', borderRadius: 8,
+                  background: 'transparent', border: `1px solid ${C.border}`,
+                  color: C.muted, fontSize: 11, fontWeight: 700,
+                  cursor: syncingNames ? 'not-allowed' : 'pointer',
+                  opacity: syncingNames ? 0.5 : 1, fontFamily: 'inherit',
+                }}
+              >
+                <RefreshCw size={12} style={{ animation: syncingNames ? 'spin 1s linear infinite' : 'none' }} />
+                {syncingNames ? 'Sync...' : 'Sync nomi IG'}
+              </button>
+              <button
+                onClick={() => setShowRecovery(v => !v)}
+                title="Recovery Inbox — webhook non processati"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 12px', borderRadius: 8,
+                  background: showRecovery ? '#F59E0B15' : 'transparent',
+                  border: `1px solid ${showRecovery ? '#F59E0B40' : C.border}`,
+                  color: showRecovery ? '#F59E0B' : C.muted,
+                  fontSize: 11, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <AlertTriangle size={12} />
+                Recovery
+              </button>
+            </>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.success, boxShadow: `0 0 8px ${C.success}` }} />
@@ -399,6 +427,26 @@ export default function Inbox() {
             contact={activeContact}
             onClose={() => setShowContactInfo(false)}
           />
+        )}
+
+        {/* Right: Recovery Inbox panel */}
+        {showRecovery && activeTab === 'instagram' && (
+          <div style={{ width: 360, flexShrink: 0, borderLeft: `1px solid ${C.border}`, height: '100%', overflowY: 'auto', background: C.surface }}>
+            <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 800, fontSize: 13, color: '#F59E0B', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AlertTriangle size={14} /> Recovery Inbox
+              </span>
+              <button onClick={() => setShowRecovery(false)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 18 }}>×</button>
+            </div>
+            <InboxRecovery
+              businessId={business?.id}
+              igAccountId={igAccountId}
+              onRecoverConversation={(conv) => {
+                setShowRecovery(false);
+                handleSelect(conv);
+              }}
+            />
+          </div>
         )}
       </div>
     </div>

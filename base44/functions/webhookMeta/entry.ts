@@ -72,7 +72,14 @@ Deno.serve(async (req) => {
 
       const senderId    = event.sender?.id;
       const recipientId = event.recipient?.id;
-      const text        = event.message?.text || event.postback?.title || '';
+      // Supporta: testo, postback, sticker, allegato (immagine, audio, video), reazione
+      const text        = event.message?.text || event.postback?.title ||
+                          (event.message?.attachments?.[0]?.type === 'image' ? '[Immagine]' :
+                           event.message?.attachments?.[0]?.type === 'audio' ? '[Audio]' :
+                           event.message?.attachments?.[0]?.type === 'video' ? '[Video]' :
+                           event.message?.attachments?.[0]?.type === 'file'  ? '[File]' :
+                           event.message?.attachments?.length > 0             ? '[Allegato]' :
+                           event.reaction?.emoji ? `[Reazione: ${event.reaction.emoji}]` : '');
       const messageId   = event.message?.mid || '';
       const timestamp   = event.timestamp || Date.now();
 
@@ -86,10 +93,13 @@ Deno.serve(async (req) => {
       console.log('[webhookMeta] timestamp:', timestamp);
       console.log('[webhookMeta] raw messaging event:', JSON.stringify(event).slice(0, 500));
 
-      if (!senderId || !text) {
-        console.log('[webhookMeta] Skip: senderId o text mancante');
+      // ⚠️ CRITICO: non skippare mai un DM reale — anche senza testo va salvato
+      if (!senderId) {
+        console.log('[webhookMeta] Skip: senderId mancante (evento non è un DM)');
         continue;
       }
+      // Se testo ancora vuoto, usa placeholder invece di skippare
+      const finalText = text || '[Messaggio senza testo]';
 
       // Fire-and-forget async processing
       (async () => {
@@ -190,30 +200,23 @@ Deno.serve(async (req) => {
           }
           console.log('[webhookMeta] ✅ MetaConnection match: conn.id=%s ig_account_id=%s recipient_id=%s', conn.id, conn.ig_account_id, recipientId);
 
-          // ── Trova o crea contatto ──
+          // ── Trova o crea contatto (SEMPRE, anche se profile lookup fallisce) ──
           let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
           let contact  = contacts[0];
 
-          // Risolvi profilo Instagram sender usando Business token
-          // API corretta per IG Business Login: GET /{senderId}?fields=username,name&access_token={BUSINESS_TOKEN}
+          // Risolvi profilo Instagram sender — NON blocca se fallisce
           const resolveIGSenderProfile = async () => {
             const igToken = conn.access_token;
             if (!igToken) return null;
             try {
-              const url = `https://graph.instagram.com/v21.0/${senderId}?fields=username,name&access_token=${igToken}`;
-              console.log('[webhookMeta] resolveIGSenderProfile URL: graph.instagram.com/v21.0/' + senderId + '?fields=username,name');
-              const res = await fetch(url);
+              const res = await fetch(`https://graph.instagram.com/v21.0/${senderId}?fields=username,name&access_token=${igToken}`);
               const data = await res.json();
-              console.log('[webhookMeta] resolveIGSenderProfile status:', res.status, '| data:', JSON.stringify(data));
-              if (data.error) {
-                console.log('[webhookMeta] resolveIGSenderProfile API error:', data.error.message);
-                return null;
-              }
-              // Priorità: username (leggibile) → name → null
+              console.log('[webhookMeta] resolveIGSenderProfile status:', res.status, '| username:', data.username);
+              if (data.error) return null;
               if (data.username) return `@${data.username}`;
               if (data.name && !/^\d+$/.test(data.name)) return data.name;
             } catch (e) {
-              console.log('[webhookMeta] resolveIGSenderProfile exception:', e.message);
+              console.log('[webhookMeta] resolveIGSenderProfile exception (non bloccante):', e.message);
             }
             return null;
           };
@@ -221,8 +224,9 @@ Deno.serve(async (req) => {
           const isPlaceholderName = (n) => !n || n.startsWith('User_') || n === 'Utente IG' || /^\d{10,}$/.test(n);
 
           if (!contact) {
-            const resolvedName = await resolveIGSenderProfile();
-            console.log('[webhookMeta] New contact name resolved:', resolvedName || '(no username — using fallback)');
+            // Tenta risoluzione nome, ma crea il contatto comunque se fallisce
+            const resolvedName = await resolveIGSenderProfile().catch(() => null);
+            console.log('[webhookMeta] Creating new contact | sender:', senderId, '| name:', resolvedName || 'Utente Instagram');
             contact = await base44.asServiceRole.entities.Contact.create({
               business_id: businessId,
               nome: resolvedName || 'Utente Instagram',
@@ -230,25 +234,33 @@ Deno.serve(async (req) => {
               canale: 'instagram',
               stato: 'lead',
             });
+            console.log('[webhookMeta] ✅ Contact created:', contact.id);
           } else if (isPlaceholderName(contact.nome)) {
-            // Tenta di aggiornare contatti esistenti con nome placeholder
-            const resolvedName = await resolveIGSenderProfile();
-            if (resolvedName) {
-              await base44.asServiceRole.entities.Contact.update(contact.id, { nome: resolvedName });
-              contact = { ...contact, nome: resolvedName };
-              console.log('[webhookMeta] Updated placeholder contact to:', resolvedName);
-            }
+            // Aggiorna nome placeholder in background, non blocca
+            resolveIGSenderProfile().then(resolvedName => {
+              if (resolvedName) {
+                base44.asServiceRole.entities.Contact.update(contact.id, { nome: resolvedName }).catch(() => {});
+                contact = { ...contact, nome: resolvedName };
+                console.log('[webhookMeta] Updated placeholder contact to:', resolvedName);
+              }
+            }).catch(() => {});
           }
 
-          // ── Salva messaggio ──
-          console.log('[webhookMeta] Message saved | contact:', contact.nome, '| businessId:', businessId);
-          await base44.asServiceRole.entities.Message.create({
+          // ── CRITICO: Salva messaggio PRIMA di qualunque altra operazione ──
+          // Se questo fallisce, tutto fallisce — è il nucleo del sistema
+          console.log('[webhookMeta] Saving message | contact_id:', contact.id, '| text:', finalText.slice(0, 80));
+          const savedMsg = await base44.asServiceRole.entities.Message.create({
             business_id: businessId, contact_id: contact.id,
-            canale: 'instagram', ruolo: 'user', testo: text, letto: false,
+            canale: 'instagram', ruolo: 'user', testo: finalText, letto: false,
           });
+          console.log('[webhookMeta] ✅ Message saved:', savedMsg.id);
+
           // Segna webhook come processato con successo
           if (webhookLogId) {
-            await base44.asServiceRole.entities.WebhookEventLog.update(webhookLogId, { processed: true }).catch(() => {});
+            await base44.asServiceRole.entities.WebhookEventLog.update(webhookLogId, {
+              processed: true,
+              business_id: businessId,
+            }).catch(() => {});
           }
 
           // Crea lead se non esiste
@@ -260,7 +272,9 @@ Deno.serve(async (req) => {
             });
           }
 
-          if (contact.ai_disabled) { console.log('[webhookMeta] AI disabilitata per:', contact.nome); return; }
+          if (contact.ai_disabled) { console.log('[webhookMeta] AI disabilitata per:', contact.nome, '— modalità manuale'); return; }
+          // Non passare a ARIA messaggi senza contenuto reale (stickers, allegati non testuali)
+          if (!text) { console.log('[webhookMeta] Messaggio senza testo — skip ARIA, messaggio salvato in inbox'); return; }
 
           const business = await base44.asServiceRole.entities.Business.get(businessId);
           if (!business) return;
@@ -322,7 +336,7 @@ Deno.serve(async (req) => {
           const customerProfile = buildCustomerProfile({ contact, lead: existingLead, appointments: prevAppointments, history });
 
           // ── Prompt ARIA come segretaria autonoma ──
-          const ariaPrompt = buildAriaPrompt({ business, agentName, history, text, isFirstMsg, customerProfile });
+          const ariaPrompt = buildAriaPrompt({ business, agentName, history, text: finalText, isFirstMsg, customerProfile });
 
           console.log('[webhookMeta] Calling ARIA for:', contact.nome);
           const llmRes = await base44.asServiceRole.integrations.Core.InvokeLLM({
@@ -387,7 +401,7 @@ Deno.serve(async (req) => {
             // Escalation reale: crea HumanRequest
             const ex = await base44.asServiceRole.entities.HumanRequest.filter({ business_id: businessId, contact_id: contact.id, stato: 'nuovo' });
             if (!ex.length) {
-              await base44.asServiceRole.entities.HumanRequest.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, canale: 'instagram', motivo: text.slice(0, 200), stato: 'nuovo' }).catch(() => {});
+              await base44.asServiceRole.entities.HumanRequest.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, canale: 'instagram', motivo: finalText.slice(0, 200), stato: 'nuovo' }).catch(() => {});
             }
           }
 
@@ -402,7 +416,7 @@ Deno.serve(async (req) => {
             };
             const aptPayload = buildSafeAppointmentPayload({
               ad: adNorm, businessId, contactId: contact.id,
-              contactName: contact.nome, source: 'instagram', rawMessage: text,
+              contactName: contact.nome, source: 'instagram', rawMessage: finalText,
             });
             const { _requested_date_text, _requested_time_text, _raw_message, _validation_status, ...cleanPayload } = aptPayload;
             // Aggiungi campi canale per invio messaggio automatico alla conferma
@@ -425,13 +439,13 @@ Deno.serve(async (req) => {
               contact_nome: contact.nome,
               contact_canale: 'instagram',
               trigger: 'appuntamento',
-              messaggio_originale: `Richiesta appuntamento: ${ad.servizio || ''} — ${ad.data || ''} ${ad.ora || ''}`.trim(),
+              messaggio_originale: `Richiesta appuntamento: ${ad.servizio || ''} — ${ad.data || ''} ${ad.ora || ''}`.trim() || finalText.slice(0,200),
               stato: 'nuovo',
             }).catch(() => {});
           }
 
           if (intent === 'complaint' || (needsHuman && intent === 'urgent_request')) {
-            await base44.asServiceRole.entities.UrgentAction.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, contact_canale: 'instagram', trigger: intent === 'complaint' ? 'reclamo' : 'urgenza', messaggio_originale: text.slice(0, 500), stato: 'nuovo' }).catch(() => {});
+            await base44.asServiceRole.entities.UrgentAction.create({ business_id: businessId, contact_id: contact.id, contact_nome: contact.nome, contact_canale: 'instagram', trigger: intent === 'complaint' ? 'reclamo' : 'urgenza', messaggio_originale: finalText.slice(0, 500), stato: 'nuovo' }).catch(() => {});
           }
 
           console.log('[webhookMeta] Sending Instagram DM to:', senderId);
