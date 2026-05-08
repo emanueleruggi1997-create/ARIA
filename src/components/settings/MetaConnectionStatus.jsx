@@ -191,7 +191,7 @@ export default function MetaConnectionStatus({ connection, businessId }) {
         </div>
       )}
 
-      {testing && <Row level="info" title="Diagnostica in corso... (20-45s)" detail="Eseguendo 10 test API su Meta — attendere" />}
+      {testing && <Row level="info" title="Diagnostica in corso... (20-45s)" detail="Eseguendo 10 test su tutti gli endpoint Meta ufficiali IG Business Login" />}
 
       {apiResult !== null && !testing && (
         <>
@@ -199,6 +199,19 @@ export default function MetaConnectionStatus({ connection, businessId }) {
 
           {!apiResult._error && (
             <>
+              {/* Endpoint summary */}
+              {apiResult.endpoint_summary && (
+                <div style={{ marginBottom: 8 }}>
+                  {Object.entries(apiResult.endpoint_summary).map(([ep, verdict]) => (
+                    <Row key={ep}
+                      level={verdict.startsWith('✅') ? 'ok' : verdict.startsWith('⚠️') ? 'warn' : 'err'}
+                      title={ep}
+                      detail={verdict}
+                    />
+                  ))}
+                </div>
+              )}
+
               {/* Profilo */}
               {apiOk ? (
                 <Row level="ok"
@@ -384,16 +397,32 @@ export default function MetaConnectionStatus({ connection, businessId }) {
           <div style={{ fontWeight: 800, fontSize: 11, color: '#F59E0B', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>🔧 Guida alla Risoluzione</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 
-            {!basicReal && apiResult && (
+            {!apiResult?.success && (
               <div style={{ fontSize: 11, color: '#9CA3AF', background: '#EF444410', border: '1px solid #EF444430', borderRadius: 8, padding: '8px 10px' }}>
-                <strong style={{ color: '#EF4444' }}>Error 100 — instagram_business_basic non approvato</strong>
-                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
-                  <li>Vai su <strong style={{ color: '#60A5FA' }}>Meta App Dashboard → App Review → Permissions</strong></li>
-                  <li>Trova <code style={{ color: '#F59E0B', fontSize: 10 }}>instagram_business_basic</code> → <strong>Request Advanced Access</strong></li>
-                  <li>Stessa cosa per <code style={{ color: '#F59E0B', fontSize: 10 }}>instagram_business_manage_messages</code></li>
-                  <li>In attesa di approvazione → aggiungi account IG come <strong>Tester</strong>: Meta App → Roles → Add Testers</li>
-                  <li>Dopo → <strong>Riconnetti OAuth</strong> → Ripeti diagnostica</li>
+                <strong style={{ color: '#EF4444' }}>Error 100: "Unsupported request - method type: get"</strong>
+                <div style={{ color: '#F59E0B', marginTop: 4, marginBottom: 6, fontWeight: 700 }}>
+                  Causa: l'utente che ha fatto OAuth non è Tester/Developer dell'app Meta, oppure l'account IG non è Business/Creator.
+                </div>
+                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.9 }}>
+                  <li>
+                    <strong>PASSO 1 — Aggiungi Tester:</strong> Meta App Dashboard → <strong style={{ color: '#60A5FA' }}>Roles → Testers → Add Testers</strong>
+                    <br /><span style={{ color: '#6B7280', fontSize: 10 }}>Inserisci il nome utente Instagram/Facebook dell'account che usa l'app</span>
+                  </li>
+                  <li>
+                    <strong>PASSO 2 — Accetta invito:</strong> l'account aggiunto deve accettare da Instagram/Facebook (notifica)
+                  </li>
+                  <li>
+                    <strong>PASSO 3 — Riconnetti OAuth:</strong> vai su Connessioni → <strong>Riconnetti Instagram</strong>
+                    <br /><span style={{ color: '#6B7280', fontSize: 10 }}>Il nuovo token avrà i permessi corretti</span>
+                  </li>
+                  <li>
+                    <strong>PASSO 4 — Verifica account IG:</strong> l'account deve essere <strong>Business o Creator</strong>
+                    <br /><span style={{ color: '#6B7280', fontSize: 10 }}>Instagram → Impostazioni → Account → Tipo di account</span>
+                  </li>
                 </ol>
+                <div style={{ marginTop: 6, fontSize: 10, color: '#6B7280', fontStyle: 'italic' }}>
+                  Nota: l'endpoint POST /messages funziona già — il problema è solo sui GET (profilo, subscribed_apps, conversations).
+                </div>
               </div>
             )}
 
