@@ -66,7 +66,8 @@ const ConvRow = memo(function ConvRow({ conv, isActive, onSelect, onArchive, onD
     return () => { document.removeEventListener('mousedown', h); document.removeEventListener('touchstart', h); };
   }, [menuOpen]);
 
-  const previewText = conv.lastMessage || 'Nessun messaggio';
+  const isManualConv = conv.ai_disabled && (!conv.numero || conv.numero === '');
+  const previewText = conv.lastMessage || (isManualConv ? '⏳ In attesa di risposta...' : 'Nessun messaggio');
 
   return (
     <div style={{ position: 'relative', borderBottom: `1px solid ${C.border}` }}>
@@ -88,6 +89,13 @@ const ConvRow = memo(function ConvRow({ conv, isActive, onSelect, onArchive, onD
             </span>
             <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{formatTime(conv.lastMessageTime)}</span>
           </div>
+          {isManualConv && (
+              <div style={{ marginBottom: 3 }}>
+                <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 20, background: `${C.danger}22`, color: C.danger, border: `1px solid ${C.danger}40`, letterSpacing: 0.5 }}>
+                  🔴 MANUALE · ARIA DISATTIVATA
+                </span>
+              </div>
+            )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{
               fontSize: 12, color: hasUnread ? `${C.text}cc` : C.muted,

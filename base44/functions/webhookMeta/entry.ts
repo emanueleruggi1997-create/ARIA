@@ -201,8 +201,34 @@ Deno.serve(async (req) => {
           console.log('[webhookMeta] ✅ MetaConnection match: conn.id=%s ig_account_id=%s recipient_id=%s', conn.id, conn.ig_account_id, recipientId);
 
           // ── Trova o crea contatto (SEMPRE, anche se profile lookup fallisce) ──
+          // Prima cerca per numero (sender_id numerico)
           let contacts = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, numero: senderId, canale: 'instagram' });
           let contact  = contacts[0];
+
+          // Se non trovato per numero, prova a trovarlo per username (@handle)
+          // Questo gestisce il caso in cui l'operatore ha creato il contatto manualmente prima che arrivasse il webhook
+          if (!contact) {
+            // Risolvi username del sender per fare match
+            const igToken = conn.access_token;
+            if (igToken) {
+              try {
+                const profileRes = await fetch(`https://graph.instagram.com/v21.0/${senderId}?fields=username&access_token=${igToken}`);
+                const profileData = await profileRes.json();
+                if (profileData.username) {
+                  const usernameMatches = await base44.asServiceRole.entities.Contact.filter({ business_id: businessId, nome: `@${profileData.username}`, canale: 'instagram' });
+                  if (usernameMatches.length > 0) {
+                    contact = usernameMatches[0];
+                    // Aggiorna il numero con il vero sender_id ora che lo conosciamo
+                    await base44.asServiceRole.entities.Contact.update(contact.id, { numero: senderId }).catch(() => {});
+                    contact = { ...contact, numero: senderId };
+                    console.log('[webhookMeta] ✅ Contact matched by username @%s → id: %s | ai_disabled: %s', profileData.username, contact.id, contact.ai_disabled);
+                  }
+                }
+              } catch (e) {
+                console.log('[webhookMeta] Username lookup for manual contact failed (non bloccante):', e.message);
+              }
+            }
+          }
 
           // Risolvi profilo Instagram sender — NON blocca se fallisce
           const resolveIGSenderProfile = async () => {

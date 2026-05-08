@@ -7,10 +7,11 @@ import SubFilters from '@/components/inbox/SubFilters';
 import ConvRow from '@/components/inbox/ConvRow';
 import NewChatView from '@/components/inbox/NewChatView';
 import ContactInfoPanel from '@/components/inbox/ContactInfoPanel';
-import { MessageSquare, RefreshCw, AlertTriangle } from 'lucide-react';
+import { MessageSquare, RefreshCw, AlertTriangle, UserPlus } from 'lucide-react';
 import SafeSection from '@/components/ui/SafeSection.jsx';
 import { safeArray } from '@/lib/safeData.js';
 import InboxRecovery from '@/components/inbox/InboxRecovery';
+import NewManualIGContactModal from '@/components/inbox/NewManualIGContactModal';
 
 // Filtra nomi tecnici/placeholder — mai mostrare User_XXX o ID numerici
 function cleanDisplayName(nome) {
@@ -55,6 +56,7 @@ export default function Inbox() {
   const [activeConv, setActiveConv] = useState(null);
   const [showContactInfo, setShowContactInfo] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
   const [readIds, setReadIds] = useState(new Set());
   const [actingId, setActingId] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -299,6 +301,16 @@ export default function Inbox() {
           <InboxTabs activeTab={activeTab} setActiveTab={tab => { setActiveTab(tab); setActiveConv(null); }} waUnread={waUnread} igUnread={igUnread} />
         </div>
         <SubFilters channel={activeTab} activeFilter={activeFilter} setActiveFilter={setActiveFilter} />
+        {activeTab === 'instagram' && (
+          <div style={{ padding: '8px 14px', borderBottom: `1px solid ${C.border}` }}>
+            <button
+              onClick={() => setShowManualModal(true)}
+              style={{ width: '100%', padding: '9px', borderRadius: 10, background: '#DD2A7B15', border: '1px solid #DD2A7B40', color: '#DD2A7B', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            >
+              <UserPlus size={13} /> Nuova conv. manuale (ARIA off)
+            </button>
+          </div>
+        )}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {isLoading ? <ConvSkeleton /> : (
             filteredConvs.length === 0 ? (
@@ -321,6 +333,17 @@ export default function Inbox() {
             ))
           )}
         </div>
+        {showManualModal && (
+          <NewManualIGContactModal
+            businessId={business?.id}
+            onClose={() => setShowManualModal(false)}
+            onCreated={(conv) => {
+              queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
+              queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
+              handleSelect(conv);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -356,6 +379,22 @@ export default function Inbox() {
                 {syncingNames ? 'Sync...' : 'Sync nomi IG'}
               </button>
               <button
+                onClick={() => setShowManualModal(true)}
+                title="Nuova conversazione manuale Instagram — ARIA disattivata"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 12px', borderRadius: 8,
+                  background: '#DD2A7B15',
+                  border: `1px solid #DD2A7B40`,
+                  color: '#DD2A7B',
+                  fontSize: 11, fontWeight: 700,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <UserPlus size={12} />
+                Nuova conv. manuale
+              </button>
+              <button
                 onClick={() => setShowRecovery(v => !v)}
                 title="Recovery Inbox — webhook non processati"
                 style={{
@@ -387,6 +426,16 @@ export default function Inbox() {
         <div style={{ width: 340, flexShrink: 0, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', height: '100%' }}>
           <InboxTabs activeTab={activeTab} setActiveTab={tab => { setActiveTab(tab); setActiveConv(null); }} waUnread={waUnread} igUnread={igUnread} />
           <SubFilters channel={activeTab} activeFilter={activeFilter} setActiveFilter={setActiveFilter} />
+          {activeTab === 'instagram' && (
+            <div style={{ padding: '8px 10px', borderBottom: `1px solid ${C.border}` }}>
+              <button
+                onClick={() => setShowManualModal(true)}
+                style={{ width: '100%', padding: '8px', borderRadius: 10, background: '#DD2A7B15', border: '1px solid #DD2A7B40', color: '#DD2A7B', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              >
+                <UserPlus size={12} /> Nuova conv. manuale
+              </button>
+            </div>
+          )}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {isLoading ? <ConvSkeleton /> : (
               filteredConvs.length === 0 ? (
@@ -426,6 +475,19 @@ export default function Inbox() {
           <ContactInfoPanel
             contact={activeContact}
             onClose={() => setShowContactInfo(false)}
+          />
+        )}
+
+        {/* Manual IG Contact Modal */}
+        {showManualModal && (
+          <NewManualIGContactModal
+            businessId={business?.id}
+            onClose={() => setShowManualModal(false)}
+            onCreated={(conv) => {
+              queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
+              queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
+              handleSelect(conv);
+            }}
           />
         )}
 
