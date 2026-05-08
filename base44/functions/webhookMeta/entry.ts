@@ -131,9 +131,11 @@ Deno.serve(async (req) => {
 
           let conn = null;
 
-          // 1. ig_account_id (priorità — Instagram Business Login)
+          // 1. ig_account_id — cerca su TUTTI i record (anche ig_connected: false)
+          // Una connessione con ig_connected=false può ancora ricevere webhook reali
+          // (es. emaralgroup con ig_account_id 17841480156923428)
           let rows = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: accountId });
-          if (rows.length) { conn = rows[0]; console.log('[webhookMeta] MetaConnection found by ig_account_id:', conn.id); }
+          if (rows.length) { conn = rows[0]; console.log('[webhookMeta] MetaConnection found by ig_account_id:', conn.id, '| ig_connected:', conn.ig_connected); }
 
           // 2. meta_user_id
           if (!conn) {
@@ -147,7 +149,7 @@ Deno.serve(async (req) => {
             if (rows.length) { conn = rows[0]; console.log('[webhookMeta] MetaConnection found by fb_page_id (legacy):', conn.id); }
           }
 
-          // 4. Fallback: unica connessione IG attiva
+          // 4. Fallback: unica connessione IG attiva (ig_connected: true)
           if (!conn) {
             const allActive = await base44.asServiceRole.entities.MetaConnection.filter({ ig_connected: true });
             if (allActive.length === 1) {

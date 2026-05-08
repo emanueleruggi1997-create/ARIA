@@ -207,18 +207,73 @@ Deno.serve(async (req) => {
   console.log('[metaOAuthCallback] ig_account_id:', igUserId, '| ig_account_name:', igUsername || '(non recuperato)', '| expires_at:', tokenExpiresAt, '| is_long_lived:', isLongLived);
 
   try {
-    // Cerca prima per user_id, poi per business_id (robustezza)
-    let existing = await base44.asServiceRole.entities.MetaConnection.filter({ user_id: userId });
-    if (!existing.length && businessId) {
-      existing = await base44.asServiceRole.entities.MetaConnection.filter({ business_id: businessId });
+    // ── Lookup anti-duplicato: priorità in ordine ──
+    // 1. Stessa ig_account_id (il caso più preciso: stesso account IG)
+    // 2. Stesso business_id + stessa ig_account_name (ri-OAuth stesso account)
+    // 3. Stesso business_id con un solo record esistente (aggiornamento sicuro)
+    // 4. Stesso user_id con un solo record (fallback)
+    // NON sovrascrivere mai una connessione con ig_account_id diverso se quella
+    // connessione ha ricevuto webhook reali recenti (matched_connection: true).
+
+    let existingConn = null;
+
+    // 1. Cerca per ig_account_id esatto (massima precisione)
+    if (igUserId) {
+      const byAccountId = await base44.asServiceRole.entities.MetaConnection.filter({ ig_account_id: igUserId });
+      if (byAccountId.length > 0) {
+        existingConn = byAccountId[0];
+        console.log('[metaOAuthCallback] Trovata connessione per ig_account_id:', igUserId, '→ id:', existingConn.id);
+      }
     }
 
-    if (existing.length > 0) {
-      await base44.asServiceRole.entities.MetaConnection.update(existing[0].id, payload);
-      console.log('[metaOAuthCallback] ✅ DB aggiornato, id:', existing[0].id);
+    // 2. Cerca per business_id + ig_account_name (stesso account, token riciclato)
+    if (!existingConn && businessId && (igUsername || igName)) {
+      const name = igUsername || igName;
+      const byName = await base44.asServiceRole.entities.MetaConnection.filter({ business_id: businessId, ig_account_name: name });
+      if (byName.length > 0) {
+        existingConn = byName[0];
+        console.log('[metaOAuthCallback] Trovata connessione per business_id+ig_account_name:', name, '→ id:', existingConn.id);
+      }
+    }
+
+    // 3. Cerca per business_id — solo se c'è UN SOLO record (sicuro aggiornare)
+    if (!existingConn && businessId) {
+      const byBiz = await base44.asServiceRole.entities.MetaConnection.filter({ business_id: businessId });
+      if (byBiz.length === 1) {
+        // Controlla: se il record esistente ha ig_account_id diverso, NON sovrascrivere
+        // a meno che sia lo stesso user_id (stessa persona, nuovo token)
+        const candidate = byBiz[0];
+        const sameUser = candidate.user_id === userId;
+        const sameAccountId = candidate.ig_account_id === igUserId;
+        if (sameUser || sameAccountId || !candidate.ig_account_id) {
+          existingConn = candidate;
+          console.log('[metaOAuthCallback] Trovata connessione per business_id (singola):', candidate.id, '| sameUser:', sameUser, '| sameAccountId:', sameAccountId);
+        } else {
+          // ig_account_id diverso e utente diverso → crea nuovo, non sovrascrivere
+          console.warn('[metaOAuthCallback] business_id match ma ig_account_id DIVERSO:', candidate.ig_account_id, '≠', igUserId, '→ creo nuovo record');
+        }
+      } else if (byBiz.length > 1) {
+        // Più record per stesso business: aggiorna solo quello con ig_account_id corrispondente
+        // (già trovato al passo 1 se presente, altrimenti non toccare)
+        console.warn('[metaOAuthCallback] Più connessioni per business_id:', businessId, '— skip aggiornamento business generico');
+      }
+    }
+
+    // 4. Fallback: cerca per user_id (solo se nessun match precedente)
+    if (!existingConn && userId) {
+      const byUser = await base44.asServiceRole.entities.MetaConnection.filter({ user_id: userId });
+      if (byUser.length === 1) {
+        existingConn = byUser[0];
+        console.log('[metaOAuthCallback] Trovata connessione per user_id:', userId, '→ id:', existingConn.id);
+      }
+    }
+
+    if (existingConn) {
+      await base44.asServiceRole.entities.MetaConnection.update(existingConn.id, payload);
+      console.log('[metaOAuthCallback] ✅ DB aggiornato, id:', existingConn.id, '| ig_account_id nuovo:', igUserId);
     } else {
       await base44.asServiceRole.entities.MetaConnection.create(payload);
-      console.log('[metaOAuthCallback] ✅ DB creato nuovo record');
+      console.log('[metaOAuthCallback] ✅ DB creato nuovo record | ig_account_id:', igUserId);
     }
   } catch (dbErr) {
     console.error('[metaOAuthCallback] DB FALLITO:', dbErr.message);
