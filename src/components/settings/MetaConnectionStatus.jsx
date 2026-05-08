@@ -371,6 +371,85 @@ export default function MetaConnectionStatus({ connection, businessId }) {
         <Row level="ok" title="Messaggi Instagram presenti" detail={`Ultimo: ${fmt(lastMsg?.created_date)} · ruolo: ${lastMsg?.ruolo}`} />
       )}
 
+      {/* ── Guida Fix — mostrata solo se ci sono errori ── */}
+      {apiResult !== null && diagnosis.filter(d => d.level === 'error').length > 0 && (
+        <div style={{ marginTop: 12, padding: '12px 14px', background: '#0F172A', border: '1px solid #F59E0B40', borderRadius: 10 }}>
+          <div style={{ fontWeight: 800, fontSize: 11, color: '#F59E0B', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+            🔧 Guida alla Risoluzione
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+            {/* Error 100 / scopes non approvati */}
+            {(!apiResult.instagram_business_basic_approved) && (
+              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#EF444410', border: '1px solid #EF444430', borderRadius: 8, padding: '8px 10px' }}>
+                <strong style={{ color: '#EF4444' }}>CAUSA PRINCIPALE — Error 100: instagram_business_basic non approvato</strong>
+                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
+                  <li>Vai su <strong style={{ color: '#60A5FA' }}>Meta App Dashboard → App Review → Permissions</strong></li>
+                  <li>Trova <code style={{ color: '#F59E0B', fontSize: 10 }}>instagram_business_basic</code> → clicca <strong>Request Advanced Access</strong></li>
+                  <li>Trova <code style={{ color: '#F59E0B', fontSize: 10 }}>instagram_business_manage_messages</code> → stessa cosa</li>
+                  <li><strong>In attesa di approvazione?</strong> → aggiungi il tuo account IG come <strong>Tester</strong> in App Dashboard → Roles → Add Testers</li>
+                  <li>Dopo aver aggiunto il Tester → <strong>Riconnetti OAuth</strong> → ripeti diagnostica</li>
+                </ol>
+              </div>
+            )}
+
+            {/* Account non Business */}
+            {apiResult.account_type && !apiResult.is_business_or_creator && (
+              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#EF444410', border: '1px solid #EF444430', borderRadius: 8, padding: '8px 10px' }}>
+                <strong style={{ color: '#EF4444' }}>Account Instagram non è Business/Creator</strong>
+                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
+                  <li>Apri Instagram → <strong>Impostazioni → Account</strong></li>
+                  <li>Clicca <strong>"Passa ad account professionale"</strong></li>
+                  <li>Scegli <strong>Business</strong> (non Creator se vuoi le API Messaging)</li>
+                  <li>Collega a una <strong>Facebook Page</strong> quando richiesto</li>
+                  <li>Dopo → <strong>Riconnetti OAuth</strong></li>
+                </ol>
+              </div>
+            )}
+
+            {/* Webhook fields mancanti */}
+            {apiResult.missing_fields?.length > 0 && (
+              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '8px 10px' }}>
+                <strong style={{ color: '#F59E0B' }}>Webhook fields non attivi → Meta non invia DM</strong>
+                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
+                  <li>Opzione A: clicca <strong>"Sottoscrivi webhook fields ora"</strong> (sopra)</li>
+                  <li>Opzione B: vai su <strong>Meta App Dashboard → Webhooks → Instagram</strong></li>
+                  <li>Verifica che <code style={{ color: '#F59E0B', fontSize: 10 }}>messages</code> e <code style={{ color: '#F59E0B', fontSize: 10 }}>messaging_postbacks</code> siano abilitati</li>
+                  <li>Verifica che il <strong>Callback URL</strong> punti al tuo endpoint webhook e che il <strong>Verify Token</strong> sia <code style={{ color: '#F59E0B', fontSize: 10 }}>emaral2026</code></li>
+                </ol>
+              </div>
+            )}
+
+            {/* Utente non Tester */}
+            {apiResult.user_role_in_app !== undefined && !apiResult.user_role_ok && (
+              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '8px 10px' }}>
+                <strong style={{ color: '#F59E0B' }}>Utente non è Tester/Developer dell'app Meta</strong>
+                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
+                  <li>Vai su <strong>Meta App Dashboard → Roles → Testers</strong></li>
+                  <li>Clicca <strong>Add Testers</strong> → inserisci il nome utente IG/FB dell'account che fa il test</li>
+                  <li>L'utente deve <strong>accettare l'invito</strong> (controlla le notifiche IG/FB)</li>
+                  <li>Dopo accettazione → invia DM di test e ricontrolla qui</li>
+                </ol>
+              </div>
+            )}
+
+            {/* Zero webhook */}
+            {apiResult.recent_webhooks_count === 0 && (
+              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#3B82F610', border: '1px solid #3B82F630', borderRadius: 8, padding: '8px 10px' }}>
+                <strong style={{ color: '#60A5FA' }}>Test DM da account Tester</strong>
+                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
+                  <li>Da un account IG aggiunto come <strong>Tester</strong>, invia un DM all'account business</li>
+                  <li>Attendi 5-10 secondi → clicca <strong>"Ripeti diagnostica"</strong></li>
+                  <li>Se appare in "Webhook DM ricevuti" → il sistema funziona</li>
+                  <li>Se ancora zero → controlla il Callback URL nel Meta App Dashboard</li>
+                  <li>URL webhook attuale: <code style={{ color: '#60A5FA', fontSize: 10, wordBreak: 'break-all' }}>https://emaral-smart-flow.base44.app/api/functions/webhookMeta</code></li>
+                </ol>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Sintesi finale ── */}
       <div style={{ marginTop: 10, padding: '10px 14px', background: '#0F172A', border: '1px solid #1E293B', borderRadius: 10, fontSize: 11 }}>
         <div style={{ fontWeight: 800, color: '#9CA3AF', marginBottom: 6, letterSpacing: 0.5 }}>STATO REALE</div>

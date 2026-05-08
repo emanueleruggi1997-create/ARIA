@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
 
   // ══════════════════════════════════════════════════════════════
   // TEST E: Facebook Pages dell'utente (per verifica collegamento page)
-  // graph.facebook.com/me/accounts richiede FB User Token — potrebbe fallire
+  // graph.facebook.com/me/accounts richiede FB User Token — potrebbe fallire con IG Business token
   // ══════════════════════════════════════════════════════════════
   console.log('[testMeta] ─── E: Facebook Pages collegate ───');
   const rE = await fetch(
@@ -168,19 +168,50 @@ Deno.serve(async (req) => {
   const dE = await rE.json();
   console.log('[testMeta] me/accounts HTTP:', rE.status);
   console.log('[testMeta] me/accounts response:', JSON.stringify(dE).slice(0, 2000));
+  const fbPages = (dE.data || []).map(p => ({
+    id: p.id,
+    name: p.name,
+    has_ig_account: !!p.instagram_business_account,
+    ig_account_id: p.instagram_business_account?.id || null,
+    page_token: p.access_token ? p.access_token.slice(0, 10) + '***' : null,
+  }));
   R.fb_pages = {
     endpoint: 'graph.facebook.com/v21.0/me/accounts',
     http_status: rE.status,
     success: !dE.error && !!dE.data,
-    pages: (dE.data || []).map(p => ({
-      id: p.id,
-      name: p.name,
-      has_ig_account: !!p.instagram_business_account,
-      ig_account_id: p.instagram_business_account?.id || null,
-    })),
+    pages: fbPages,
+    ig_linked_page: fbPages.find(p => p.ig_account_id === igAccountId) || null,
     error: dE.error ? { code: dE.error.code, message: dE.error.message } : null,
-    note: dE.error ? 'Normale se il token è IG Business Login (non ha accesso a me/accounts)' : null,
+    note: dE.error ? 'Normale se il token è IG Business Login puro (non FB Login) — non ha accesso a me/accounts' : null,
   };
+  const igLinkedPage = fbPages.find(p => p.ig_account_id === igAccountId);
+  console.log('[testMeta] FB pages count:', fbPages.length, '| IG linked page:', igLinkedPage ? igLinkedPage.name : 'NOT FOUND');
+
+  // ── TEST E2: Se c'è una FB Page con Page Token, tenta profilo IG via graph.facebook.com ──
+  // Questa è la via alternativa quando instagram_business_basic non è approvato
+  // graph.facebook.com/{ig_account_id} con Page Token funziona DIVERSAMENTE
+  if (dE.data && igLinkedPage) {
+    const fullPage = (dE.data || []).find(p => p.id === igLinkedPage.id);
+    const pageToken = fullPage?.access_token;
+    if (pageToken) {
+      console.log('[testMeta] ─── E2: graph.facebook.com/{ig_id} con Page Token ───');
+      const rE2 = await fetch(
+        `https://graph.facebook.com/v21.0/${igAccountId}?fields=id,username,name,account_type,followers_count&access_token=${pageToken}`
+      );
+      const dE2 = await rE2.json();
+      console.log('[testMeta] graph.facebook.com/{ig_id} HTTP:', rE2.status);
+      console.log('[testMeta] graph.facebook.com/{ig_id} response:', JSON.stringify(dE2));
+      R.fb_ig_profile = {
+        endpoint: `graph.facebook.com/v21.0/${igAccountId}`,
+        method: 'Page Token',
+        http_status: rE2.status,
+        success: !dE2.error && !!dE2.id,
+        data: dE2.error ? null : { id: dE2.id, username: dE2.username, account_type: dE2.account_type },
+        error: dE2.error ? { code: dE2.error.code, message: dE2.error.message } : null,
+        note: dE2.id ? 'Profilo IG accessibile via FB Page Token — alternativa a instagram_business_basic' : null,
+      };
+    }
+  }
 
   // ══════════════════════════════════════════════════════════════
   // TEST F: Webhook subscribed_apps — verifica subscribed_fields attivi

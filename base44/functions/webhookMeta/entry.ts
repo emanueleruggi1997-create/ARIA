@@ -19,22 +19,46 @@ Deno.serve(async (req) => {
 
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
-  const body = await req.json().catch(() => ({}));
+  // ── LOG headers completi (per debug Meta signature, content-type, ecc.) ──
+  const headersObj = {};
+  req.headers.forEach((v, k) => { headersObj[k] = v; });
+  const rawBodyText = await req.text();
+  let body = {};
+  try { body = JSON.parse(rawBodyText); } catch { body = {}; }
 
-  // ── LOG COMPLETO payload ──
   console.log('[webhookMeta] ═══════════ INCOMING WEBHOOK ═══════════');
+  console.log('[webhookMeta] timestamp:', new Date().toISOString());
   console.log('[webhookMeta] object:', body.object);
   console.log('[webhookMeta] entry count:', (body.entry || []).length);
-  console.log('[webhookMeta] FULL BODY:', JSON.stringify(body, null, 2).slice(0, 3000));
+  console.log('[webhookMeta] headers:', JSON.stringify(headersObj));
+  console.log('[webhookMeta] FULL BODY:', JSON.stringify(body, null, 2).slice(0, 4000));
   console.log('[webhookMeta] ═══════════════════════════════════════');
+
+  const base44 = createClientFromRequest(req);
+
+  // ── Salva RAW log di ogni richiesta POST (anche non parsata) ──
+  // Questo intercetta TUTTI gli eventi Meta, anche quelli che non matchano
+  (async () => {
+    try {
+      await base44.asServiceRole.entities.WebhookEventLog.create({
+        provider: body.object === 'whatsapp_business_account' ? 'whatsapp' : 'instagram',
+        object: body.object || 'unknown',
+        entry_id: body.entry?.[0]?.id || '',
+        sender_id: body.entry?.[0]?.messaging?.[0]?.sender?.id || body.entry?.[0]?.changes?.[0]?.value?.from?.id || '',
+        recipient_id: body.entry?.[0]?.messaging?.[0]?.recipient?.id || body.entry?.[0]?.id || '',
+        event_type: 'unknown',
+        raw_payload: (JSON.stringify({ headers: headersObj, body }).slice(0, 5000)),
+        processed: false,
+        matched_connection: false,
+      });
+    } catch (_) { /* non bloccare il flusso principale */ }
+  })();
 
   // Supporta object="instagram" (principale) e object="page" (fallback legacy)
   if (body.object !== 'instagram' && body.object !== 'page') {
     console.log('[webhookMeta] object non supportato:', body.object, '— skip');
     return Response.json({ ok: true });
   }
-
-  const base44 = createClientFromRequest(req);
 
   for (const entry of (body.entry || [])) {
     const entryId = entry.id;
