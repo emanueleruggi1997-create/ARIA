@@ -12,6 +12,7 @@ import SafeSection from '@/components/ui/SafeSection.jsx';
 import { safeArray } from '@/lib/safeData.js';
 import InboxRecovery from '@/components/inbox/InboxRecovery';
 import NewManualIGContactModal from '@/components/inbox/NewManualIGContactModal';
+import IGSyncPanel from '@/components/inbox/IGSyncPanel';
 
 // Filtra nomi tecnici/placeholder — mai mostrare User_XXX o ID numerici
 function cleanDisplayName(nome) {
@@ -56,6 +57,7 @@ export default function Inbox() {
   const [activeConv, setActiveConv] = useState(null);
   const [showContactInfo, setShowContactInfo] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
+  const [showIGSync, setShowIGSync] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [readIds, setReadIds] = useState(new Set());
   const [actingId, setActingId] = useState(null);
@@ -427,12 +429,27 @@ export default function Inbox() {
           <InboxTabs activeTab={activeTab} setActiveTab={tab => { setActiveTab(tab); setActiveConv(null); }} waUnread={waUnread} igUnread={igUnread} />
           <SubFilters channel={activeTab} activeFilter={activeFilter} setActiveFilter={setActiveFilter} />
           {activeTab === 'instagram' && (
-            <div style={{ padding: '8px 10px', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ padding: '8px 10px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {/* Bottone principale sincronizzazione — sempre visibile */}
+              <button
+                onClick={() => { setShowIGSync(v => !v); setShowRecovery(false); setShowContactInfo(false); }}
+                style={{
+                  width: '100%', padding: '9px', borderRadius: 10,
+                  background: showIGSync ? 'linear-gradient(135deg,#F5852920,#DD2A7B20)' : 'linear-gradient(135deg,#F5852912,#DD2A7B12)',
+                  border: `1px solid ${showIGSync ? '#DD2A7B80' : '#DD2A7B40'}`,
+                  color: '#DD2A7B', fontSize: 12, fontWeight: 800,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  boxShadow: showIGSync ? '0 0 12px #DD2A7B22' : 'none',
+                }}
+              >
+                <RefreshCw size={13} /> 🔄 Sincronizza Instagram
+              </button>
               <button
                 onClick={() => setShowManualModal(true)}
-                style={{ width: '100%', padding: '8px', borderRadius: 10, background: '#DD2A7B15', border: '1px solid #DD2A7B40', color: '#DD2A7B', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                style={{ width: '100%', padding: '7px', borderRadius: 10, background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
               >
-                <UserPlus size={12} /> Nuova conv. manuale
+                <UserPlus size={11} /> Nuova conv. manuale (ARIA off)
               </button>
             </div>
           )}
@@ -488,6 +505,19 @@ export default function Inbox() {
               queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
               handleSelect(conv);
             }}
+          />
+        )}
+
+        {/* Right: IG Sync panel */}
+        {showIGSync && activeTab === 'instagram' && (
+          <IGSyncPanel
+            businessId={business?.id}
+            onClose={() => setShowIGSync(false)}
+            onSyncDone={() => {
+              queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
+              queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
+            }}
+            onOpenManualModal={() => { setShowIGSync(false); setShowManualModal(true); }}
           />
         )}
 

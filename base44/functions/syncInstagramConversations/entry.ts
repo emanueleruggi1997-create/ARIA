@@ -68,9 +68,9 @@ Deno.serve(async (req) => {
         success: false,
         api_supported: true,
         token_expired: true,
+        ig_account_id: igAccountId,
         error_code: errCode,
         error_message: 'Il token Instagram è scaduto. Riconnetti Instagram dalle Impostazioni → Connessioni.',
-        meta_limitation: false,
       });
     }
 
@@ -78,12 +78,10 @@ Deno.serve(async (req) => {
     return Response.json({
       success: false,
       api_supported: false,
+      ig_account_id: igAccountId,
       error_code: errCode,
       error_message: errMsg,
       meta_limitation: true,
-      message: `Meta API non ha restituito conversazioni (errore ${errCode}). ` +
-        `I messaggi inviati direttamente dall'app Instagram nativa non sono accessibili via API. ` +
-        `Le conversazioni appariranno in Emaral solo quando il cliente risponde e Meta invia il webhook.`,
     });
   }
 
@@ -201,6 +199,7 @@ Deno.serve(async (req) => {
   return Response.json({
     success: true,
     api_supported: true,
+    ig_account_id: igAccountId,
     threads_found: threads.length,
     threads_processed: threads.slice(0, 20).length - skipped,
     imported,
@@ -209,6 +208,5 @@ Deno.serve(async (req) => {
     message: imported > 0
       ? `Sincronizzati ${imported} messaggi da ${results.filter(r => r.messages_imported > 0).length} conversazioni.`
       : 'Nessun messaggio nuovo da importare. Le conversazioni erano già aggiornate.',
-    caveat: 'I messaggi inviati direttamente dall\'app Instagram nativa (outbound manuali senza API) non sono recuperabili via Meta API.',
   });
 });
