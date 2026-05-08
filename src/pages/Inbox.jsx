@@ -7,14 +7,11 @@ import SubFilters from '@/components/inbox/SubFilters';
 import ConvRow from '@/components/inbox/ConvRow';
 import NewChatView from '@/components/inbox/NewChatView';
 import ContactInfoPanel from '@/components/inbox/ContactInfoPanel';
-import { MessageSquare, RefreshCw, AlertTriangle, UserPlus } from 'lucide-react';
-import SafeSection from '@/components/ui/SafeSection.jsx';
-import { safeArray } from '@/lib/safeData.js';
-import InboxRecovery from '@/components/inbox/InboxRecovery';
 import NewManualIGContactModal from '@/components/inbox/NewManualIGContactModal';
-import IGSyncPanel from '@/components/inbox/IGSyncPanel';
+import { MessageSquare, RefreshCw, UserPlus } from 'lucide-react';
+import { safeArray } from '@/lib/safeData.js';
+import { useNavigate } from 'react-router-dom';
 
-// Filtra nomi tecnici/placeholder — mai mostrare User_XXX o ID numerici
 function cleanDisplayName(nome) {
   if (!nome) return 'Utente Instagram';
   if (nome.startsWith('User_')) return 'Utente Instagram';
@@ -26,10 +23,8 @@ function cleanDisplayName(nome) {
 const C = {
   bg: '#04080F', surface: '#0D1525', card: '#111C30', border: '#1A2E4A',
   text: '#E8F4FF', muted: '#5A7A9A', wa: '#25D366', ig: '#DD2A7B',
-  success: '#00E5A0',
+  success: '#00E5A0', danger: '#FF3860',
 };
-
-const inboxStyles = `@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
 
 function ConvSkeleton() {
   return (
@@ -50,20 +45,18 @@ function ConvSkeleton() {
 export default function Inbox() {
   const { business } = useBusiness();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('whatsapp');
   const [waFilter, setWaFilter] = useState('tutti');
   const [igFilter, setIgFilter] = useState('tutti');
   const [activeConv, setActiveConv] = useState(null);
   const [showContactInfo, setShowContactInfo] = useState(false);
-  const [showRecovery, setShowRecovery] = useState(false);
-  const [showIGSync, setShowIGSync] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [readIds, setReadIds] = useState(new Set());
   const [actingId, setActingId] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [syncingNames, setSyncingNames] = useState(false);
-  // Optimistic messages: shown immediately before API confirms
+  const [refreshing, setRefreshing] = useState(false);
   const [optimisticMessages, setOptimisticMessages] = useState([]);
   const markReadTimerRef = useRef(null);
 
@@ -90,14 +83,6 @@ export default function Inbox() {
     };
   }, [activeConv, isMobile]);
 
-  const { data: metaConnections = [] } = useQuery({
-    queryKey: ['meta-connections', business?.id],
-    queryFn: () => base44.entities.MetaConnection.filter({ business_id: business?.id, ig_connected: true }).catch(() => []),
-    enabled: !!business?.id,
-    staleTime: 60_000,
-  });
-  const igAccountId = metaConnections[0]?.ig_account_id || null;
-
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['contacts', business?.id],
     queryFn: () => base44.entities.Contact.filter({ business_id: business?.id }),
@@ -110,7 +95,6 @@ export default function Inbox() {
     queryFn: () => base44.entities.Message.filter({ business_id: business?.id }, '-created_date', 200),
     enabled: !!business?.id,
     staleTime: 30_000,
-    // Removed aggressive polling — real-time updates happen via optimistic updates
   });
 
   const conversations = useMemo(() => {
@@ -172,16 +156,14 @@ export default function Inbox() {
 
   const handleSelect = useCallback(async (conv) => {
     setActiveConv(conv);
-    setOptimisticMessages([]); // clear optimistic for new conv
+    setOptimisticMessages([]);
     setReadIds(prev => new Set([...prev, conv.contact_id]));
     setShowContactInfo(false);
-    // Mark as read in background, debounced — no UI wait
     if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
     markReadTimerRef.current = setTimeout(async () => {
       const unread = allMessages.filter(m => m?.contact_id === conv.contact_id && !m?.letto && m?.ruolo === 'user');
       if (unread.length > 0) {
         await Promise.allSettled(unread.map(m => base44.entities.Message.update(m.id, { letto: true })));
-        // Soft refresh — don't block UI
         queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
       }
     }, 500);
@@ -189,7 +171,6 @@ export default function Inbox() {
 
   const handleSendMessage = useCallback(async (text, ruolo) => {
     if (!text?.trim() || !activeConv?.contact_id || !business?.id) return;
-    // Optimistic: show message immediately
     const optimistic = {
       id: `opt_${Date.now()}`,
       contact_id: activeConv.contact_id,
@@ -202,7 +183,6 @@ export default function Inbox() {
       _optimistic: true,
     };
     setOptimisticMessages(prev => [...prev, optimistic]);
-    // Fire API in background
     base44.entities.Message.create({
       contact_id: activeConv.contact_id,
       business_id: business.id,
@@ -214,7 +194,6 @@ export default function Inbox() {
       queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
       setOptimisticMessages([]);
     }).catch(() => {
-      // Remove optimistic message on failure
       setOptimisticMessages(prev => prev.filter(m => m.id !== optimistic.id));
     });
   }, [activeConv, business?.id, queryClient]);
@@ -244,27 +223,28 @@ export default function Inbox() {
 
   const handleMarkRead = (conv) => setReadIds(prev => new Set([...prev, conv.contact_id]));
 
-  const handleSyncIGNames = async () => {
-    if (syncingNames) return;
-    setSyncingNames(true);
-    try {
-      await base44.functions.invoke('cleanupIGContacts', {});
-      queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
-    } finally {
-      setSyncingNames(false);
-    }
-  };
-
   const handleToggleAI = (conv, newDisabled) => {
-    // Aggiorna la lista localmente subito, poi refetch
     queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
-    // Se è la conv attiva, aggiorna anche quella
     if (activeConv?.contact_id === conv.contact_id) {
       setActiveConv(prev => prev ? { ...prev, ai_disabled: newDisabled } : prev);
     }
   };
 
-  // ── MOBILE LAYOUT ──
+  // Aggiorna conversazioni (semplice refresh dati)
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] }),
+        queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] }),
+      ]);
+    } finally {
+      setTimeout(() => setRefreshing(false), 800);
+    }
+  };
+
+  // ── MOBILE ──
   if (isMobile) {
     if (activeConv) {
       return (
@@ -288,31 +268,26 @@ export default function Inbox() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 7rem)', background: C.bg }}>
-        {/* Mobile header */}
         <div style={{ padding: '14px 16px 0', background: C.surface, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg,#7000FF,#0066FF)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⬡</div>
-              <span style={{ fontWeight: 900, fontSize: 18, color: C.text, letterSpacing: -0.5 }}>Inbox</span>
-            </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.success, boxShadow: `0 0 6px ${C.success}` }} />
-              <span style={{ fontSize: 11, color: C.success, fontWeight: 700 }}>ARIA online</span>
+            <span style={{ fontWeight: 900, fontSize: 18, color: C.text, letterSpacing: -0.5 }}>Inbox</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+              {activeTab === 'instagram' && (
+                <button
+                  onClick={() => setShowManualModal(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, background: '#DD2A7B15', border: '1px solid #DD2A7B40', color: '#DD2A7B', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  <UserPlus size={12} /> Manuale
+                </button>
+              )}
+              <button onClick={handleRefresh} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, cursor: 'pointer' }}>
+                <RefreshCw size={13} style={{ color: C.muted, animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+              </button>
             </div>
           </div>
           <InboxTabs activeTab={activeTab} setActiveTab={tab => { setActiveTab(tab); setActiveConv(null); }} waUnread={waUnread} igUnread={igUnread} />
         </div>
         <SubFilters channel={activeTab} activeFilter={activeFilter} setActiveFilter={setActiveFilter} />
-        {activeTab === 'instagram' && (
-          <div style={{ padding: '8px 14px', borderBottom: `1px solid ${C.border}` }}>
-            <button
-              onClick={() => setShowManualModal(true)}
-              style={{ width: '100%', padding: '9px', borderRadius: 10, background: '#DD2A7B15', border: '1px solid #DD2A7B40', color: '#DD2A7B', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-            >
-              <UserPlus size={13} /> Nuova conv. manuale (ARIA off)
-            </button>
-          </div>
-        )}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {isLoading ? <ConvSkeleton /> : (
             filteredConvs.length === 0 ? (
@@ -346,74 +321,46 @@ export default function Inbox() {
             }}
           />
         )}
+        <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
       </div>
     );
   }
 
-  // ── DESKTOP LAYOUT ──
+  // ── DESKTOP ──
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: C.bg }}>
-      <style>{inboxStyles}</style>
-      {/* Desktop header */}
+      <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+
+      {/* Header */}
       <div style={{ height: 56, padding: '0 20px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${C.border}`, background: C.surface, flexShrink: 0 }}>
         <MessageSquare size={18} style={{ color: '#7000FF' }} />
         <span style={{ fontWeight: 800, fontSize: 16, color: C.text }}>Inbox</span>
         <span style={{ fontSize: 11, color: C.muted, background: `${C.border}66`, borderRadius: 20, padding: '2px 10px' }}>
           {conversations.filter(c => !c.archiviata).length} conversazioni
         </span>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Refresh semplice */}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Aggiorna conversazioni"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, fontSize: 11, fontWeight: 700, cursor: refreshing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: refreshing ? 0.6 : 1 }}
+          >
+            <RefreshCw size={12} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+            {refreshing ? '...' : 'Aggiorna'}
+          </button>
+
+          {/* Nuova conv manuale IG */}
           {activeTab === 'instagram' && (
-            <>
-              <button
-                onClick={handleSyncIGNames}
-                disabled={syncingNames}
-                title="Sincronizza nomi utenti Instagram"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '5px 12px', borderRadius: 8,
-                  background: 'transparent', border: `1px solid ${C.border}`,
-                  color: C.muted, fontSize: 11, fontWeight: 700,
-                  cursor: syncingNames ? 'not-allowed' : 'pointer',
-                  opacity: syncingNames ? 0.5 : 1, fontFamily: 'inherit',
-                }}
-              >
-                <RefreshCw size={12} style={{ animation: syncingNames ? 'spin 1s linear infinite' : 'none' }} />
-                {syncingNames ? 'Sync...' : 'Sync nomi IG'}
-              </button>
-              <button
-                onClick={() => setShowManualModal(true)}
-                title="Nuova conversazione manuale Instagram — ARIA disattivata"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '5px 12px', borderRadius: 8,
-                  background: '#DD2A7B15',
-                  border: `1px solid #DD2A7B40`,
-                  color: '#DD2A7B',
-                  fontSize: 11, fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                <UserPlus size={12} />
-                Nuova conv. manuale
-              </button>
-              <button
-                onClick={() => setShowRecovery(v => !v)}
-                title="Recovery Inbox — webhook non processati"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '5px 12px', borderRadius: 8,
-                  background: showRecovery ? '#F59E0B15' : 'transparent',
-                  border: `1px solid ${showRecovery ? '#F59E0B40' : C.border}`,
-                  color: showRecovery ? '#F59E0B' : C.muted,
-                  fontSize: 11, fontWeight: 700,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                <AlertTriangle size={12} />
-                Recovery
-              </button>
-            </>
+            <button
+              onClick={() => setShowManualModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 8, background: '#DD2A7B15', border: '1px solid #DD2A7B40', color: '#DD2A7B', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <UserPlus size={12} /> Nuova conv. manuale
+            </button>
           )}
+
+          {/* ARIA status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.success, boxShadow: `0 0 8px ${C.success}` }} />
             <span style={{ fontSize: 11, color: C.success, fontWeight: 700 }}>ARIA online</span>
@@ -424,35 +371,10 @@ export default function Inbox() {
       {/* Main area */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* Left column: list */}
+        {/* Left: conversation list */}
         <div style={{ width: 340, flexShrink: 0, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', height: '100%' }}>
           <InboxTabs activeTab={activeTab} setActiveTab={tab => { setActiveTab(tab); setActiveConv(null); }} waUnread={waUnread} igUnread={igUnread} />
           <SubFilters channel={activeTab} activeFilter={activeFilter} setActiveFilter={setActiveFilter} />
-          {activeTab === 'instagram' && (
-            <div style={{ padding: '8px 10px', borderBottom: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {/* Bottone principale sincronizzazione — sempre visibile */}
-              <button
-                onClick={() => { setShowIGSync(v => !v); setShowRecovery(false); setShowContactInfo(false); }}
-                style={{
-                  width: '100%', padding: '9px', borderRadius: 10,
-                  background: showIGSync ? 'linear-gradient(135deg,#F5852920,#DD2A7B20)' : 'linear-gradient(135deg,#F5852912,#DD2A7B12)',
-                  border: `1px solid ${showIGSync ? '#DD2A7B80' : '#DD2A7B40'}`,
-                  color: '#DD2A7B', fontSize: 12, fontWeight: 800,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  boxShadow: showIGSync ? '0 0 12px #DD2A7B22' : 'none',
-                }}
-              >
-                <RefreshCw size={13} /> 🔄 Sincronizza Instagram
-              </button>
-              <button
-                onClick={() => setShowManualModal(true)}
-                style={{ width: '100%', padding: '7px', borderRadius: 10, background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
-              >
-                <UserPlus size={11} /> Nuova conv. manuale (ARIA off)
-              </button>
-            </div>
-          )}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {isLoading ? <ConvSkeleton /> : (
               filteredConvs.length === 0 ? (
@@ -487,7 +409,7 @@ export default function Inbox() {
           />
         </div>
 
-        {/* Right: contact info panel (slides in) */}
+        {/* Right: contact info panel */}
         {showContactInfo && activeConv && (
           <ContactInfoPanel
             contact={activeContact}
@@ -495,7 +417,7 @@ export default function Inbox() {
           />
         )}
 
-        {/* Manual IG Contact Modal */}
+        {/* Modal nuova conversazione manuale IG */}
         {showManualModal && (
           <NewManualIGContactModal
             businessId={business?.id}
@@ -506,39 +428,6 @@ export default function Inbox() {
               handleSelect(conv);
             }}
           />
-        )}
-
-        {/* Right: IG Sync panel */}
-        {showIGSync && activeTab === 'instagram' && (
-          <IGSyncPanel
-            businessId={business?.id}
-            onClose={() => setShowIGSync(false)}
-            onSyncDone={() => {
-              queryClient.invalidateQueries({ queryKey: ['contacts', business?.id] });
-              queryClient.invalidateQueries({ queryKey: ['all-messages', business?.id] });
-            }}
-            onOpenManualModal={() => { setShowIGSync(false); setShowManualModal(true); }}
-          />
-        )}
-
-        {/* Right: Recovery Inbox panel */}
-        {showRecovery && activeTab === 'instagram' && (
-          <div style={{ width: 360, flexShrink: 0, borderLeft: `1px solid ${C.border}`, height: '100%', overflowY: 'auto', background: C.surface }}>
-            <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontWeight: 800, fontSize: 13, color: '#F59E0B', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <AlertTriangle size={14} /> Recovery Inbox
-              </span>
-              <button onClick={() => setShowRecovery(false)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 18 }}>×</button>
-            </div>
-            <InboxRecovery
-              businessId={business?.id}
-              igAccountId={igAccountId}
-              onRecoverConversation={(conv) => {
-                setShowRecovery(false);
-                handleSelect(conv);
-              }}
-            />
-          </div>
         )}
       </div>
     </div>
