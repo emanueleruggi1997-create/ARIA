@@ -1,15 +1,9 @@
 /**
- * MetaConnectionStatus — diagnostica a 6 livelli con stato OPERATIVO reale.
- *
- * Stato "operativo" SOLO se:
- * 1. OAuth & Token OK
- * 2. API Meta risponde (profilo, scopes reali)
- * 3. Webhook fields sottoscritti
- * 4. Webhook DM reale ricevuto e processato
- * 5. DM salvato in Inbox
- * (6. ARIA risponde — verificato implicitamente se 4+5 ok)
+ * MetaConnectionStatus — diagnostica con test DM live basato su timestamp.
+ * Il "test DM" considera SOLO webhook ricevuti DOPO il click del pulsante,
+ * con recipient_id === ig_account_id della connessione corrente.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Loader2, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -45,29 +39,43 @@ function SectionHeader({ n, label, status }) {
   );
 }
 
-const fmt = (d) => d ? new Date(d).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+const fmt = (d) => d ? new Date(d).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+
+// Stati possibili del test DM live
+const DM_TEST_IDLE    = 'idle';
+const DM_TEST_WAITING = 'waiting'; // in attesa del DM (polling)
+const DM_TEST_SUCCESS = 'success'; // DM ricevuto e processato
+const DM_TEST_FAILED  = 'failed';  // timeout senza DM
 
 export default function MetaConnectionStatus({ connection, businessId }) {
-  const [loading, setLoading]         = useState(true);
-  const [testing, setTesting]         = useState(false);
+  const [loading, setLoading]     = useState(true);
+  const [testing, setTesting]     = useState(false);
   const [subscribing, setSubscribing] = useState(false);
-  const [logs, setLogs]               = useState([]);
-  const [messages, setMessages]       = useState([]);
-  const [apiResult, setApiResult]     = useState(null);
-  const [showRaw, setShowRaw]         = useState(false);
+  const [apiResult, setApiResult] = useState(null);
+  const [showRaw, setShowRaw]     = useState(false);
 
-  const load = async () => {
-    if (!connection?.id || !businessId) { setLoading(false); return; }
-    const [wl, msgs] = await Promise.all([
-      base44.entities.WebhookEventLog.filter({ connection_id: connection.id }, '-created_date', 10).catch(() => []),
-      base44.entities.Message.filter({ business_id: businessId, canale: 'instagram' }, '-created_date', 1).catch(() => []),
-    ]);
-    setLogs(wl || []);
-    setMessages(msgs || []);
-    setLoading(false);
-  };
+  // ── Stato test DM live ──
+  const [dmTestState, setDmTestState]       = useState(DM_TEST_IDLE);
+  const [dmTestStartedAt, setDmTestStartedAt] = useState(null); // Date object
+  const [dmTestSecondsLeft, setDmTestSecondsLeft] = useState(60);
+  const [dmTestResult, setDmTestResult]     = useState(null); // WebhookEventLog trovato
+  const [dmTestMessage, setDmTestMessage]   = useState(null); // Message trovato in inbox
+  const pollRef  = useRef(null);
+  const timerRef = useRef(null);
 
-  useEffect(() => { load(); }, [connection?.id, businessId]);
+  useEffect(() => {
+    if (connection?.id && businessId) {
+      setLoading(false);
+    } else {
+      setLoading(false);
+    }
+  }, [connection?.id, businessId]);
+
+  // Cleanup poll/timer on unmount
+  useEffect(() => () => {
+    clearInterval(pollRef.current);
+    clearInterval(timerRef.current);
+  }, []);
 
   const runApiTest = async () => {
     if (testing || !connection?.id) return;
@@ -79,7 +87,6 @@ export default function MetaConnectionStatus({ connection, businessId }) {
         new Promise((_, rej) => setTimeout(() => rej(new Error('Timeout 45s')), 45000)),
       ]);
       setApiResult(res.data || {});
-      load();
     } catch (e) {
       setApiResult({ _error: e.message });
     } finally {
@@ -102,6 +109,100 @@ export default function MetaConnectionStatus({ connection, businessId }) {
     }
   };
 
+  // ── Avvia test DM live ──
+  const startDmTest = () => {
+    if (dmTestState === DM_TEST_WAITING) return;
+    const startedAt = new Date();
+    setDmTestStartedAt(startedAt);
+    setDmTestState(DM_TEST_WAITING);
+    setDmTestResult(null);
+    setDmTestMessage(null);
+    setDmTestSecondsLeft(60);
+
+    const igAccountId = connection?.ig_account_id;
+
+    // Countdown timer
+    let remaining = 60;
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      remaining -= 1;
+      setDmTestSecondsLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timerRef.current);
+      }
+    }, 1000);
+
+    // Polling ogni 3 secondi per max 60 secondi
+    let elapsed = 0;
+    clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      elapsed += 3;
+      if (elapsed > 60) {
+        clearInterval(pollRef.current);
+        clearInterval(timerRef.current);
+        setDmTestState(DM_TEST_FAILED);
+        setDmTestSecondsLeft(0);
+        return;
+      }
+
+      try {
+        // Cerca webhook DM ricevuti DOPO startedAt, per questa connessione specifica
+        // con recipient_id === ig_account_id
+        const allLogs = await base44.entities.WebhookEventLog.filter(
+          { connection_id: connection.id, event_type: 'dm' },
+          '-created_date',
+          20
+        ).catch(() => []);
+
+        // Filtra: solo quelli DOPO il test started e con recipient_id corrispondente
+        const matchingLogs = allLogs.filter(log => {
+          if (!log.created_date) return false;
+          const logDate = new Date(log.created_date);
+          if (logDate <= startedAt) return false; // vecchio
+          // recipient_id deve corrispondere a ig_account_id
+          if (igAccountId && log.recipient_id && log.recipient_id !== igAccountId) return false;
+          return true;
+        });
+
+        if (matchingLogs.length > 0) {
+          const found = matchingLogs[0]; // più recente
+          setDmTestResult(found);
+
+          // Cerca anche il messaggio in Inbox creato dopo il test
+          if (found.processed) {
+            const msgs = await base44.entities.Message.filter(
+              { business_id: businessId, canale: 'instagram' },
+              '-created_date',
+              5
+            ).catch(() => []);
+            const newMsg = msgs.find(m => {
+              if (!m.created_date) return false;
+              return new Date(m.created_date) > startedAt && m.ruolo === 'user';
+            });
+            setDmTestMessage(newMsg || null);
+          }
+
+          clearInterval(pollRef.current);
+          clearInterval(timerRef.current);
+          setDmTestState(DM_TEST_SUCCESS);
+          setDmTestSecondsLeft(0);
+        }
+      } catch (_) {
+        // ignora errori di polling
+      }
+    }, 3000);
+  };
+
+  const resetDmTest = () => {
+    clearInterval(pollRef.current);
+    clearInterval(timerRef.current);
+    setDmTestState(DM_TEST_IDLE);
+    setDmTestStartedAt(null);
+    setDmTestResult(null);
+    setDmTestMessage(null);
+    setDmTestSecondsLeft(60);
+  };
+
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#6B7280', padding: '8px 0' }}>
       <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> Caricamento diagnostica...
@@ -118,46 +219,23 @@ export default function MetaConnectionStatus({ connection, businessId }) {
   const oauthStatus  = (!tokenOk || tokenExpired) ? 'err' : 'ok';
 
   // ── Livello 2: API result ──
-  const apiOk           = apiResult?.success === true;
-  const igError         = apiResult?.results?.ig_profile?.error || apiResult?.results?.ig_me?.error;
-  const accountType     = apiResult?.account_type || null;
-  const isBusiness      = apiResult?.is_business_or_creator === true;
-  const realScopes      = apiResult?.real_scopes || [];
-  const basicReal       = apiResult?.instagram_business_basic_approved === true;
-  const msgReal         = apiResult?.instagram_business_manage_messages_approved === true;
-  const tokenDebug      = apiResult?.results?.token_debug;
-  const tokenValid      = tokenDebug?.is_valid === true;
-  const apiStatus       = apiResult === null ? 'warn' : apiOk ? 'ok' : 'err';
-  const fbPageLinked    = apiResult?.fb_page_linked;
-  const fbPageName      = apiResult?.fb_page_name;
-  const userIsPageAdmin = apiResult?.user_is_page_admin;
-  const userRole        = apiResult?.user_role_in_app;
-  const userRoleOk      = apiResult?.user_role_ok;
-  const sendEpOk        = apiResult?.send_endpoint_ok;
-  const sendEpErrCode   = apiResult?.send_endpoint_error_code;
+  const apiOk        = apiResult?.success === true;
+  const accountType  = apiResult?.account_type || null;
+  const isBusiness   = apiResult?.is_business_or_creator === true;
+  const userRole     = apiResult?.user_role_in_app;
+  const userRoleOk   = apiResult?.user_role_ok;
+  const apiStatus    = apiResult === null ? 'warn' : apiOk ? 'ok' : 'err';
 
   // ── Livello 3: Webhook fields ──
-  const subscribedFields   = apiResult?.subscribed_fields || [];
-  const missingFields      = apiResult?.missing_fields || [];
-  const webhookFieldsOk    = apiResult !== null ? (subscribedFields.includes('messages') && subscribedFields.includes('messaging_postbacks')) : null;
+  const subscribedFields = apiResult?.subscribed_fields || [];
+  const missingFields    = apiResult?.missing_fields || [];
+  const webhookFieldsOk  = apiResult !== null
+    ? (subscribedFields.includes('messages') && subscribedFields.includes('messaging_postbacks'))
+    : null;
   const webhookFieldStatus = webhookFieldsOk === null ? 'warn' : webhookFieldsOk ? 'ok' : 'err';
-
-  // ── Livello 4: Webhook DM reali ──
-  const allDmLogs       = logs.filter(l => l.event_type === 'dm');
-  const lastDmLog       = allDmLogs[0] || null;
-  const processedDmLogs = allDmLogs.filter(l => l.processed);
-  const webhookOk       = processedDmLogs.length > 0;
-  const webhookStatus   = webhookOk ? 'ok' : allDmLogs.length > 0 ? 'warn' : 'warn';
-
-  // ── Livello 5: Inbox ──
-  const lastMsg    = messages[0] || null;
-  const inboxOk    = !!lastMsg;
-  const inboxStatus = inboxOk ? 'ok' : 'warn';
 
   // ── Diagnosi ──
   const diagnosis = apiResult?.diagnosis || [];
-
-  // STATO OPERATIVO REALE — solo se webhook DM processato E Inbox popolata
   const isOperative = apiResult?.is_operative === true;
 
   return (
@@ -176,14 +254,17 @@ export default function MetaConnectionStatus({ connection, businessId }) {
             ? <Row level="err" title="Token SCADUTO" detail={`Scaduto il ${fmt(expiryDate)} — riconnetti`} />
             : <Row level="ok" title="Token presente e valido" detail={daysLeft !== null ? `Scade tra ${daysLeft} giorni (${fmt(expiryDate)})` : 'Scadenza non registrata'} />
       }
+      {connection?.ig_account_id && (
+        <Row level="info" title={`Account ID: ${connection.ig_account_id}`} detail={connection.ig_account_name ? `@${connection.ig_account_name}` : undefined} />
+      )}
 
       {/* ── 2: Test API ── */}
-      <SectionHeader n="2" label="Test API Meta (reale)" status={apiStatus} />
+      <SectionHeader n="2" label="Test API Meta (endpoint reali)" status={apiStatus} />
 
       {apiResult === null && !testing && (
         <div style={{ padding: '12px', background: '#1F293780', border: '1px solid #374151', borderRadius: 8, marginBottom: 5 }}>
           <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>
-            Verifica: profilo IG, tipo account, scopes reali, FB Page collegata, Admin, ruolo app, endpoint DM.
+            Verifica: profilo IG, tipo account, endpoint DM, webhook fields, ruolo utente.
           </div>
           <button onClick={runApiTest} style={{ background: '#3B82F620', border: '1px solid #3B82F640', borderRadius: 8, padding: '7px 14px', color: '#60A5FA', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
             🧪 Esegui Diagnostica Completa
@@ -191,7 +272,7 @@ export default function MetaConnectionStatus({ connection, businessId }) {
         </div>
       )}
 
-      {testing && <Row level="info" title="Diagnostica in corso... (20-45s)" detail="Eseguendo 10 test su tutti gli endpoint Meta ufficiali IG Business Login" />}
+      {testing && <Row level="info" title="Diagnostica in corso... (20-45s)" detail="Eseguendo test su endpoint Meta ufficiali IG Business Login" />}
 
       {apiResult !== null && !testing && (
         <>
@@ -220,74 +301,18 @@ export default function MetaConnectionStatus({ connection, businessId }) {
                 />
               ) : (
                 <Row level="err"
-                  title={`Profilo FALLITO — Error ${igError?.code || '?'}`}
-                  detail={igError?.message}
-                  sub={`fbtrace_id: ${igError?.fbtrace_id || '?'}`}
+                  title={`Profilo non raggiungibile — vedi endpoint summary sopra`}
                 />
               )}
-
-              {/* Account type non business */}
-              {accountType && !isBusiness && (
-                <Row level="err"
-                  title={`Account type: ${accountType} — NON compatibile`}
-                  detail="Vai su Instagram → Impostazioni → Account → Passa ad account professionale → Business."
-                />
-              )}
-
-              {/* Token debug */}
-              {tokenDebug && !tokenDebug.skipped && (
-                <>
-                  <Row level={tokenValid ? 'ok' : (tokenDebug.error?.is_transient ? 'warn' : 'err')}
-                    title={`Token ${tokenValid ? 'VALIDO' : tokenDebug.error?.is_transient ? 'non verificabile (Meta API down)' : 'NON VALIDO'} — debug_token`}
-                    detail={`Type: ${tokenDebug.type || '?'} · Meta user_id: ${tokenDebug.user_id || '?'}`}
-                  />
-                  <Row level={basicReal ? 'ok' : 'err'}
-                    title={`instagram_business_basic: ${basicReal ? '✅ APPROVATO' : '❌ NON approvato'}`}
-                    detail={basicReal ? undefined : 'Causa principale di Error 100 — richiedi App Review o aggiungi Tester.'}
-                  />
-                  <Row level={msgReal ? 'ok' : 'err'}
-                    title={`instagram_business_manage_messages: ${msgReal ? '✅ APPROVATO' : '❌ NON approvato'}`}
-                  />
-                  {realScopes.length > 0 && (
-                    <Row level="info" title="Scopes reali nel token" detail={realScopes.join(', ')} />
-                  )}
-                </>
-              )}
-
-              {/* FB cross-check */}
-              {apiResult.results?.fb_me?.success && (
-                <Row level="warn"
-                  title="⚠️ Token risponde su graph.facebook.com/me — tipo token sospetto"
-                  detail="Un IG Business Login token NON dovrebbe funzionare su graph.facebook.com. Questo token potrebbe essere un FB User Token. Verifica che startMetaOAuth usi api.instagram.com/oauth/authorize."
-                />
-              )}
-
-              {/* FB Page */}
-              <Row
-                level={fbPageLinked ? 'ok' : 'warn'}
-                title={fbPageLinked ? `Facebook Page collegata: ${fbPageName}` : 'Nessuna Facebook Page trovata collegata all\'account IG'}
-                detail={fbPageLinked ? (userIsPageAdmin ? 'Utente è Admin della Page ✅' : 'Utente NON è Admin della Page — verifica i permessi') : 'L\'account IG deve essere collegato a una FB Page per usare le API Business.'}
-              />
 
               {/* App Role */}
               <Row
                 level={userRoleOk ? 'ok' : (userRole ? 'warn' : 'err')}
-                title={`Ruolo utente nell'app Meta: ${userRole || 'NON trovato'}`}
+                title={`Ruolo nell'app Meta: ${userRole || 'NON trovato'}`}
                 detail={userRoleOk
-                  ? 'Utente autorizzato (Developer/Admin/Tester) — può ricevere DM in dev mode'
-                  : 'In modalità sviluppo solo Developer/Admin/Tester possono inviare DM. Aggiungi su Meta App Dashboard → Roles.'}
+                  ? 'Utente autorizzato (Developer/Admin/Tester)'
+                  : 'In dev mode solo Developer/Admin/Tester possono inviare DM. Aggiungi su Meta App Dashboard → Roles.'}
               />
-
-              {/* Send endpoint */}
-              {sendEpOk !== undefined && (
-                <Row
-                  level={sendEpErrCode === 551 ? 'ok' : sendEpErrCode === 100 ? 'err' : sendEpOk ? 'ok' : 'err'}
-                  title={sendEpErrCode === 551 ? 'Endpoint invio DM funzionante (error 551 = atteso)' :
-                         sendEpErrCode === 100 ? 'Endpoint DM: permessi mancanti (Error 100)' :
-                         sendEpOk ? 'Endpoint DM raggiungibile' : `Endpoint DM NON raggiungibile (HTTP ${apiResult.results?.send_message_test?.http_status})`}
-                  detail={apiResult.results?.send_message_test?.note}
-                />
-              )}
 
               {/* Webhook fields */}
               <div style={{ marginTop: 6 }}>
@@ -347,153 +372,141 @@ export default function MetaConnectionStatus({ connection, businessId }) {
       {/* ── 3: Webhook fields ── */}
       <SectionHeader n="3" label="Webhook Fields" status={webhookFieldStatus} />
       {apiResult === null ? (
-        <Row level="warn" title="Non verificato — esegui Test API" />
+        <Row level="warn" title="Non verificato — esegui Test API sopra" />
       ) : webhookFieldsOk ? (
         <Row level="ok" title={`Fields attivi: ${subscribedFields.join(', ')}`} detail="Meta invierà eventi DM a questo account" />
       ) : (
         <Row level="err" title={`Fields mancanti: ${missingFields.join(', ')}`} detail="Meta NON invia eventi DM." />
       )}
 
-      {/* ── 4: Webhook DM reali ── */}
-      <SectionHeader n="4" label="Webhook DM reali ricevuti" status={webhookOk ? 'ok' : 'warn'} />
-      {logs.length === 0 ? (
-        <Row level="warn"
-          title="Nessun webhook ricevuto per questa connessione"
-          detail="Invia un DM di test da un account Tester verso l'account Business. Se dopo 10s non appare qui → problema Meta/webhook configuration."
-        />
-      ) : allDmLogs.length === 0 ? (
-        <Row level="warn"
-          title={`${logs.length} webhook ricevuti ma NESSUN DM`}
-          detail={`Tipi: ${[...new Set(logs.map(l => l.event_type))].join(', ')} · Ultimo: ${fmt(logs[0]?.created_date)}`}
-          sub={logs[0]?.raw_payload?.slice(0, 400)} mono
-        />
-      ) : !webhookOk ? (
-        <Row level="warn"
-          title={`${allDmLogs.length} DM ricevuti ma nessuno processato (matched_connection fallito)`}
-          detail={`sender: ${lastDmLog?.sender_id} → recipient: ${lastDmLog?.recipient_id} · ${fmt(lastDmLog?.created_date)}`}
-          sub={`matched: ${lastDmLog?.matched_connection} | processed: ${lastDmLog?.processed}`}
-        />
-      ) : (
-        <Row level="ok"
-          title={`${processedDmLogs.length} DM processati correttamente`}
-          detail={`Ultimo: ${fmt(lastDmLog?.created_date)} · sender: ${lastDmLog?.sender_id} → recipient: ${lastDmLog?.recipient_id}`}
-        />
-      )}
-      {logs.find(l => l.event_type === 'error') && (
-        <Row level="err" title="Errore webhook" detail={logs.find(l => l.event_type === 'error')?.processing_error} sub={logs.find(l => l.event_type === 'error')?.raw_payload?.slice(0, 300)} mono />
-      )}
+      {/* ── 4: Test DM live ── */}
+      <SectionHeader n="4"
+        label="Test DM reale (live)"
+        status={dmTestState === DM_TEST_SUCCESS ? 'ok' : dmTestState === DM_TEST_FAILED ? 'err' : 'warn'}
+      />
 
-      {/* ── 5: Inbox & ARIA ── */}
-      <SectionHeader n="5" label="Inbox & ARIA operativa" status={inboxStatus} />
-      {!inboxOk ? (
-        <Row level="warn" title="Nessun messaggio Instagram in Inbox" detail="ARIA è OPERATIVA solo quando un DM reale appare in Inbox." />
-      ) : (
-        <Row level="ok" title="Messaggi Instagram presenti in Inbox" detail={`Ultimo: ${fmt(lastMsg?.created_date)} · ruolo: ${lastMsg?.ruolo}`} />
-      )}
-
-      {/* ── Guida Fix ── */}
-      {diagnosis.filter(d => d.level === 'error').length > 0 && (
-        <div style={{ marginTop: 12, padding: '12px 14px', background: '#0F172A', border: '1px solid #F59E0B40', borderRadius: 10 }}>
-          <div style={{ fontWeight: 800, fontSize: 11, color: '#F59E0B', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>🔧 Guida alla Risoluzione</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-
-            {!apiResult?.success && (
-              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#EF444410', border: '1px solid #EF444430', borderRadius: 8, padding: '8px 10px' }}>
-                <strong style={{ color: '#EF4444' }}>Error 100: "Unsupported request - method type: get"</strong>
-                <div style={{ color: '#F59E0B', marginTop: 4, marginBottom: 6, fontWeight: 700 }}>
-                  Causa: l'utente che ha fatto OAuth non è Tester/Developer dell'app Meta, oppure l'account IG non è Business/Creator.
-                </div>
-                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.9 }}>
-                  <li>
-                    <strong>PASSO 1 — Aggiungi Tester:</strong> Meta App Dashboard → <strong style={{ color: '#60A5FA' }}>Roles → Testers → Add Testers</strong>
-                    <br /><span style={{ color: '#6B7280', fontSize: 10 }}>Inserisci il nome utente Instagram/Facebook dell'account che usa l'app</span>
-                  </li>
-                  <li>
-                    <strong>PASSO 2 — Accetta invito:</strong> l'account aggiunto deve accettare da Instagram/Facebook (notifica)
-                  </li>
-                  <li>
-                    <strong>PASSO 3 — Riconnetti OAuth:</strong> vai su Connessioni → <strong>Riconnetti Instagram</strong>
-                    <br /><span style={{ color: '#6B7280', fontSize: 10 }}>Il nuovo token avrà i permessi corretti</span>
-                  </li>
-                  <li>
-                    <strong>PASSO 4 — Verifica account IG:</strong> l'account deve essere <strong>Business o Creator</strong>
-                    <br /><span style={{ color: '#6B7280', fontSize: 10 }}>Instagram → Impostazioni → Account → Tipo di account</span>
-                  </li>
-                </ol>
-                <div style={{ marginTop: 6, fontSize: 10, color: '#6B7280', fontStyle: 'italic' }}>
-                  Nota: l'endpoint POST /messages funziona già — il problema è solo sui GET (profilo, subscribed_apps, conversations).
-                </div>
-              </div>
-            )}
-
-            {apiResult?.account_type && !apiResult?.is_business_or_creator && (
-              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#EF444410', border: '1px solid #EF444430', borderRadius: 8, padding: '8px 10px' }}>
-                <strong style={{ color: '#EF4444' }}>Account Instagram non è Business/Creator</strong>
-                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
-                  <li>Instagram → Impostazioni → Account → <strong>Passa ad account professionale</strong></li>
-                  <li>Scegli <strong>Business</strong></li>
-                  <li>Collega a una <strong>Facebook Page</strong></li>
-                  <li>Dopo → <strong>Riconnetti OAuth</strong></li>
-                </ol>
-              </div>
-            )}
-
-            {apiResult?.missing_fields?.length > 0 && (
-              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '8px 10px' }}>
-                <strong style={{ color: '#F59E0B' }}>Webhook fields non attivi</strong>
-                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
-                  <li>Clicca <strong>"Sottoscrivi webhook fields ora"</strong> sopra</li>
-                  <li>Oppure: Meta App Dashboard → Webhooks → Instagram → abilita <code style={{ fontSize: 10, color: '#F59E0B' }}>messages</code>, <code style={{ fontSize: 10, color: '#F59E0B' }}>messaging_postbacks</code></li>
-                  <li>Verify Token: <code style={{ color: '#F59E0B', fontSize: 10 }}>emaral2026</code></li>
-                  <li>Callback URL: <code style={{ color: '#60A5FA', fontSize: 10, wordBreak: 'break-all' }}>https://emaral-smart-flow.base44.app/api/functions/webhookMeta</code></li>
-                </ol>
-              </div>
-            )}
-
-            {apiResult && !userRoleOk && userRole !== undefined && (
-              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 8, padding: '8px 10px' }}>
-                <strong style={{ color: '#F59E0B' }}>Utente non è Tester/Developer dell'app Meta</strong>
-                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
-                  <li>Meta App Dashboard → <strong>Roles → Testers → Add Testers</strong></li>
-                  <li>Inserisci username IG/FB dell'account che fa il test DM</li>
-                  <li>L'utente deve <strong>accettare l'invito</strong> dalle notifiche IG/FB</li>
-                  <li>Dopo accettazione → invia DM di test → ricontrolla qui</li>
-                </ol>
-              </div>
-            )}
-
-            {apiResult?.recent_webhooks_count === 0 && (
-              <div style={{ fontSize: 11, color: '#9CA3AF', background: '#3B82F610', border: '1px solid #3B82F630', borderRadius: 8, padding: '8px 10px' }}>
-                <strong style={{ color: '#60A5FA' }}>Zero webhook ricevuti — Test DM</strong>
-                <ol style={{ margin: '6px 0 0 16px', padding: 0, lineHeight: 1.8 }}>
-                  <li>Da un account IG <strong>Tester</strong>, invia un DM all'account business</li>
-                  <li>Attendi 5-10s → clicca <strong>Ripeti diagnostica</strong></li>
-                  <li>Se appare in "Webhook DM ricevuti" → sistema funziona</li>
-                  <li>Se ancora zero → controlla Callback URL nel Meta App Dashboard</li>
-                </ol>
-              </div>
-            )}
+      {/* Pulsante avvia test */}
+      {dmTestState === DM_TEST_IDLE && (
+        <div style={{ padding: '12px', background: '#1F293780', border: '1px solid #374151', borderRadius: 8, marginBottom: 5 }}>
+          <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>
+            Verifica end-to-end: invia un DM reale all'account Instagram collegato e controlla se arriva in Inbox.
+            Il test considera SOLO webhook ricevuti dopo il click, con recipient_id = <code style={{ color: '#60A5FA', fontSize: 10 }}>{connection?.ig_account_id}</code>.
           </div>
+          <button onClick={startDmTest} style={{ background: '#10B98120', border: '1px solid #10B98140', borderRadius: 8, padding: '8px 16px', color: '#10B981', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            📨 Avvia Test DM
+          </button>
         </div>
       )}
 
-      {/* ── Stato OPERATIVO REALE ── */}
-      <div style={{ marginTop: 10, padding: '12px 14px', background: '#0F172A', border: `1px solid ${isOperative ? '#10B98140' : '#1E293B'}`, borderRadius: 10, fontSize: 11 }}>
-        <div style={{ fontWeight: 800, color: isOperative ? '#10B981' : '#9CA3AF', marginBottom: 8, letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: isOperative ? '#10B981' : '#EF4444', boxShadow: isOperative ? '0 0 8px #10B981' : 'none', flexShrink: 0 }} />
-          {isOperative ? 'OPERATIVA — ARIA risponde ai DM' : 'NON OPERATIVA — azioni richieste'}
+      {/* In attesa DM */}
+      {dmTestState === DM_TEST_WAITING && (
+        <div style={{ padding: '14px', background: '#3B82F610', border: '1px solid #3B82F640', borderRadius: 10, marginBottom: 5 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <Loader2 size={16} style={{ color: '#60A5FA', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontWeight: 800, fontSize: 13, color: '#60A5FA' }}>In attesa DM... {dmTestSecondsLeft}s</span>
+          </div>
+          <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 6 }}>
+            👉 <strong style={{ color: '#E8F4FF' }}>Invia ora un DM</strong> da un account Tester all'account Instagram collegato:
+          </div>
+          <div style={{ fontSize: 11, color: '#F59E0B', background: '#F59E0B10', border: '1px solid #F59E0B30', borderRadius: 6, padding: '6px 10px', marginBottom: 8 }}>
+            Destinatario: <strong>@{connection?.ig_account_name || connection?.ig_account_id}</strong>
+          </div>
+          <div style={{ fontSize: 10, color: '#4B5563' }}>
+            Test iniziato: {fmt(dmTestStartedAt)} · Solo webhook con recipient_id = {connection?.ig_account_id}
+          </div>
+          <button onClick={resetDmTest} style={{ marginTop: 8, background: 'none', border: '1px solid #374151', borderRadius: 6, padding: '4px 10px', color: '#6B7280', fontSize: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Annulla
+          </button>
+        </div>
+      )}
+
+      {/* Risultato: DM ricevuto */}
+      {dmTestState === DM_TEST_SUCCESS && dmTestResult && (
+        <div style={{ padding: '14px', background: '#10B98110', border: '1px solid #10B98140', borderRadius: 10, marginBottom: 5 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: '#10B981', marginBottom: 10 }}>
+            ✅ DM REALE RICEVUTO dopo il test
+          </div>
+          <div style={{ display: 'grid', gap: 4 }}>
+            <InfoLine label="Ricevuto alle" value={fmt(dmTestResult.created_date)} />
+            <InfoLine label="sender_id" value={dmTestResult.sender_id || '—'} mono />
+            <InfoLine label="recipient_id" value={dmTestResult.recipient_id || '—'} mono />
+            <InfoLine label="matched_connection" value={dmTestResult.matched_connection ? '✅ sì' : '❌ no'} />
+            <InfoLine label="processed" value={dmTestResult.processed ? '✅ sì' : '❌ no'} />
+            {dmTestResult.processing_error && (
+              <InfoLine label="errore processing" value={dmTestResult.processing_error} err />
+            )}
+          </div>
+
+          {dmTestResult.processed && (
+            <>
+              <div style={{ marginTop: 10, fontWeight: 700, fontSize: 11, color: '#10B981' }}>📥 Inbox</div>
+              {dmTestMessage ? (
+                <div style={{ display: 'grid', gap: 4, marginTop: 4 }}>
+                  <InfoLine label="Messaggio in Inbox" value="✅ creato" />
+                  <InfoLine label="contact_id" value={dmTestMessage.contact_id} mono />
+                  <InfoLine label="Timestamp" value={fmt(dmTestMessage.created_date)} />
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 4 }}>
+                  ⚠️ Messaggio processato ma non trovato in Inbox (contact_id potrebbe non corrispondere o c'è stato un errore)
+                </div>
+              )}
+            </>
+          )}
+
+          {!dmTestResult.processed && (
+            <div style={{ marginTop: 8, fontSize: 11, color: '#EF4444' }}>
+              ❌ Webhook ricevuto ma NON processato — vedi errore sopra. ARIA non ha risposto.
+            </div>
+          )}
+
+          <button onClick={resetDmTest} style={{ marginTop: 10, background: '#1F293780', border: '1px solid #374151', borderRadius: 6, padding: '5px 12px', color: '#6B7280', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+            🔄 Ripeti test
+          </button>
+        </div>
+      )}
+
+      {/* Risultato: timeout senza DM */}
+      {dmTestState === DM_TEST_FAILED && (
+        <div style={{ padding: '14px', background: '#EF444410', border: '1px solid #EF444440', borderRadius: 10, marginBottom: 5 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: '#EF4444', marginBottom: 8 }}>
+            ❌ NESSUN DM REALE RICEVUTO DOPO IL TEST
+          </div>
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 6 }}>
+            Nessun webhook con recipient_id = <code style={{ color: '#EF4444' }}>{connection?.ig_account_id}</code> ricevuto nei 60 secondi dopo {fmt(dmTestStartedAt)}.
+          </div>
+          <div style={{ fontSize: 11, color: '#9CA3AF' }}>
+            Cause probabili:
+          </div>
+          <ul style={{ fontSize: 11, color: '#6B7280', marginTop: 4, paddingLeft: 16, lineHeight: 1.8 }}>
+            <li>Meta non sta inviando webhook → controlla Callback URL e Verify Token nel Meta App Dashboard</li>
+            <li>L'account che ha mandato il DM non è Tester dell'app → Meta App Dashboard → Roles → Testers</li>
+            <li>Webhook fields non attivi → usa "Sottoscrivi webhook fields" nella sezione 3</li>
+            <li>recipient_id nel webhook non corrisponde a <code style={{ color: '#60A5FA' }}>{connection?.ig_account_id}</code> → mismatch account</li>
+          </ul>
+          <button onClick={resetDmTest} style={{ marginTop: 10, background: '#1F293780', border: '1px solid #374151', borderRadius: 6, padding: '5px 12px', color: '#6B7280', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+            🔄 Riprova test
+          </button>
+        </div>
+      )}
+
+      {/* ── 5: Stato OPERATIVO ── */}
+      <SectionHeader n="5" label="Stato Operativo" status={dmTestState === DM_TEST_SUCCESS && dmTestResult?.processed ? 'ok' : 'warn'} />
+      <div style={{ padding: '12px 14px', background: '#0F172A', border: `1px solid ${isOperative || (dmTestState === DM_TEST_SUCCESS && dmTestResult?.processed) ? '#10B98140' : '#1E293B'}`, borderRadius: 10, fontSize: 11 }}>
+        <div style={{ fontWeight: 800, color: (dmTestState === DM_TEST_SUCCESS && dmTestResult?.processed) ? '#10B981' : '#9CA3AF', marginBottom: 8, letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: (dmTestState === DM_TEST_SUCCESS && dmTestResult?.processed) ? '#10B981' : '#EF4444', flexShrink: 0 }} />
+          {(dmTestState === DM_TEST_SUCCESS && dmTestResult?.processed) ? 'OPERATIVA — ARIA risponde ai DM' : dmTestState === DM_TEST_IDLE ? 'Non verificato — avvia Test DM' : dmTestState === DM_TEST_FAILED ? 'NON OPERATIVA — nessun DM ricevuto nel test' : 'Test DM in corso...'}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px 12px' }}>
           {[
-            { label: 'OAuth & Token',       ok: oauthStatus === 'ok' },
-            { label: 'API & Scopes',        ok: apiOk,              unknown: apiResult === null },
-            { label: 'Account Business',    ok: isBusiness,         unknown: apiResult === null },
-            { label: 'FB Page collegata',   ok: fbPageLinked,       unknown: apiResult === null },
-            { label: 'Ruolo Tester/Dev',    ok: userRoleOk,         unknown: apiResult === null },
-            { label: 'Webhook fields',      ok: webhookFieldsOk,    unknown: apiResult === null },
-            { label: 'Endpoint DM',         ok: sendEpOk || sendEpErrCode === 551, unknown: apiResult === null },
-            { label: 'DM reali ricevuti',   ok: webhookOk },
-            { label: 'Inbox popolata',      ok: inboxOk },
+            { label: 'OAuth & Token',     ok: oauthStatus === 'ok' },
+            { label: 'API endpoint IG',   ok: apiOk,              unknown: apiResult === null },
+            { label: 'Account Business',  ok: isBusiness,         unknown: apiResult === null },
+            { label: 'Ruolo Tester/Dev',  ok: userRoleOk,         unknown: apiResult === null },
+            { label: 'Webhook fields',    ok: webhookFieldsOk,    unknown: apiResult === null },
+            { label: 'DM reale ricevuto', ok: dmTestState === DM_TEST_SUCCESS, unknown: dmTestState === DM_TEST_IDLE },
+            { label: 'DM in Inbox',       ok: dmTestState === DM_TEST_SUCCESS && !!dmTestMessage, unknown: dmTestState === DM_TEST_IDLE },
+            { label: 'DM processato',     ok: dmTestState === DM_TEST_SUCCESS && dmTestResult?.processed, unknown: dmTestState === DM_TEST_IDLE },
           ].map(({ label, ok, unknown }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0' }}>
               <span style={{ fontSize: 11 }}>{unknown ? '❓' : ok ? '✅' : '❌'}</span>
@@ -502,14 +515,34 @@ export default function MetaConnectionStatus({ connection, businessId }) {
             </div>
           ))}
         </div>
-        {!isOperative && (
-          <div style={{ marginTop: 8, fontSize: 10, color: '#F59E0B', background: '#F59E0B08', border: '1px solid #F59E0B20', borderRadius: 6, padding: '5px 8px' }}>
-            ⚠️ ARIA è OPERATIVA solo quando: webhook DM reale ricevuto + DM salvato in Inbox
-          </div>
-        )}
       </div>
 
+      {/* ── Guida Fix ── */}
+      {!apiOk && apiResult !== null && (
+        <div style={{ marginTop: 12, padding: '12px 14px', background: '#0F172A', border: '1px solid #F59E0B40', borderRadius: 10 }}>
+          <div style={{ fontWeight: 800, fontSize: 11, color: '#F59E0B', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' }}>🔧 Guida alla Risoluzione — Error 100</div>
+          <div style={{ fontSize: 11, color: '#9CA3AF' }}>
+            <ol style={{ paddingLeft: 16, lineHeight: 1.9, margin: 0 }}>
+              <li><strong style={{ color: '#E8F4FF' }}>PASSO 1:</strong> Meta App Dashboard → <strong style={{ color: '#60A5FA' }}>Roles → Testers → Add Testers</strong> (inserisci username IG)</li>
+              <li><strong style={{ color: '#E8F4FF' }}>PASSO 2:</strong> L'account aggiunto accetta l'invito da IG/FB</li>
+              <li><strong style={{ color: '#E8F4FF' }}>PASSO 3:</strong> Riconnetti Instagram → OAuth completo</li>
+              <li><strong style={{ color: '#E8F4FF' }}>PASSO 4:</strong> Verifica che l'account sia <strong>Business o Creator</strong> su Instagram</li>
+            </ol>
+          </div>
+        </div>
+      )}
+
       <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+}
+
+// Helper inline per righe di dettaglio
+function InfoLine({ label, value, mono, err }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, fontSize: 11 }}>
+      <span style={{ color: '#4B5563', flexShrink: 0, minWidth: 130 }}>{label}:</span>
+      <span style={{ color: err ? '#EF4444' : '#9CA3AF', fontFamily: mono ? 'monospace' : 'inherit', wordBreak: 'break-all' }}>{value}</span>
     </div>
   );
 }
