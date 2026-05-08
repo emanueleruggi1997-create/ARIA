@@ -95,10 +95,13 @@ export default function MetaConnectionStatus({ connection, businessId }) {
 
   // ── LIVELLO 1: OAuth locale ──
   const tokenOk      = !!connection?.access_token;
+  const isError190   = (connection?.sync_error || '').includes('token_expired_190') ||
+                       (connection?.refresh_error || '').includes('error_190') ||
+                       connection?.status === 'error';
   const basicInDB    = connection?.has_basic_scope === true || (connection?.granted_scopes || '').includes('instagram_business_basic');
   const msgInDB      = connection?.has_messages_scope === true || (connection?.granted_scopes || '').includes('instagram_business_manage_messages');
   const expiryDate   = connection?.ig_token_expires_at ? new Date(connection.ig_token_expires_at) : null;
-  const tokenExpired = expiryDate && expiryDate < new Date();
+  const tokenExpired = (expiryDate && expiryDate < new Date()) || isError190;
   const daysLeft     = expiryDate ? Math.round((expiryDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
   const oauthStatus  = (!tokenOk || tokenExpired) ? 'err' : 'ok';
 
@@ -135,10 +138,15 @@ export default function MetaConnectionStatus({ connection, businessId }) {
       <SectionHeader n="1" label="OAuth & Token (DB locale)" status={oauthStatus} />
       {!tokenOk
         ? <Row level="err" title="Token mancante — riconnetti Instagram" />
-        : tokenExpired
-          ? <Row level="err" title="Token SCADUTO" detail={`Scaduto il ${fmt(expiryDate)} — riconnetti`} />
-          : <Row level="ok" title="Token presente" detail={daysLeft !== null ? `Scade tra ${daysLeft} giorni (${fmt(expiryDate)})` : undefined} />
+        : isError190
+          ? <Row level="err" title="⚠️ TOKEN META SCADUTO — Error 190 (Session has expired)" detail="Il token è stato invalidato da Meta. È necessario riconnettere Instagram tramite OAuth completo. ARIA non funziona." sub={connection?.refresh_error || connection?.sync_error} mono />
+          : tokenExpired
+            ? <Row level="err" title="Token SCADUTO (data di scadenza superata)" detail={`Scaduto il ${fmt(expiryDate)} — riconnetti`} />
+            : <Row level="ok" title="Token presente e non scaduto" detail={daysLeft !== null ? `Scade tra ${daysLeft} giorni (${fmt(expiryDate)})` : 'Scadenza non registrata'} />
       }
+      {connection?.last_refresh_at && !isError190 && (
+        <Row level="info" title={`Ultimo refresh token: ${fmt(connection.last_refresh_at)}`} detail={connection?.oauth_long_lived === false ? '⚠️ Token short-lived (max ~1h) — reconnetti per ottenere long-lived' : 'Long-lived token (60 giorni)'} />
+      )}
       <Row
         level={basicInDB ? 'info' : 'warn'}
         title={`instagram_business_basic in DB: ${basicInDB ? 'sì' : 'NON salvato'}`}
@@ -196,6 +204,15 @@ export default function MetaConnectionStatus({ connection, businessId }) {
                   title={`Chiamata API FALLITA — Meta error ${apiError?.code || '?'}`}
                   detail={apiError?.message}
                   sub={`fbtrace_id: ${apiError?.fbtrace_id || '?'} · subcode: ${apiError?.subcode || '?'}`}
+                />
+              )}
+
+              {/* Diagnosi error 190 — token scaduto */}
+              {!apiOk && (apiError?.code === 190 || (apiResult?.results?.profile?.http_status === 400 && (apiError?.message || '').toLowerCase().includes('session'))) && (
+                <Row level="err"
+                  title="⚠️ Error 190: Session has expired — TOKEN SCADUTO"
+                  detail="Il token Instagram è stato invalidato da Meta. Causa: token scaduto (>60 giorni), revocato dall'utente, o password Instagram cambiata."
+                  sub="Soluzione: clicca 'Riconnetti Instagram (OAuth nuovo)' per ottenere un token fresco. Il refresh automatico NON può recuperare un token error 190 — serve OAuth completo."
                 />
               )}
 

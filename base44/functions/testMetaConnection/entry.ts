@@ -124,19 +124,32 @@ Deno.serve(async (req) => {
 
   results.token_debug = tokenDebugResult;
 
-  // ── AGGIORNA DB se test profilo ok ──
+  // ── AGGIORNA DB ──
   if (results.profile.success) {
-    const updates = { sync_error: '', has_basic_scope: true, has_messages_scope: true };
+    const updates = { sync_error: '', refresh_error: '', status: 'connected', has_basic_scope: true, has_messages_scope: true };
     if (d1.username) { updates.ig_account_name = d1.username; updates.meta_user_name = d1.username; }
     if (d1.profile_picture_url) updates.ig_profile_picture_url = d1.profile_picture_url;
     await base44.asServiceRole.entities.MetaConnection.update(conn.id, updates).catch(() => {});
-    console.log('[testMetaConnection] ✅ Profilo OK — DB aggiornato');
+    console.log('[testMetaConnection] ✅ Profilo OK — DB aggiornato, status=connected');
   } else if (d1.error) {
-    // Salva l'errore reale nel DB — non simulare che va tutto bene
-    await base44.asServiceRole.entities.MetaConnection.update(conn.id, {
-      sync_error: `API error ${d1.error.code}: ${d1.error.message}`,
-    }).catch(() => {});
-    console.log('[testMetaConnection] ❌ Profilo FALLITO — error salvato in DB');
+    const errCode = d1.error.code;
+    const errMsg  = d1.error.message || '';
+
+    if (errCode === 190) {
+      // Error 190 = Session has expired — TOKEN SCADUTO
+      console.log('[testMetaConnection] ⚠️ Error 190: token scaduto — marcato in DB come error');
+      await base44.asServiceRole.entities.MetaConnection.update(conn.id, {
+        status:        'error',
+        sync_error:    `token_expired_190: ${errMsg}`,
+        refresh_error: `error_190_${new Date().toISOString()}: ${errMsg}`,
+      }).catch(() => {});
+    } else {
+      // Altro errore API — salva senza marcare come scaduto
+      await base44.asServiceRole.entities.MetaConnection.update(conn.id, {
+        sync_error: `API error ${errCode}: ${errMsg}`,
+      }).catch(() => {});
+    }
+    console.log(`[testMetaConnection] ❌ Profilo FALLITO — error ${errCode} salvato in DB`);
   }
 
   // ── RISPOSTA FINALE ──

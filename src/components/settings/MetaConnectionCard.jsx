@@ -50,9 +50,13 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
   const popupRef = useRef(null);
   const pollRef  = useRef(null);
 
-  const igConnected    = connection?.ig_connected && !!connection?.ig_account_id;
+  // Error 190 = token invalidato da Meta (Session has expired) — richiede OAuth completo
+  const isError190     = (connection?.sync_error || '').includes('token_expired_190') ||
+                         (connection?.refresh_error || '').includes('error_190') ||
+                         connection?.status === 'error';
+  const igConnected    = connection?.ig_connected && !!connection?.ig_account_id && !isError190;
   const tokenInfo      = formatTokenExpiry(connection, lang);
-  const tokenExpired   = tokenInfo?.color === '#EF4444';
+  const tokenExpired   = tokenInfo?.color === '#EF4444' || isError190;
   const rawName        = runtimeUsername ?? (connection?.ig_account_name || connection?.meta_user_name || '');
   const igAccountName  = rawName && !/^\d+$/.test(rawName) ? rawName : '';
   const igProfilePic   = connection?.ig_profile_picture_url || '';
@@ -91,7 +95,37 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
       pollRef.current = setInterval(async () => {
         if (!popup || popup.closed) {
           clearInterval(pollRef.current);
+          // Refresh DB e poi esegui test API automatico
           await onRefresh();
+          // Breve delay per attendere che il DB sia aggiornato
+          setTimeout(async () => {
+            await onRefresh();
+            // Trigger test automatico dopo reconnessione (se la card ha la funzione)
+            setResolveMsg({ ok: true, text: '✅ OAuth completato — test API in corso...' });
+            try {
+              const conn = await base44.entities.MetaConnection.filter({ user_id: (await base44.auth.me())?.id });
+              if (conn?.[0]?.id) {
+                const testRes = await base44.functions.invoke('testMetaConnection', { connector_id: conn[0].id });
+                const d = testRes.data || {};
+                if (d.success) {
+                  setRuntimeUsername(d.account_name || null);
+                  setRuntimeScopesOk(true);
+                  setRuntimeTestOk(true);
+                  setResolveMsg({ ok: true, text: `✅ Connessione verificata — @${d.account_name || d.account_id} — token valido` });
+                } else {
+                  const errCode = d.results?.profile?.error?.code;
+                  if (errCode === 190) {
+                    setResolveMsg({ ok: false, text: '⚠️ Token scaduto (error 190) — riconnetti di nuovo' });
+                  } else {
+                    setResolveMsg({ ok: false, text: `⚠️ Test API: ${d.results?.profile?.error?.message || 'errore sconosciuto'}` });
+                  }
+                }
+                await onRefresh();
+              }
+            } catch (e) {
+              setResolveMsg({ ok: false, text: `Test automatico fallito: ${e.message}` });
+            }
+          }, 2000);
         }
       }, 800);
     } catch (err) {
@@ -187,8 +221,29 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
         </div>
       </div>
 
+      {/* Banner ERROR 190 — molto visibile */}
+      {isError190 && (
+        <div style={{ marginTop: 12, padding: '12px 14px', background: '#EF444415', border: '1.5px solid #EF4444', borderRadius: 10 }}>
+          <div style={{ fontWeight: 800, fontSize: 13, color: '#EF4444', marginBottom: 4 }}>
+            ⚠️ TOKEN META SCADUTO — Error 190
+          </div>
+          <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5 }}>
+            Il token Instagram è stato invalidato da Meta (<code style={{ color: '#F87171', fontSize: 11 }}>Session has expired</code>).
+            ARIA non risponde, i webhook non arrivano, l'Inbox è bloccata.
+          </div>
+          <div style={{ marginTop: 8, fontSize: 11, color: '#6B7280' }}>
+            👉 Clicca <strong style={{ color: '#EF4444' }}>Riconnetti Instagram</strong> qui sotto per eseguire un OAuth completo e ottenere un token fresco.
+          </div>
+          {connection?.refresh_error && (
+            <div style={{ marginTop: 6, fontSize: 10, color: '#6B7280', fontFamily: 'monospace', background: '#0F172A', padding: '4px 8px', borderRadius: 6 }}>
+              {connection.refresh_error.slice(0, 200)}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Token expiry */}
-      {igConnected && tokenInfo && (
+      {(igConnected || (connection?.ig_connected && !isError190)) && tokenInfo && (
         <div style={{ marginTop: 10, fontSize: 11, color: tokenInfo.color, background: `${tokenInfo.color}10`, border: `1px solid ${tokenInfo.color}30`, borderRadius: 8, padding: '6px 10px' }}>
           🔑 {tokenInfo.label}
           {tokenExpired && <span style={{ display: 'block', color: '#9CA3AF', marginTop: 2 }}>Riconnetti per continuare</span>}
@@ -196,7 +251,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
       )}
 
       {/* Pannello diagnostica veritiero — mostra stato reale OAuth / Webhook / ARIA */}
-      {igConnected && (
+      {(igConnected || isError190) && (
         <MetaConnectionStatus connection={connection} businessId={connection?.business_id} />
       )}
 
@@ -214,7 +269,7 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
 
       {/* Actions */}
       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {igConnected && (
+        {igConnected && !isError190 && (
           <MetaTestButton
             connection={connection}
             ariaColor={IG_COLOR}
@@ -222,16 +277,20 @@ export default function MetaConnectionCard({ connection, businessId, onRefresh }
               if (username) setRuntimeUsername(username);
               setRuntimeScopesOk(true);
               setRuntimeTestOk(true);
-              // Refresh DB in background
               onRefresh();
             }}
           />
         )}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {igConnected ? (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {(igConnected || isError190) ? (
             <>
-              <button onClick={startOAuth} disabled={loading} style={btnStyle('rgba(255,255,255,0.08)', '#9CA3AF', loading)}>
-                {loading ? '⏳ Apertura...' : '🔄 Riconnetti'}
+              <button onClick={startOAuth} disabled={loading} style={btnStyle(
+                isError190 ? '#EF444430' : 'rgba(255,255,255,0.08)',
+                isError190 ? '#EF4444' : '#9CA3AF',
+                loading,
+                isError190 ? '#EF444460' : undefined
+              )}>
+                {loading ? '⏳ Apertura popup...' : isError190 ? '🔄 Riconnetti Instagram (OAuth nuovo)' : '🔄 Riconnetti'}
               </button>
               <button onClick={disconnect} disabled={disconnecting} style={btnStyle('#EF444420', '#EF4444', disconnecting)}>
                 {disconnecting ? '...' : 'Disconnetti'}
