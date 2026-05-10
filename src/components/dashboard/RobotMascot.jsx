@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import AriaChatCore from '@/components/aria/AriaChatCore';
@@ -187,7 +188,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         zIndex: 50,
       };
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop for desktop expanded */}
       {showFullscreen && !isMobile && (
@@ -258,6 +259,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         panelOpen={panelOpen}
         onClick={handleClick}
       />
-    </>
+    </>,
+    document.body
   );
 }

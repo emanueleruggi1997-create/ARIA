@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import AriaHumanoid from './AriaHumanoid';
 
 const LS_KEY = 'aria_mascot_pos_v3';
@@ -125,7 +126,7 @@ export default function ARIAMascot({ color = '#3B6EF8', mood = 'felice', name = 
   const sz = getSize();
   const mobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  return (
+  return createPortal(
     <div
       onMouseDown={onMouseDown}
       onTouchStart={onTouchStart}
@@ -174,6 +175,7 @@ export default function ARIAMascot({ color = '#3B6EF8', mood = 'felice', name = 
           {name}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
