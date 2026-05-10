@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import RobotARIA from './RobotARIA';
+import AriaHumanoid from './AriaHumanoid';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useLang } from '@/lib/LanguageContext.jsx';
@@ -47,7 +47,7 @@ Sii caldo, diretto, in italiano. Inizia con "Ciao!" o simile. Non usare virgolet
     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-6 border-b border-border">
       {/* Robot */}
       <div className="shrink-0">
-        <RobotARIA size={100} color={ariaColor} mood={form.robot_mood || form.aria_mood || 'felice'} animated={true} />
+        <AriaHumanoid size={100} color={ariaColor} mood={form.robot_mood || form.aria_mood || 'felice'} animated={true} />
       </div>
 
       {/* Info */}

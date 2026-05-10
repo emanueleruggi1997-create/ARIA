@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import AriaChatCore from '@/components/aria/AriaChatCore';
-import RobotARIA from '@/components/aria/RobotARIA';
+import ARIAMascot from '@/components/aria/ARIAMascot';
 
 const COLORS = [
   { id: '#3B6EF8', label: 'Blu' },
@@ -228,40 +228,36 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         </div>
       )}
 
-      <div style={{ position: 'fixed', bottom: isMobile ? 80 : 24, right: isMobile ? 12 : 24, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-
-        {/* Proactive bubble */}
-        {proactiveBubble && !panelOpen && (
-          <div className="proactive-bubble"
-            onClick={() => { setPanelOpen(true); setProactiveBubble(null); }}
-            style={{
-              background: '#0F1219', border: `1px solid ${color}66`,
-              borderRadius: 20, padding: '6px 12px',
-              fontSize: 11, color: '#F0F4FF', cursor: 'pointer',
-              boxShadow: `0 4px 16px ${color}33`,
-              marginBottom: 4, whiteSpace: 'nowrap',
-            }}
-          >
-            {proactiveBubble}
-          </div>
-        )}
-
-        {/* Robot button */}
-        <div ref={robotRef} className={`robot-wrapper ${clicked ? 'robot-click' : ''}`} onClick={handleClick} style={{ position: 'relative', zIndex: 51 }}>
-          <RobotARIA
-            size={isMobile ? 64 : 110}
-            color={color}
-            mood={mood}
-            animated={true}
-          />
+      {/* Proactive bubble — posizionata in basso a destra fisso */}
+      {proactiveBubble && !panelOpen && (
+        <div
+          className="proactive-bubble"
+          onClick={() => { setPanelOpen(true); setProactiveBubble(null); }}
+          style={{
+            position: 'fixed',
+            bottom: isMobile ? 210 : 220,
+            right: isMobile ? 16 : 28,
+            background: '#0F1219', border: `1px solid ${color}66`,
+            borderRadius: 20, padding: '6px 12px',
+            fontSize: 11, color: '#F0F4FF', cursor: 'pointer',
+            boxShadow: `0 4px 16px ${color}33`,
+            whiteSpace: 'nowrap',
+            zIndex: 1001,
+          }}
+        >
+          {proactiveBubble}
         </div>
+      )}
 
-        {name && !isMobile && (
-          <div style={{ fontSize:12,fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color,opacity:0.8,fontFamily:'Inter,sans-serif',marginTop:2 }}>
-            {name}
-          </div>
-        )}
-      </div>
+      {/* Nuova mascotte humanoid draggable */}
+      <ARIAMascot
+        color={color}
+        mood={mood}
+        name={name}
+        newMessageCount={newMessageCount}
+        panelOpen={panelOpen}
+        onClick={handleClick}
+      />
     </>
   );
 }
