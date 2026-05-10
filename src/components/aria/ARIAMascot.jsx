@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import AriaHumanoid from './AriaHumanoid';
+const ARIA_IMG = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/412254054_superrealaria.png';
 
 const LS_KEY = 'aria_mascot_pos_v3';
 
@@ -161,7 +161,19 @@ export default function ARIAMascot({ color = '#3B6EF8', mood = 'felice', name = 
         </div>
       )}
 
-      <AriaHumanoid size={sz} color={color} mood={mood} animated />
+      <img
+        src={ARIA_IMG}
+        alt="ARIA"
+        style={{
+          width: sz,
+          height: sz,
+          objectFit: 'cover',
+          borderRadius: '50%',
+          border: `2px solid ${color}66`,
+          display: 'block',
+        }}
+        draggable={false}
+      />
 
       {!mobile && (
         <div style={{
