@@ -1,34 +1,13 @@
 /**
- * ARIAMascot — mascotte ARIA humanoid draggable premium
- * Gestisce: posizione draggable (mouse + touch), localStorage, responsive, click → chat
+ * ARIAMascot — mascotte ARIA humanoid draggable
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import AriaHumanoid from './AriaHumanoid';
 
-const LS_KEY = 'aria_mascot_pos';
+const LS_KEY = 'aria_mascot_pos_v2';
 
 function clamp(val, min, max) {
   return Math.min(Math.max(val, min), max);
-}
-
-function getInitialPos(isMobile, size) {
-  const W = window.innerWidth;
-  const H = window.innerHeight;
-  try {
-    const saved = JSON.parse(localStorage.getItem(LS_KEY));
-    if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
-      if (saved.x >= 0 && saved.x <= W - size - 4 && saved.y >= 0 && saved.y <= H - size - 4) {
-        return { x: saved.x, y: saved.y };
-      }
-    }
-  } catch {}
-  // Default: bottom-right corner
-  const bottomOffset = isMobile ? 88 : 28;
-  const rightOffset  = isMobile ? 12 : 28;
-  return {
-    x: Math.max(8, W - size - rightOffset),
-    y: Math.max(8, H - size - bottomOffset),
-  };
 }
 
 export default function ARIAMascot({
@@ -39,43 +18,40 @@ export default function ARIAMascot({
   newMessageCount = 0,
   panelOpen = false,
 }) {
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
-  const size = isMobile ? 100 : 160;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const SIZE = isMobile ? 80 : 130;
 
-  const [pos, setPos]           = useState(() => getInitialPos(isMobile, size));
+  // Posizione: lazy init dopo mount per avere window sicuro
+  const [pos, setPos] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [didDrag, setDidDrag]   = useState(false);
-  const [clicked, setClicked]   = useState(false);
-  const [pulse, setPulse]       = useState(false);
+  const dragStart = useRef(null);
+  const posRef    = useRef(pos);
+  posRef.current  = pos;
 
-  const dragStart  = useRef(null); // { clientX, clientY, startX, startY }
-  const posRef     = useRef(pos);
-  posRef.current   = pos;
-  const wrapperRef = useRef(null);
-
-  // Resize — riposiziona se esce dallo schermo
+  // Init posizione dopo mount
   useEffect(() => {
-    const onResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      const sz = mobile ? 100 : 160;
-      setPos(p => ({
-        x: clamp(p.x, 8, window.innerWidth  - sz - 8),
-        y: clamp(p.y, 8, window.innerHeight - sz - 8),
-      }));
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const mobile = W < 768;
+    const sz = mobile ? 80 : 130;
+    const bottomPad = mobile ? 90 : 28;
+    const rightPad  = mobile ? 12 : 28;
+    const defaultPos = {
+      x: Math.max(8, W - sz - rightPad),
+      y: Math.max(8, H - sz - bottomPad),
     };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    try {
+      const saved = JSON.parse(localStorage.getItem(LS_KEY));
+      if (saved && typeof saved.x === 'number' && typeof saved.y === 'number'
+          && saved.x >= 0 && saved.x <= W - sz - 4
+          && saved.y >= 0 && saved.y <= H - sz - 4) {
+        setPos(saved);
+        return;
+      }
+    } catch {}
+    setPos(defaultPos);
   }, []);
-
-  // Pulse quando arriva un nuovo messaggio
-  useEffect(() => {
-    if (newMessageCount > 0 && !panelOpen) {
-      setPulse(true);
-      const t = setTimeout(() => setPulse(false), 1200);
-      return () => clearTimeout(t);
-    }
-  }, [newMessageCount, panelOpen]);
 
   const savePos = useCallback((x, y) => {
     try { localStorage.setItem(LS_KEY, JSON.stringify({ x, y })); } catch {}
@@ -91,30 +67,22 @@ export default function ARIAMascot({
   };
 
   useEffect(() => {
-    if (!dragging) return;
-    const sz = isMobile ? 100 : 160;
-
-    const onMouseMove = (e) => {
+    if (!dragging || !pos) return;
+    const sz = window.innerWidth < 768 ? 80 : 130;
+    const onMove = (e) => {
       const dx = e.clientX - dragStart.current.clientX;
       const dy = e.clientY - dragStart.current.clientY;
       if (Math.abs(dx) > 4 || Math.abs(dy) > 4) setDidDrag(true);
-      const nx = clamp(dragStart.current.startX + dx, 8, window.innerWidth  - sz - 8);
-      const ny = clamp(dragStart.current.startY + dy, 8, window.innerHeight - sz - 8);
-      setPos({ x: nx, y: ny });
+      setPos({
+        x: clamp(dragStart.current.startX + dx, 8, window.innerWidth  - sz - 8),
+        y: clamp(dragStart.current.startY + dy, 8, window.innerHeight - sz - 8),
+      });
     };
-
-    const onMouseUp = () => {
-      setDragging(false);
-      savePos(posRef.current.x, posRef.current.y);
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [dragging, isMobile, savePos]);
+    const onUp = () => { setDragging(false); savePos(posRef.current.x, posRef.current.y); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [dragging, savePos]);
 
   // ── TOUCH drag ──
   const onTouchStart = (e) => {
@@ -125,46 +93,36 @@ export default function ARIAMascot({
   };
 
   useEffect(() => {
-    if (!dragging) return;
-    const sz = isMobile ? 100 : 160;
-
-    const onTouchMove = (e) => {
+    if (!dragging || !pos) return;
+    const sz = window.innerWidth < 768 ? 80 : 130;
+    const onMove = (e) => {
       const t = e.touches[0];
       const dx = t.clientX - dragStart.current.clientX;
       const dy = t.clientY - dragStart.current.clientY;
       if (Math.abs(dx) > 6 || Math.abs(dy) > 6) setDidDrag(true);
-      const nx = clamp(dragStart.current.startX + dx, 8, window.innerWidth  - sz - 8);
-      const ny = clamp(dragStart.current.startY + dy, 8, window.innerHeight - sz - 8);
-      setPos({ x: nx, y: ny });
+      setPos({
+        x: clamp(dragStart.current.startX + dx, 8, window.innerWidth  - sz - 8),
+        y: clamp(dragStart.current.startY + dy, 8, window.innerHeight - sz - 8),
+      });
       e.preventDefault();
     };
-
-    const onTouchEnd = () => {
-      setDragging(false);
-      savePos(posRef.current.x, posRef.current.y);
-    };
-
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd);
-    return () => {
-      window.removeEventListener('touchmove', onTouchMove);
-      window.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [dragging, isMobile, savePos]);
+    const onEnd = () => { setDragging(false); savePos(posRef.current.x, posRef.current.y); };
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('touchend', onEnd);
+    return () => { window.removeEventListener('touchmove', onMove); window.removeEventListener('touchend', onEnd); };
+  }, [dragging, savePos]);
 
   const handleClick = (e) => {
-    if (didDrag) return; // era un drag, non un click
+    if (didDrag) return;
     e.stopPropagation();
-    setClicked(true);
-    setTimeout(() => setClicked(false), 400);
     onClick?.();
   };
 
-  const glowColor = color;
+  // Non renderizzare finché la posizione non è pronta
+  if (!pos) return null;
 
   return (
     <div
-      ref={wrapperRef}
       onMouseDown={onMouseDown}
       onTouchStart={onTouchStart}
       onClick={handleClick}
@@ -172,73 +130,47 @@ export default function ARIAMascot({
         position: 'fixed',
         left: pos.x,
         top:  pos.y,
-        width:  size,
+        width: SIZE,
         zIndex: 1000,
         cursor: dragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         WebkitUserSelect: 'none',
         touchAction: 'none',
-        transition: dragging ? 'none' : 'filter 0.3s, transform 0.15s',
-        filter: pulse
-          ? `drop-shadow(0 0 16px ${glowColor}) drop-shadow(0 0 32px ${glowColor}88)`
-          : `drop-shadow(0 0 8px ${glowColor}66)`,
-        transform: clicked ? 'scale(1.08)' : 'scale(1)',
+        filter: `drop-shadow(0 0 10px ${color}88)`,
         overflow: 'visible',
       }}
     >
-      {/* Badge messaggi non letti */}
+      {/* Badge messaggi */}
       {newMessageCount > 0 && !panelOpen && (
         <div style={{
-          position: 'absolute',
-          top: 6, right: 6,
-          minWidth: 20, height: 20,
-          borderRadius: 10,
-          background: '#EF4444',
-          color: '#fff',
-          fontSize: 11, fontWeight: 800,
+          position: 'absolute', top: 4, right: 4,
+          minWidth: 18, height: 18, borderRadius: 9,
+          background: '#EF4444', color: '#fff',
+          fontSize: 10, fontWeight: 800,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 5px',
-          zIndex: 2,
-          boxShadow: '0 0 8px #EF444466',
+          padding: '0 4px', zIndex: 2,
+          boxShadow: '0 0 6px #EF444466',
           border: '2px solid #0A0D14',
         }}>
           {newMessageCount > 9 ? '9+' : newMessageCount}
         </div>
       )}
 
-      {/* Mascotte humanoid */}
-      <AriaHumanoid
-        size={size}
-        color={color}
-        mood={mood}
-        animated={true}
-      />
+      <AriaHumanoid size={SIZE} color={color} mood={mood} animated={true} />
 
-      {/* Label nome — solo desktop */}
+      {/* Nome — solo desktop */}
       {!isMobile && (
         <div style={{
-          textAlign: 'center',
-          fontSize: 11,
-          fontWeight: 800,
-          letterSpacing: '0.15em',
-          textTransform: 'uppercase',
-          color: glowColor,
-          opacity: 0.85,
-          marginTop: -8,
+          textAlign: 'center', fontSize: 10, fontWeight: 800,
+          letterSpacing: '0.12em', textTransform: 'uppercase',
+          color, opacity: 0.8, marginTop: -6,
           fontFamily: 'Inter, sans-serif',
-          textShadow: `0 0 8px ${glowColor}66`,
+          textShadow: `0 0 6px ${color}66`,
           pointerEvents: 'none',
         }}>
           {name}
         </div>
       )}
-
-      <style>{`
-        @keyframes ariaMascotPulse {
-          0%,100% { transform: scale(1); }
-          50% { transform: scale(1.06); }
-        }
-      `}</style>
     </div>
   );
 }
