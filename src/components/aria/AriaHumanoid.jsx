@@ -27,7 +27,7 @@ export default function AriaHumanoid({ size = 160, color = '#3B6EF8', mood = 'fe
   return (
     <svg
       width={s} height={s}
-      viewBox="0 0 200 220"
+      viewBox="0 0 200 200"
       xmlns="http://www.w3.org/2000/svg"
       style={{
         filter: animated ? `drop-shadow(0 0 ${s * 0.08}px ${c}88) drop-shadow(0 0 ${s * 0.04}px ${c}44)` : 'none',

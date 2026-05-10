@@ -12,23 +12,22 @@ function clamp(val, min, max) {
 }
 
 function getInitialPos(isMobile, size) {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
   try {
     const saved = JSON.parse(localStorage.getItem(LS_KEY));
     if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') {
-      // Valida che sia ancora dentro lo schermo
-      const maxX = window.innerWidth  - size - 8;
-      const maxY = window.innerHeight - size - 8;
-      if (saved.x >= 0 && saved.x <= maxX && saved.y >= 0 && saved.y <= maxY) {
+      if (saved.x >= 0 && saved.x <= W - size - 4 && saved.y >= 0 && saved.y <= H - size - 4) {
         return { x: saved.x, y: saved.y };
       }
     }
   } catch {}
-  // Default: bottom-right
-  const bottomOffset = isMobile ? 88 : 24;
-  const rightOffset  = isMobile ? 12 : 24;
+  // Default: bottom-right corner
+  const bottomOffset = isMobile ? 88 : 28;
+  const rightOffset  = isMobile ? 12 : 28;
   return {
-    x: window.innerWidth  - size - rightOffset,
-    y: window.innerHeight - size - bottomOffset,
+    x: Math.max(8, W - size - rightOffset),
+    y: Math.max(8, H - size - bottomOffset),
   };
 }
 
@@ -40,8 +39,8 @@ export default function ARIAMascot({
   newMessageCount = 0,
   panelOpen = false,
 }) {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-  const size = isMobile ? 110 : 180;
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const size = isMobile ? 100 : 160;
 
   const [pos, setPos]           = useState(() => getInitialPos(isMobile, size));
   const [dragging, setDragging] = useState(false);
@@ -59,7 +58,7 @@ export default function ARIAMascot({
     const onResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      const sz = mobile ? 110 : 180;
+      const sz = mobile ? 100 : 160;
       setPos(p => ({
         x: clamp(p.x, 8, window.innerWidth  - sz - 8),
         y: clamp(p.y, 8, window.innerHeight - sz - 8),
@@ -93,7 +92,7 @@ export default function ARIAMascot({
 
   useEffect(() => {
     if (!dragging) return;
-    const sz = isMobile ? 110 : 180;
+    const sz = isMobile ? 100 : 160;
 
     const onMouseMove = (e) => {
       const dx = e.clientX - dragStart.current.clientX;
@@ -127,7 +126,7 @@ export default function ARIAMascot({
 
   useEffect(() => {
     if (!dragging) return;
-    const sz = isMobile ? 110 : 180;
+    const sz = isMobile ? 100 : 160;
 
     const onTouchMove = (e) => {
       const t = e.touches[0];
@@ -174,17 +173,17 @@ export default function ARIAMascot({
         left: pos.x,
         top:  pos.y,
         width:  size,
-        height: size,
         zIndex: 1000,
         cursor: dragging ? 'grabbing' : 'grab',
         userSelect: 'none',
         WebkitUserSelect: 'none',
         touchAction: 'none',
-        transition: dragging ? 'none' : 'filter 0.3s',
+        transition: dragging ? 'none' : 'filter 0.3s, transform 0.15s',
         filter: pulse
           ? `drop-shadow(0 0 16px ${glowColor}) drop-shadow(0 0 32px ${glowColor}88)`
           : `drop-shadow(0 0 8px ${glowColor}66)`,
         transform: clicked ? 'scale(1.08)' : 'scale(1)',
+        overflow: 'visible',
       }}
     >
       {/* Badge messaggi non letti */}

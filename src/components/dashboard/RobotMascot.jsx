@@ -97,7 +97,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   useEffect(() => {
     if (!panelOpen || expanded) return;
     const handler = (e) => {
-      if (!panelRef.current?.contains(e.target) && !robotRef.current?.contains(e.target)) {
+      if (!panelRef.current?.contains(e.target)) {
         setPanelOpen(false);
         setExpanded(false);
       }
@@ -179,8 +179,8 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
         zIndex: 200,
       }
     : {
-        position: 'absolute',
-        bottom: 90, right: 0,
+        position: 'fixed',
+        bottom: 200, right: 28,
         width: 420,
         height: 580,
         borderRadius: 20,
