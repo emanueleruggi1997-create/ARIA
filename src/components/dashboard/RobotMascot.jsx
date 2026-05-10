@@ -108,7 +108,7 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
   }, [panelOpen, expanded]);
 
   const handleClick = (e) => {
-    e.stopPropagation();
+    e?.stopPropagation();
     setClicked(true);
     setTimeout(() => setClicked(false), 400);
     // Su mobile apri la route dedicata, su desktop usa il pannello overlay
