@@ -61,7 +61,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium min-w-0",
                 "transition-colors duration-100",
                 isActive 
                   ? "bg-primary/10 text-primary" 
@@ -83,7 +83,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
               ) : (
                 <item.icon className={cn("w-[18px] h-[18px] shrink-0", isActive && "text-primary")} />
               )}
-              {!collapsed && <span>{isAria ? ariaName : item.label}</span>}
+              {!collapsed && <span className="truncate">{isAria ? ariaName : item.label}</span>}
             </Link>
           );
         })}
