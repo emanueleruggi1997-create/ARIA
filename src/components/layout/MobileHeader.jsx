@@ -12,10 +12,9 @@ export default function MobileHeader() {
   const initial = (user?.full_name || 'U')[0].toUpperCase();
 
   return (
-    <header className="h-14 bg-[#080A0F] border-b border-border flex items-center justify-between px-4 shrink-0 z-40">
-      <div className="flex items-center gap-2">
-        <img src={LOGO_URL} alt="Emaral" className="shrink-0" style={{ width: 80, height: 56, objectFit: 'contain', mixBlendMode: 'screen' }} />
-        <BrandLogo size="sm" />
+    <header className="h-14 bg-[#080A0F] border-b border-border flex items-center justify-between px-3 shrink-0 z-40 min-w-0">
+      <div className="flex items-center gap-1 min-w-0 flex-shrink">
+        <img src={LOGO_URL} alt="Emaral" className="shrink-0" style={{ width: 48, height: 32, objectFit: 'contain', mixBlendMode: 'screen' }} />
       </div>
       <div className="flex items-center gap-2">
         <button
