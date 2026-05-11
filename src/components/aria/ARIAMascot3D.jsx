@@ -48,7 +48,7 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
     // Load — fetch as ArrayBuffer e parse come GLB binario
     const loader = new GLTFLoader();
 
-    fetch('https://raw.githubusercontent.com/emanueleruggi1997-create/ARIA/main/prova_aria_opt.glb')
+    fetch('/prova_aria_opt.glb')
       .then(res => {
         if (!res.ok) throw new Error('fetch failed');
         return res.arrayBuffer();
