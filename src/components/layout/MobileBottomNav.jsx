@@ -65,8 +65,8 @@ export default function MobileBottomNav() {
             style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom))' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <p className="text-sm font-semibold text-foreground">Menu</p>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">Menu</p>
               <button onClick={() => setDrawerOpen(false)} className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
@@ -77,7 +77,7 @@ export default function MobileBottomNav() {
                   key={item.path}
                   onClick={() => handleMenuNav(item.path)}
                   className={cn(
-                    "w-full flex items-center gap-4 px-5 py-4 text-left transition-colors",
+                    "w-full flex items-center gap-4 px-5 py-4 text-left transition-colors min-w-0",
                     location.pathname === item.path ? 'text-primary' : 'text-foreground hover:bg-secondary/50'
                   )}
                 >
@@ -96,7 +96,7 @@ export default function MobileBottomNav() {
                   ) : (
                     <item.icon className="w-5 h-5" />
                   )}
-                  <span className="text-[15px] font-medium">{item.isAria ? ariaName : item.label}</span>
+                  <span className="text-[15px] font-medium truncate">{item.isAria ? ariaName : item.label}</span>
                 </button>
               ))}
               <button
@@ -104,14 +104,14 @@ export default function MobileBottomNav() {
                 className="w-full flex items-center gap-4 px-5 py-4 text-left text-muted-foreground hover:bg-secondary/50 transition-colors"
               >
                 <span className="text-[15px]">📄</span>
-                <span className="text-[15px] font-medium">{t.termsPrivacy}</span>
+                <span className="text-[15px] font-medium truncate">{t.termsPrivacy}</span>
               </button>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-4 px-5 py-4 text-left text-red-400 hover:bg-red-500/10 transition-colors border-t border-border mt-2"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="text-[15px] font-medium">{t.logout}</span>
+                <span className="text-[15px] font-medium truncate">{t.logout}</span>
               </button>
             </div>
           </div>
