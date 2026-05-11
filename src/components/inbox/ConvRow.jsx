@@ -83,8 +83,8 @@ const ConvRow = memo(function ConvRow({ conv, isActive, onSelect, onArchive, onD
       >
         <Avatar nome={conv.nome} canale={conv.canale} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3, gap: 6 }}>
-            <span style={{ fontSize: 14, fontWeight: hasUnread ? 900 : 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3, gap: 6, minWidth: 0 }}>
+            <span style={{ fontSize: 14, fontWeight: hasUnread ? 900 : 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
               {conv.nome || 'Sconosciuto'}
             </span>
             <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{formatTime(conv.lastMessageTime)}</span>
@@ -96,10 +96,10 @@ const ConvRow = memo(function ConvRow({ conv, isActive, onSelect, onArchive, onD
                 </span>
               </div>
             )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <span style={{
               fontSize: 12, color: hasUnread ? `${C.text}cc` : C.muted,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0,
               fontWeight: hasUnread ? 600 : 400,
             }}>
               {previewText}
