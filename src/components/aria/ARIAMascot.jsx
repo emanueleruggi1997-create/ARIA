@@ -15,7 +15,7 @@ export default function ARIAMascot({ color = '#3B6EF8', mood = 'felice', name = 
   const dragStart = useRef(null);
   const posRef = useRef(null);
 
-  const getSize = () => window.innerWidth < 768 ? 80 : 130;
+  const getSize = () => window.innerWidth < 768 ? 120 : 300;
 
   // Initialize position after mount
   useEffect(() => {
