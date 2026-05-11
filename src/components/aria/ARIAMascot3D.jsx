@@ -45,55 +45,54 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
     fillLight.position.set(-2, 0, 2);
     scene.add(fillLight);
 
-    // Load GLB — try both paths
+    // Load — fetch as ArrayBuffer e parse come GLB binario
     const loader = new GLTFLoader();
-    const paths = [
-      '/prova_aria_opt.gltf',
-      '/prova_aria_opt.glb',
-      './prova_aria_opt.gltf',
-      './prova_aria_opt.glb',
-    ];
 
-    let tried = 0;
-    function tryLoad(pathIndex) {
-      if (pathIndex >= paths.length) {
+    fetch('/prova_aria_opt.gltf')
+      .then(res => {
+        if (!res.ok) throw new Error('fetch failed');
+        return res.arrayBuffer();
+      })
+      .then(buffer => {
+        loader.parse(
+          buffer,
+          '',
+          (gltf) => {
+            const model = gltf.scene;
+
+            // Center & scale
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            const sizeVec = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z);
+            const scale = 2 / maxDim;
+            model.scale.setScalar(scale);
+            model.position.sub(center.multiplyScalar(scale));
+
+            scene.add(model);
+            setLoaded(true);
+
+            // Animate — gentle float rotation
+            let t = 0;
+            const animate = () => {
+              animFrameRef.current = requestAnimationFrame(animate);
+              t += 0.01;
+              model.rotation.y = Math.sin(t * 0.5) * 0.3;
+              model.position.y = Math.sin(t) * 0.05;
+              renderer.render(scene, camera);
+            };
+            animate();
+          },
+          (err) => {
+            console.error('[ARIAMascot3D] parse error:', err);
+            setError(true);
+          }
+        );
+      })
+      .catch(err => {
+        console.error('[ARIAMascot3D] fetch error:', err);
         setError(true);
-        return;
-      }
-      loader.load(
-        paths[pathIndex],
-        (gltf) => {
-          const model = gltf.scene;
-
-          // Center & scale
-          const box = new THREE.Box3().setFromObject(model);
-          const center = box.getCenter(new THREE.Vector3());
-          const sizeVec = box.getSize(new THREE.Vector3());
-          const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z);
-          const scale = 2 / maxDim;
-          model.scale.setScalar(scale);
-          model.position.sub(center.multiplyScalar(scale));
-
-          scene.add(model);
-          setLoaded(true);
-
-          // Animate — gentle float rotation
-          let t = 0;
-          const animate = () => {
-            animFrameRef.current = requestAnimationFrame(animate);
-            t += 0.01;
-            model.rotation.y = Math.sin(t * 0.5) * 0.3;
-            model.position.y = Math.sin(t) * 0.05;
-            renderer.render(scene, camera);
-          };
-          animate();
-        },
-        undefined,
-        () => tryLoad(pathIndex + 1)
-      );
-    }
-
-    tryLoad(0);
+      });
 
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
