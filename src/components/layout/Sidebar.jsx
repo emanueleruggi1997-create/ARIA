@@ -76,9 +76,6 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                   >
                     {ariaName[0]?.toUpperCase()}
                   </div>
-                  {ariaActive && (
-                    <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-500 border border-sidebar" />
-                  )}
                 </div>
               ) : (
                 <item.icon className={cn("w-[18px] h-[18px] shrink-0", isActive && "text-primary")} />

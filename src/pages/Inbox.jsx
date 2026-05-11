@@ -272,14 +272,6 @@ export default function Inbox() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <span style={{ fontWeight: 900, fontSize: 18, color: C.text, letterSpacing: -0.5 }}>Inbox</span>
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-              {activeTab === 'instagram' && (
-                <button
-                  onClick={() => setShowManualModal(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, background: '#DD2A7B15', border: '1px solid #DD2A7B40', color: '#DD2A7B', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-                >
-                  <UserPlus size={12} /> Manuale
-                </button>
-              )}
               <button onClick={handleRefresh} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, cursor: 'pointer' }}>
                 <RefreshCw size={13} style={{ color: C.muted, animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
               </button>
@@ -350,16 +342,6 @@ export default function Inbox() {
             {refreshing ? '...' : 'Aggiorna'}
           </button>
 
-          {/* Nuova conv manuale IG */}
-          {activeTab === 'instagram' && (
-            <button
-              onClick={() => setShowManualModal(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 8, background: '#DD2A7B15', border: '1px solid #DD2A7B40', color: '#DD2A7B', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              <UserPlus size={12} /> Nuova conv. manuale
-            </button>
-          )}
-
           {/* ARIA status */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.success, boxShadow: `0 0 8px ${C.success}` }} />
@@ -374,6 +356,16 @@ export default function Inbox() {
         {/* Left: conversation list */}
         <div style={{ width: 340, flexShrink: 0, borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', height: '100%' }}>
           <InboxTabs activeTab={activeTab} setActiveTab={tab => { setActiveTab(tab); setActiveConv(null); }} waUnread={waUnread} igUnread={igUnread} />
+          {activeTab === 'instagram' && (
+            <div style={{ padding: '10px 16px', borderBottom: `1px solid ${C.border}` }}>
+              <button
+                onClick={() => setShowManualModal(true)}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '6px 12px', borderRadius: 8, background: '#DD2A7B15', border: '1px solid #DD2A7B40', color: '#DD2A7B', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}
+              >
+                <UserPlus size={13} /> Nuova conv. manuale
+              </button>
+            </div>
+          )}
           <SubFilters channel={activeTab} activeFilter={activeFilter} setActiveFilter={setActiveFilter} />
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {isLoading ? <ConvSkeleton /> : (
