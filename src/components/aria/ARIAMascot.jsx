@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-const ARIA_IMG = 'https://media.base44.com/images/public/69bfc400a0538988ee3a6cfd/412254054_superrealaria.png';
+import ARIAMascot3D from './ARIAMascot3D';
 
 const LS_KEY = 'aria_mascot_pos_v3';
 
@@ -145,34 +145,11 @@ export default function ARIAMascot({ color = '#3B6EF8', mood = 'felice', name = 
         overflow: 'visible',
       }}
     >
-      {/* Unread badge */}
-      {newMessageCount > 0 && !panelOpen && (
-        <div style={{
-          position: 'absolute', top: 2, right: 2,
-          minWidth: 18, height: 18, borderRadius: 9,
-          background: '#EF4444', color: '#fff',
-          fontSize: 10, fontWeight: 800,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '0 4px', zIndex: 2,
-          border: '2px solid #080A0F',
-          boxShadow: '0 0 6px #EF444499',
-        }}>
-          {newMessageCount > 9 ? '9+' : newMessageCount}
-        </div>
-      )}
-
-      <img
-        src={ARIA_IMG}
-        alt="ARIA"
-        style={{
-          width: sz,
-          height: sz,
-          objectFit: 'cover',
-          borderRadius: '50%',
-          border: `2px solid ${color}66`,
-          display: 'block',
-        }}
-        draggable={false}
+      <ARIAMascot3D
+        size={sz}
+        color={color}
+        newMessageCount={newMessageCount}
+        panelOpen={panelOpen}
       />
 
       {!mobile && (
