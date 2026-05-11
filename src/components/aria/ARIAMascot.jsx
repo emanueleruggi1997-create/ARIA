@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import ARIAMascot3D from './ARIAMascot3D';
+import AriaHumanoid from './AriaHumanoid';
 
 const LS_KEY = 'aria_mascot_pos_v3';
 
@@ -145,12 +145,25 @@ export default function ARIAMascot({ color = '#3B6EF8', mood = 'felice', name = 
         overflow: 'visible',
       }}
     >
-      <ARIAMascot3D
-        size={sz}
-        color={color}
-        newMessageCount={newMessageCount}
-        panelOpen={panelOpen}
-      />
+      <div style={{ position: 'relative', width: sz, height: sz }}>
+        <AriaHumanoid size={sz} color={color} mood={mood} animated />
+
+        {/* Unread badge */}
+        {newMessageCount > 0 && !panelOpen && (
+          <div style={{
+            position: 'absolute', top: 8, right: 8,
+            minWidth: 18, height: 18, borderRadius: 9,
+            background: '#EF4444', color: '#fff',
+            fontSize: 10, fontWeight: 800,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0 4px', zIndex: 2,
+            border: '2px solid #080A0F',
+            boxShadow: '0 0 6px #EF444499',
+          }}>
+            {newMessageCount > 9 ? '9+' : newMessageCount}
+          </div>
+        )}
+      </div>
 
       {!mobile && (
         <div style={{
