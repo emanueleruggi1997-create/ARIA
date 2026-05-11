@@ -342,11 +342,7 @@ export default function Inbox() {
             {refreshing ? '...' : 'Aggiorna'}
           </button>
 
-          {/* ARIA status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.success, boxShadow: `0 0 8px ${C.success}` }} />
-            <span style={{ fontSize: 11, color: C.success, fontWeight: 700 }}>ARIA online</span>
-          </div>
+
         </div>
       </div>
 
