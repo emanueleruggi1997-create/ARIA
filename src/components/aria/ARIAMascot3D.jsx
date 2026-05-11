@@ -11,6 +11,7 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
   const animFrameRef = useRef(null);
+  const controlsRef = useRef(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
@@ -90,8 +91,7 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
             };
             animate();
 
-            // Store controls ref for cleanup
-            rendererRef._controls = controls;
+            controlsRef.current = controls;
           },
           (err) => {
             console.error('[ARIAMascot3D] parse error:', err);
@@ -106,7 +106,7 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
 
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      if (rendererRef._controls) rendererRef._controls.dispose();
+      if (controlsRef.current) controlsRef.current.dispose();
       renderer.dispose();
       if (mountRef.current && renderer.domElement.parentNode === mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
