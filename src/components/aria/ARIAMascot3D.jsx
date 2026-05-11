@@ -149,14 +149,14 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
         </div>
       )}
 
-      {/* Fallback label if error */}
+      {/* Fallback on error — hidden */}
       {error && (
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 48,
+          fontSize: 12, color: '#666',
         }}>
-          🤖
+          ⏳
         </div>
       )}
     </div>
