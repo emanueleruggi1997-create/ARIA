@@ -25,7 +25,7 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
 
     // Camera
     const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
-    camera.position.set(0, 0.5, 3);
+    camera.position.set(0, 0, 4.5);
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -65,9 +65,10 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
             const center = box.getCenter(new THREE.Vector3());
             const sizeVec = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z);
-            const scale = 2 / maxDim;
+            const scale = 1.5 / maxDim;
             model.scale.setScalar(scale);
             model.position.sub(center.multiplyScalar(scale));
+            model.position.y -= 0.3;
 
             scene.add(model);
             setLoaded(true);
