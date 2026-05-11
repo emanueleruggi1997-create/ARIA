@@ -1,4 +1,5 @@
 import React from 'react';
+import BrandLogo from '@/components/layout/BrandLogo.jsx';
 import NotificationsBell from './NotificationsBell';
 import { useAuth } from '@/lib/AuthContext';
 import { useLang } from '@/lib/LanguageContext.jsx';
@@ -14,7 +15,7 @@ export default function MobileHeader() {
     <header className="h-14 bg-[#080A0F] border-b border-border flex items-center justify-between px-4 shrink-0 z-40">
       <div className="flex items-center gap-2">
         <img src={LOGO_URL} alt="Emaral" className="shrink-0" style={{ width: 80, height: 56, objectFit: 'contain', mixBlendMode: 'screen' }} />
-        <span className="text-sm font-bold text-foreground tracking-tight">Emaral Agent AI</span>
+        <BrandLogo size="sm" />
       </div>
       <div className="flex items-center gap-2">
         <button

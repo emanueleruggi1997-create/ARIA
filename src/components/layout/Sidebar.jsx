@@ -1,4 +1,5 @@
 import React from 'react';
+import BrandLogo from '@/components/layout/BrandLogo.jsx';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, MessageSquare, Users, CalendarDays, 
@@ -40,8 +41,7 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           <img src={LOGO_URL} alt="Emaral" className="shrink-0" style={{ width: 96, height: 64, objectFit: 'contain', mixBlendMode: 'screen' }} />
           {!collapsed && (
             <div className="whitespace-nowrap">
-              <p className="text-sm font-bold text-foreground tracking-tight">Emaral Agent AI</p>
-              <p className="text-[10px] text-muted-foreground">by Emaral Group</p>
+              <BrandLogo size="md" />
             </div>
           )}
         </div>
