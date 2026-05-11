@@ -30,9 +30,9 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
     camera.lookAt(0, 0, 0);
 
     // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, precision: 'lowp' });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(w, h);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setClearColor(0x000000, 0);
     rendererRef.current = renderer;
     mountRef.current.appendChild(renderer.domElement);
@@ -50,12 +50,7 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
     // Load — fetch as ArrayBuffer e parse come GLB binario
     const loader = new GLTFLoader();
 
-    // Preload with cache
-    const abortController = new AbortController();
-    fetch('https://cdn.jsdelivr.net/gh/emanueleruggi1997-create/ARIA@main/prova_aria_clean.glb', {
-      signal: abortController.signal,
-      headers: { 'Cache-Control': 'max-age=604800' }
-    })
+    fetch('https://cdn.jsdelivr.net/gh/emanueleruggi1997-create/ARIA@main/prova_aria_clean.glb')
       .then(res => {
         if (!res.ok) throw new Error('fetch failed');
         return res.arrayBuffer();
@@ -110,7 +105,6 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
       });
 
     return () => {
-      abortController.abort();
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       if (controlsRef.current) controlsRef.current.dispose();
       renderer.dispose();
@@ -149,14 +143,14 @@ export default function ARIAMascot3D({ size = 130, color = '#3B6EF8', onClick, n
         </div>
       )}
 
-      {/* Fallback on error — hidden */}
+      {/* Fallback label if error */}
       {error && (
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, color: '#666',
+          fontSize: 48,
         }}>
-          ⏳
+          🤖
         </div>
       )}
     </div>
