@@ -330,18 +330,16 @@ export default function Inbox() {
         <span style={{ fontSize: 11, color: C.muted, background: `${C.border}66`, borderRadius: 20, padding: '2px 10px' }}>
           {conversations.filter(c => !c.archiviata).length} conversazioni
         </span>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          title="Aggiorna conversazioni"
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, fontSize: 11, fontWeight: 700, cursor: refreshing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: refreshing ? 0.6 : 1 }}
+        >
+          <RefreshCw size={12} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+          {refreshing ? '...' : 'Aggiorna'}
+        </button>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Refresh semplice */}
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            title="Aggiorna conversazioni"
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, fontSize: 11, fontWeight: 700, cursor: refreshing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: refreshing ? 0.6 : 1 }}
-          >
-            <RefreshCw size={12} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
-            {refreshing ? '...' : 'Aggiorna'}
-          </button>
-
 
         </div>
       </div>
