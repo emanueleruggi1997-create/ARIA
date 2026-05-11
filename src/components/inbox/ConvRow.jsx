@@ -79,16 +79,17 @@ const ConvRow = memo(function ConvRow({ conv, isActive, onSelect, onArchive, onD
           background: isActive ? `${C.accent2}14` : hasUnread ? `${C.text}04` : 'transparent',
           transition: 'background 0.1s',
           willChange: 'background-color',
+          minWidth: 0,
         }}
       >
         <Avatar nome={conv.nome} canale={conv.canale} />
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3, gap: 6, minWidth: 0 }}>
             <span style={{ fontSize: 14, fontWeight: hasUnread ? 900 : 700, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
               {conv.nome || 'Sconosciuto'}
             </span>
-            <span style={{ fontSize: 11, color: C.muted, flexShrink: 0 }}>{formatTime(conv.lastMessageTime)}</span>
-          </div>
+            <span style={{ fontSize: 11, color: C.muted, flexShrink: 0, whiteSpace: 'nowrap' }}>{formatTime(conv.lastMessageTime)}</span>
+            </div>
           {isManualConv && (
               <div style={{ marginBottom: 3 }}>
                 <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 20, background: `${C.danger}22`, color: C.danger, border: `1px solid ${C.danger}40`, letterSpacing: 0.5 }}>
