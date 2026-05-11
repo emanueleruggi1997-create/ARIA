@@ -181,10 +181,12 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
       }
     : {
         position: 'fixed',
-        bottom: 200, right: 28,
-        width: 420,
-        height: 580,
-        borderRadius: 20,
+        bottom: 20, right: 20,
+        width: 380,
+        maxWidth: 380,
+        height: 500,
+        maxHeight: 500,
+        borderRadius: 16,
         zIndex: 50,
       };
 
@@ -205,8 +207,8 @@ export default function RobotMascot({ newMessageCount = 0, aiResponseCount = 0, 
           className="robot-panel"
           style={{
             ...panelStyle,
-            background: '#0A0D14',
-            border: `1px solid ${color}4D`,
+            background: '#0D0F14',
+            border: '1px solid #ffffff15',
             boxShadow: showFullscreen
               ? `0 24px 80px rgba(0,0,0,0.6), 0 0 30px ${color}18`
               : `0 20px 60px rgba(0,0,0,0.5), 0 0 20px ${color}11`,
