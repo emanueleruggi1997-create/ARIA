@@ -1,0 +1,68 @@
+{
+  "name": "EmailCampaign",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string"
+    },
+    "nome": {
+      "type": "string"
+    },
+    "oggetto": {
+      "type": "string"
+    },
+    "preview_text": {
+      "type": "string"
+    },
+    "mittente_nome": {
+      "type": "string"
+    },
+    "mittente_email": {
+      "type": "string"
+    },
+    "template_id": {
+      "type": "string"
+    },
+    "stato": {
+      "type": "string",
+      "enum": [
+        "bozza",
+        "schedulata",
+        "inviata",
+        "in_corso"
+      ],
+      "default": "bozza"
+    },
+    "destinatari_count": {
+      "type": "number",
+      "default": 0
+    },
+    "destinatari_tag": {
+      "type": "string"
+    },
+    "scheduled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aperture": {
+      "type": "number",
+      "default": 0
+    },
+    "click": {
+      "type": "number",
+      "default": 0
+    },
+    "disiscrizioni": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "business_id",
+    "nome"
+  ]
+}

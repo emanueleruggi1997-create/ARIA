@@ -118,14 +118,7 @@ Rispondi all'ultimo messaggio dell'utente.`;
           <div style={{ fontSize: 13, fontWeight: 700, color: '#F0F4FF', lineHeight: 1.2 }}>{name}</div>
           <div style={{ fontSize: 10, color: '#6B7280', marginTop: 1 }}>Il tuo assistente personale</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div style={{
-            width: 7, height: 7, borderRadius: '50%', background: '#10B981',
-            boxShadow: '0 0 6px #10B981',
-            animation: 'pulseDot 2s infinite',
-          }} />
-          <span style={{ fontSize: 9, color: '#10B981', fontWeight: 600 }}>online</span>
-        </div>
+
       </div>
 
       {/* Messages */}

@@ -1,0 +1,38 @@
+{
+  "name": "EmailAutomation",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string"
+    },
+    "tipo": {
+      "type": "string"
+    },
+    "nome": {
+      "type": "string"
+    },
+    "attiva": {
+      "type": "boolean",
+      "default": false
+    },
+    "template_id": {
+      "type": "string"
+    },
+    "delay_giorni": {
+      "type": "number",
+      "default": 1
+    },
+    "invii_totali": {
+      "type": "number",
+      "default": 0
+    },
+    "aperture_totali": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "business_id",
+    "tipo"
+  ]
+}

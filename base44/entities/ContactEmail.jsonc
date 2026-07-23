@@ -1,0 +1,48 @@
+{
+  "name": "ContactEmail",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string",
+      "description": "ID del business"
+    },
+    "nome": {
+      "type": "string",
+      "description": "Nome completo"
+    },
+    "email": {
+      "type": "string",
+      "description": "Indirizzo email"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tag del contatto"
+    },
+    "fonte": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "instagram",
+        "csv",
+        "form",
+        "manuale"
+      ],
+      "default": "manuale"
+    },
+    "stato": {
+      "type": "string",
+      "enum": [
+        "attivo",
+        "disiscritto"
+      ],
+      "default": "attivo"
+    }
+  },
+  "required": [
+    "business_id",
+    "email"
+  ]
+}

@@ -535,10 +535,7 @@ export default function AriaChatCore({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: '#F0F4FF', lineHeight: 1.2 }}>{name}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981', boxShadow: '0 0 5px #10B981', animation: 'pulseDot 2s infinite' }} />
-            <span style={{ fontSize: 10, color: '#10B981' }}>online</span>
-          </div>
+          <div style={{ fontSize: 10, color: '#6B7280', marginTop: 1 }}>Il tuo assistente personale</div>
         </div>
 
         {/* 🕐 cronologia */}

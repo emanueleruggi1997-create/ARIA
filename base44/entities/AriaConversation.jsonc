@@ -1,0 +1,24 @@
+{
+  "name": "AriaConversation",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string",
+      "description": "Titolo auto-generato dalla conversazione"
+    },
+    "messages": {
+      "type": "string",
+      "description": "JSON array dei messaggi"
+    },
+    "mood": {
+      "type": "string",
+      "description": "Umore ARIA al momento della conversazione"
+    }
+  },
+  "required": [
+    "business_id"
+  ]
+}

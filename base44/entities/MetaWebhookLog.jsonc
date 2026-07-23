@@ -1,0 +1,53 @@
+{
+  "name": "MetaWebhookLog",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string",
+      "description": "ID del business"
+    },
+    "ig_account_id": {
+      "type": "string",
+      "description": "ID account Instagram"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "message_received",
+        "comment_received",
+        "response_sent",
+        "error",
+        "subscription",
+        "test"
+      ],
+      "description": "Tipo di evento"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "pending"
+      ],
+      "default": "pending"
+    },
+    "details": {
+      "type": "string",
+      "description": "Dettagli evento in JSON"
+    },
+    "sender_id": {
+      "type": "string"
+    },
+    "sender_name": {
+      "type": "string"
+    },
+    "error_message": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "business_id",
+    "ig_account_id",
+    "event_type"
+  ]
+}

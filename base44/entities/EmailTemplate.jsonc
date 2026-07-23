@@ -1,0 +1,30 @@
+{
+  "name": "EmailTemplate",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string"
+    },
+    "nome": {
+      "type": "string"
+    },
+    "categoria": {
+      "type": "string"
+    },
+    "soggetto": {
+      "type": "string"
+    },
+    "sections": {
+      "type": "string",
+      "description": "JSON array delle sezioni"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "business_id",
+    "nome"
+  ]
+}

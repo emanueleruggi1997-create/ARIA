@@ -1,0 +1,61 @@
+{
+  "name": "Post",
+  "type": "object",
+  "properties": {
+    "business_id": {
+      "type": "string",
+      "description": "ID del business"
+    },
+    "canale": {
+      "type": "string",
+      "enum": [
+        "instagram",
+        "facebook"
+      ]
+    },
+    "media_url": {
+      "type": "string",
+      "description": "URL del media"
+    },
+    "caption": {
+      "type": "string"
+    },
+    "hashtags": {
+      "type": "string"
+    },
+    "stato": {
+      "type": "string",
+      "enum": [
+        "bozza",
+        "schedulato",
+        "pubblicato",
+        "errore"
+      ],
+      "default": "bozza"
+    },
+    "scheduled_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reach": {
+      "type": "number",
+      "default": 0
+    },
+    "likes": {
+      "type": "number",
+      "default": 0
+    },
+    "commenti": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "business_id",
+    "canale"
+  ]
+}
