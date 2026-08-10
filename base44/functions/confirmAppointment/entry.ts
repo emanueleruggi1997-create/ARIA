@@ -86,6 +86,13 @@ Deno.serve(async (req) => {
     base44.asServiceRole.entities.MetaConnection.filter({ business_id: apt.business_id }).catch(() => []),
   ]);
 
+  // Security: verify caller owns the business
+  if (!business) return Response.json({ error: 'Business not found' }, { status: 404 });
+  const isOwner = business.created_by_id === user.id || business.created_by === user.email || business.created_by === user.id;
+  if (!isOwner && user.role !== 'admin') {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const conn = (connections || []).find(c => c?.ig_connected && c?.ig_account_id) || (connections || [])[0] || null;
   const canale = contact?.canale || apt.canale_origine || 'instagram';
 

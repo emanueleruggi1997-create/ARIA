@@ -38,6 +38,15 @@ Deno.serve(async (req) => {
   }
   if (!conn) return Response.json({ success: false, error: `Connection not found: ${connector_id}` }, { status: 404 });
 
+  // Security: verify caller owns the connection's business
+  if (conn.business_id) {
+    const biz = await base44.asServiceRole.entities.Business.get(conn.business_id).catch(() => null);
+    const isOwner = biz && (biz.created_by_id === user.id || biz.created_by === user.email || biz.created_by === user.id);
+    if (!isOwner && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  }
+
   const token       = conn.access_token;
   const igAccountId = conn.ig_account_id;
   const appId       = Deno.env.get('META_APP_ID') || '';

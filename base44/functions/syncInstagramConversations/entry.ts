@@ -27,14 +27,12 @@ Deno.serve(async (req) => {
   let conn = null;
   try {
     const conns = await base44.asServiceRole.entities.MetaConnection.filter({ ig_connected: true });
-    // Filtra per user_id o business_id
     const allBiz = await base44.asServiceRole.entities.Business.filter({});
-    const userBiz = allBiz.find(b => b.created_by === user.email || b.created_by === user.id);
-    if (userBiz) {
-      conn = conns.find(c => c.business_id === userBiz.id) || conns[0];
-    } else {
-      conn = conns[0];
+    const userBiz = allBiz.find(b => b.created_by_id === user.id || b.created_by === user.email || b.created_by === user.id);
+    if (!userBiz) {
+      return Response.json({ error: 'Nessun business trovato per questo utente' }, { status: 403 });
     }
+    conn = conns.find(c => c.business_id === userBiz.id) || null;
   } catch (e) {
     return Response.json({ error: 'Nessuna connessione Instagram trovata' }, { status: 404 });
   }

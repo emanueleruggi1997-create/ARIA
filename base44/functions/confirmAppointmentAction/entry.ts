@@ -16,6 +16,12 @@ Deno.serve(async (req) => {
   const business = await base44.asServiceRole.entities.Business.get(appt.business_id);
   if (!business) return Response.json({ error: 'Business not found' }, { status: 404 });
 
+  // Security: verify caller owns the business
+  const isOwner = business.created_by_id === user.id || business.created_by === user.email || business.created_by === user.id;
+  if (!isOwner && user.role !== 'admin') {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   // ── FORMAT DATE ──
   const formatDate = (isoDate) => {
     const months = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];

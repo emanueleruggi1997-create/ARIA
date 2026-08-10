@@ -13,6 +13,14 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Missing parameters' }, { status: 400 });
   }
 
+  // Security: verify caller owns the business
+  const biz = await base44.asServiceRole.entities.Business.get(business_id).catch(() => null);
+  if (!biz) return Response.json({ error: 'Business not found' }, { status: 404 });
+  const isOwner = biz.created_by_id === user.id || biz.created_by === user.email || biz.created_by === user.id;
+  if (!isOwner && user.role !== 'admin') {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     // Get contact and connection
     const contact = await base44.asServiceRole.entities.Contact.get(contact_id);

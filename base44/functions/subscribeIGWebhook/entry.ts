@@ -24,6 +24,14 @@ Deno.serve(async (req) => {
     const rows = await base44.asServiceRole.entities.MetaConnection.filter({ id: connector_id }).catch(() => []);
     const conn = rows[0];
     if (conn) {
+      // Security: verify caller owns the connection's business
+      if (conn.business_id) {
+        const biz = await base44.asServiceRole.entities.Business.get(conn.business_id).catch(() => null);
+        const isOwner = biz && (biz.created_by_id === user.id || biz.created_by === user.email || biz.created_by === user.id);
+        if (!isOwner && user.role !== 'admin') {
+          return Response.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
       token = token || conn.access_token;
       accountId = accountId || conn.ig_account_id;
     }
